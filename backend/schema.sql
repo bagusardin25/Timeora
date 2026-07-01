@@ -1,12 +1,14 @@
 -- Timeora database schema
 -- Run this in Supabase SQL Editor
 
+-- Users table (auto-synced saat login lewat auth.py)
 CREATE TABLE IF NOT EXISTS users (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email       TEXT UNIQUE NOT NULL,
     created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Events table
 CREATE TABLE IF NOT EXISTS events (
     id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id           UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -21,7 +23,7 @@ CREATE TABLE IF NOT EXISTS events (
 
 CREATE INDEX IF NOT EXISTS idx_events_user_date ON events(user_id, date);
 
--- Auto-update updated_at
+-- Auto-update updated_at trigger
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -30,7 +32,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER IF NOT EXISTS events_updated_at
+DROP TRIGGER IF EXISTS events_updated_at ON events;
+CREATE TRIGGER events_updated_at
     BEFORE UPDATE ON events
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at();

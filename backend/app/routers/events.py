@@ -69,8 +69,18 @@ async def _generate_alternatives(
 
 
 @router.get("", response_model=list[EventResponse])
-async def list_events(user: dict = Depends(get_current_user)):
+def _require_pool():
     pool = get_pool()
+    if pool is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database not connected",
+        )
+    return pool
+
+
+async def list_events(user: dict = Depends(get_current_user)):
+    pool = _require_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch(
             "SELECT * FROM events WHERE user_id = $1 ORDER BY date, start_time",
@@ -81,7 +91,7 @@ async def list_events(user: dict = Depends(get_current_user)):
 
 @router.post("", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
 async def create_event(body: EventCreate, user: dict = Depends(get_current_user)):
-    pool = get_pool()
+    pool = _require_pool()
     async with pool.acquire() as conn:
         conflict = await _check_conflict(
             conn, user["id"], body.date, body.start_time, body.duration_minutes
@@ -117,7 +127,7 @@ async def create_event(body: EventCreate, user: dict = Depends(get_current_user)
 
 @router.get("/{event_id}", response_model=EventResponse)
 async def get_event(event_id: str, user: dict = Depends(get_current_user)):
-    pool = get_pool()
+    pool = _require_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             "SELECT * FROM events WHERE id = $1 AND user_id = $2",
@@ -135,7 +145,7 @@ async def update_event(
     body: EventUpdate,
     user: dict = Depends(get_current_user),
 ):
-    pool = get_pool()
+    pool = _require_pool()
     async with pool.acquire() as conn:
         existing = await conn.fetchrow(
             "SELECT * FROM events WHERE id = $1 AND user_id = $2",
@@ -168,7 +178,7 @@ async def update_event(
 
 @router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_event(event_id: str, user: dict = Depends(get_current_user)):
-    pool = get_pool()
+    pool = _require_pool()
     async with pool.acquire() as conn:
         result = await conn.execute(
             "DELETE FROM events WHERE id = $1 AND user_id = $2",
@@ -183,7 +193,7 @@ async def delete_event(event_id: str, user: dict = Depends(get_current_user)):
 async def check_conflict(
     body: ConflictCheckRequest, user: dict = Depends(get_current_user)
 ):
-    pool = get_pool()
+    pool = _require_pool()
     async with pool.acquire() as conn:
         conflict = await _check_conflict(
             conn, user["id"], body.date, body.start_time, body.duration_minutes
