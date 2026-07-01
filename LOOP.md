@@ -4,4 +4,5 @@ Agent-written loop log. One plain-English line per iteration.
 
 ---
 
-- [2026-07-01 #1] maker: FastAPI skeleton with /api/health, Supabase Auth, CRUD events, NL parse, conflict detection + deployed to Railway public URL | verify: `testsprite test create --type backend --name 'Health endpoint' --code-file .testsprite/test_health.py --run --wait` | failure: none (200 OK on first run) | fix: N/A
+- [2026-07-01 #1] maker: FastAPI skeleton (health, auth, CRUD events, NL parse, conflict detect) + deployed to Railway (timeora-production.up.railway.app) | verify: `testsprite test create --type backend --name 'Health endpoint' --code-file .testsprite/test_health.py --run --wait` → status: passed | failure: none | fix: N/A
+- [2026-07-01 #2] maker: fixed DB connection (DATABASE_URL IPv6 issue, used session pooler) + auto-create user row on login | verify: `testsprite test create --type backend --name 'Login endpoint' --code-file .testsprite/test_login.py --run --wait` → status: passed | failure: login returned 500 (DB pool None, DATABASE_URL unresolvable) | fix: switched to Session Pooler connection string + graceful None handling in auth.py/events.py
