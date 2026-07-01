@@ -33,4 +33,5 @@ Thumbs.db
 *.log
 logs.*.json
 *.md
-!**/README.md
+!README.md
+!LOOP.md
