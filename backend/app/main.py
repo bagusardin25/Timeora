@@ -1,9 +1,18 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import cors_origins
-from app.database import lifespan
+from app.database import close_pool, init_pool
 from app.routers import auth, events, health, parse
+
+
+@asynccontextmanager
+async def lifespan(_app):
+    await init_pool()
+    yield
+    await close_pool()
 
 app = FastAPI(
     title="Timeora API",

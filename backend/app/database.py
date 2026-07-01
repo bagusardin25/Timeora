@@ -1,38 +1,35 @@
-from contextlib import asynccontextmanager
-
-from psycopg_pool import ConnectionPool
+import asyncpg
 
 from app.config import settings
 
-pool: ConnectionPool | None = None
+pool: asyncpg.Pool | None = None
 
 
-def init_pool() -> None:
+async def init_pool() -> None:
     global pool
-    pool = ConnectionPool(
-        conninfo=settings.DATABASE_URL,
-        min_size=1,
-        max_size=10,
-        open=False,
-    )
-    print("[db] Connection pool created (lazy connect)")
-
-
-def close_pool() -> None:
-    global pool
-    if pool is not None:
-        pool.close()
+    ssl_mode: str | bool = "require" if "supabase" in settings.DATABASE_URL or "railway" in settings.DATABASE_URL else False
+    try:
+        pool = await asyncpg.create_pool(
+            dsn=settings.DATABASE_URL,
+            min_size=1,
+            max_size=10,
+            ssl=ssl_mode,
+        )
+        print(f"[db] asyncpg pool created (ssl={ssl_mode})")
+    except Exception as e:
+        print(f"[db] WARNING: could not connect to DB — {e}")
+        print("[db] Server will start, but DB endpoints will fail until DB is available")
         pool = None
 
 
-def get_pool() -> ConnectionPool:
+async def close_pool() -> None:
+    global pool
+    if pool is not None:
+        await pool.close()
+        pool = None
+
+
+def get_pool() -> asyncpg.Pool:
     if pool is None:
         raise RuntimeError("Database pool not initialized")
     return pool
-
-
-@asynccontextmanager
-async def lifespan(_app):
-    init_pool()
-    yield
-    close_pool()
