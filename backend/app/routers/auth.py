@@ -2,6 +2,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, status
 
 from app.config import settings
+from app.database import get_pool
 from app.models import LoginRequest, LoginResponse
 
 router = APIRouter()
@@ -26,4 +27,15 @@ async def login(body: LoginRequest):
         )
 
     data = resp.json()
+    user_id = data["user"]["id"]
+    email = data["user"]["email"]
+
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "INSERT INTO users (id, email) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING",
+            user_id,
+            email,
+        )
+
     return LoginResponse(access_token=data["access_token"])
