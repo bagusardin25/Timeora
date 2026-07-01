@@ -1,0 +1,45 @@
+name: TestSprite — Verify Loop
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
+      PROJECT_ID: fe31e397-bb11-4aae-af0f-2916b246b3f5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install TestSprite CLI
+        run: npm install -g @testsprite/testsprite-cli
+
+      - name: Wait for Railway deploy
+        run: sleep 30
+
+      - name: Run all backend tests
+        run: |
+          testsprite test run --all --project "$PROJECT_ID" \
+            --wait --output json > result.json
+
+      - name: Download failure artifacts
+        if: failure()
+        run: |
+          testsprite test failure get \
+            "$(jq -r '.run.testId' result.json)" \
+            --out ./.testsprite/failure
+
+      - name: Upload failure bundle
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testsprite-failure
+          path: ./.testsprite/failure
