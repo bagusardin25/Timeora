@@ -31,5 +31,6 @@ Thumbs.db
 
 # Logs
 *.log
+logs.*.json
 *.md
 !**/README.md
