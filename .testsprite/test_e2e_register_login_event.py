@@ -14,6 +14,9 @@ def test_register_login_create_event():
     assert health.get("db") == "connected", (
         f"Database not connected on server: {health}"
     )
+    assert health.get("db_mode") in ("postgres", "supabase_rest"), (
+        f"Unexpected db mode: {health}"
+    )
 
     email = f"e2e_{uuid.uuid4().hex[:12]}@timeora.app"
 

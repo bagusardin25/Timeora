@@ -2,7 +2,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, status
 
 from app.config import settings
-from app.database import ensure_pool
+from app import data_access
 from app.models import AuthResponse, LoginRequest, LoginResponse, RegisterRequest
 
 router = APIRouter()
@@ -14,16 +14,7 @@ _SUPABASE_HEADERS = {
 
 
 async def _ensure_user_row(user_id: str, email: str) -> None:
-    pool = await ensure_pool()
-    if pool is None:
-        print("[auth] DB pool not available, skipping user row insert")
-        return
-    async with pool.acquire() as conn:
-        await conn.execute(
-            "INSERT INTO users (id, email) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING",
-            user_id,
-            email,
-        )
+    await data_access.upsert_user(user_id, email)
 
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
