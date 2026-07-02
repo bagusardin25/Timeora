@@ -1,0 +1,5 @@
+{
+  "rootCauseHypothesis": "TEST BLOCKED\n\nThe test could not be run — the login step is blocked by a network/CORS error preventing access to the dashboard.\n\nObservations:\n- The login page displays the banner 'Login failed (Network/CORS error)'.\n- After entering credentials and clicking 'Sign In', the app did not navigate to the dashboard or show any calendar content.",
+  "recommendedFixTarget": null,
+  "evidence": []
+}

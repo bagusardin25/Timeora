@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "cli-v1",
+  "snapshotId": "snap_51999b3529c187fd",
+  "testId": "cf93491c-61fc-4a59-ac51-3afecab90937",
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "codeVersion": "v1",
+  "runIdIfAvailable": "b1d357a0-3f6e-4129-bae8-07a520261ae9",
+  "targetUrl": "https://timeora-alpha.vercel.app",
+  "failedStepIndex": 5,
+  "failureKind": null,
+  "capturedAt": "2026-07-02T03:50:00.901Z",
+  "fetchedAt": "2026-07-02T03:50:15.819Z"
+}

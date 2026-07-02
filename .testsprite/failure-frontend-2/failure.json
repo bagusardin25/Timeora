@@ -1,0 +1,5 @@
+{
+  "rootCauseHypothesis": "TEST BLOCKED\n\nThe dashboard could not be reached because login is blocked by a network/CORS error.\n\nObservations:\n- The login form shows the error 'Login failed (Network/CORS error)'.\n- The Email field contains 'demo@timeora.app' and a password was entered, but sign-in did not succeed and the dashboard never loaded.",
+  "recommendedFixTarget": null,
+  "evidence": []
+}

@@ -37,7 +37,7 @@ export default function LoginPage() {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.detail || 'Login failed (Network/CORS error)');
+        throw new Error(data.detail || `Login failed (HTTP ${response.status} ${response.statusText})`);
       }
 
       localStorage.setItem('token', data.access_token);
