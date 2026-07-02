@@ -22,17 +22,39 @@ export function WeeklyCalendar({
   onEventResize,
 }: WeeklyCalendarProps) {
   const calendarRef = useRef<FullCalendar>(null);
+  const [isMobile, setIsMobile] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (calendarRef.current) {
+        const api = calendarRef.current.getApi();
+        if (mobile && api.view.type === 'timeGridWeek') {
+          api.changeView('timeGridDay');
+        } else if (!mobile && api.view.type === 'timeGridDay') {
+          api.changeView('timeGridWeek');
+        }
+      }
+    };
+    
+    // Initial check
+    handleResize();
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
-    <div className="bg-card text-card-foreground rounded-lg border shadow-sm p-4 h-[700px] w-full flex flex-col">
+    <div className="bg-transparent rounded-lg w-full flex flex-col" style={{ height: "calc(100vh - 220px)", minHeight: "500px" }}>
       <FullCalendar
         ref={calendarRef}
         plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-        initialView="timeGridWeek"
+        initialView={isMobile ? "timeGridDay" : "timeGridWeek"}
         headerToolbar={{
-          left: "prev,next today",
+          left: isMobile ? "prev,next" : "prev,next today",
           center: "title",
-          right: "timeGridWeek,timeGridDay",
+          right: isMobile ? "today" : "timeGridWeek,timeGridDay",
         }}
         slotMinTime="06:00:00"
         slotMaxTime="23:00:00"
@@ -49,7 +71,12 @@ export function WeeklyCalendar({
         height="100%"
         expandRows={true}
         nowIndicator={true}
-        eventClassNames={() => "cursor-pointer"}
+        eventClassNames={() => "cursor-pointer transition-transform hover:scale-[1.02] shadow-sm"}
+        titleFormat={
+          isMobile 
+            ? { month: 'short', day: 'numeric' } 
+            : { month: 'long', year: 'numeric', day: 'numeric' }
+        }
       />
     </div>
   );
