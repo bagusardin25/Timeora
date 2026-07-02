@@ -5,4 +5,4 @@ router = APIRouter()
 
 @router.get("/health")
 def health():
-    return {"status": "ok", "service": "timeora-api"}
+    return {"status": "ok", "service": "timeora-api", "auth": "jwt-v2"}
