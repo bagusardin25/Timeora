@@ -5,7 +5,7 @@ BASE_URL = "https://timeora-production.up.railway.app"
 
 
 def test_register_endpoint():
-    unique_email = f"test_{uuid.uuid4().hex[:8]}@timeora-test.app"
+    unique_email = f"register_{uuid.uuid4().hex[:12]}@timeora.app"
     resp = requests.post(
         f"{BASE_URL}/api/auth/register",
         json={"email": unique_email, "password": "TimeoraTest123!"},

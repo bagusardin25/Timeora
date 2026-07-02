@@ -28,8 +28,12 @@ async def _ensure_user_row(user_id: str, email: str) -> None:
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 async def register(body: RegisterRequest):
-    url = f"{settings.SUPABASE_URL}/auth/v1/signup"
-    payload = {"email": body.email, "password": body.password}
+    url = f"{settings.SUPABASE_URL}/auth/v1/admin/users"
+    payload = {
+        "email": body.email,
+        "password": body.password,
+        "email_confirm": True,
+    }
 
     async with httpx.AsyncClient() as client:
         resp = await client.post(url, json=payload, headers=_SUPABASE_HEADERS)
@@ -54,21 +58,27 @@ async def register(body: RegisterRequest):
         raise HTTPException(status_code=status_code, detail=detail)
 
     data = resp.json()
-    user = data.get("user") or {}
+    user = data.get("user") or data
     user_id = user.get("id")
     email = user.get("email", body.email)
 
     if user_id:
         await _ensure_user_row(user_id, email)
 
-    access_token = data.get("access_token") or (data.get("session") or {}).get(
-        "access_token"
-    )
-    if access_token:
-        return AuthResponse(access_token=access_token)
+    login_url = f"{settings.SUPABASE_URL}/auth/v1/token?grant_type=password"
+    async with httpx.AsyncClient() as client:
+        login_resp = await client.post(
+            login_url,
+            json={"email": body.email, "password": body.password},
+            headers=_SUPABASE_HEADERS,
+        )
+
+    if login_resp.status_code == 200:
+        login_data = login_resp.json()
+        return AuthResponse(access_token=login_data["access_token"])
 
     return AuthResponse(
-        message="Account created. Please check your email to confirm, then sign in."
+        message="Account created. Please sign in with your new credentials."
     )
 
 
