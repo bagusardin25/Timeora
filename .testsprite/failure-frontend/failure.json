@@ -1,0 +1,5 @@
+{
+  "rootCauseHypothesis": "TEST BLOCKED\n\nThe test could not be run — login to the application failed and the dashboard could not be reached.\n\nObservations:\n- A red 'Invalid credentials' alert is visible above the sign-in form.\n- The page remained on the login screen after clicking the 'Sign In' button (dashboard was not loaded).",
+  "recommendedFixTarget": null,
+  "evidence": []
+}

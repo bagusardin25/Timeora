@@ -33,11 +33,12 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
+      const data = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        throw new Error('Invalid credentials');
+        throw new Error(data.detail || 'Login failed (Network/CORS error)');
       }
 
-      const data = await response.json();
       localStorage.setItem('token', data.access_token);
       router.push('/');
     } catch (err: any) {

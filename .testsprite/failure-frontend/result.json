@@ -1,0 +1,18 @@
+{
+  "testId": "6577ee11-3285-4e79-9dc1-9a11e9a4fdf6",
+  "status": "blocked",
+  "startedAt": "2026-07-02T03:39:14.189Z",
+  "finishedAt": "2026-07-02T03:40:37.568Z",
+  "videoUrl": "https://testsprite-videos.s3.us-east-1.amazonaws.com/a4787478-8011-7097-f2bc-9f18d8ab2e80/1782963637314419//tmp/7118beaf-22b1-4c8b-b545-a823de8b786e/result.webm",
+  "failureAnalysisUrl": null,
+  "snapshotId": "snap_7e8ce013dea24e61",
+  "runIdIfAvailable": "cb6717fd-de87-498b-bec3-35f9d3848e80",
+  "codeVersion": "v1",
+  "targetUrl": "https://timeora-alpha.vercel.app",
+  "targetUrlSource": "run",
+  "failedStepIndex": 5,
+  "failureKind": null,
+  "verdict": "blocked",
+  "executionStatus": "completed",
+  "summary": "Blocked before a verdict could be produced: TEST BLOCKED\n\nThe test could not be run — login to the application failed and the dashboard could not be reached.\n\nObservations:\n- A red 'Invalid credentials' alert is visible above the sign-in form.\n- The page remained on the login screen after clicking the 'Sign In' button (dashboard was not loaded)."
+}
