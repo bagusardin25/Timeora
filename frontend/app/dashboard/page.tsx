@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { LogOut, Calendar as CalendarIcon, Sparkles } from "lucide-react";
+import { LogOut, Calendar as CalendarIcon, BrainCircuit } from "lucide-react";
 import { WeeklyCalendar } from "@/components/calendar/WeeklyCalendar";
 import { EventDialog, EventData, ConflictData } from "@/components/calendar/EventDialog";
 import { fetchApi, ApiError } from "@/lib/api";
@@ -161,54 +161,54 @@ export default function DashboardPage() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col relative overflow-hidden">
-      {/* Subtle Background Glows */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[300px] bg-primary/5 rounded-full blur-[100px] -z-10 pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-violet-600/5 rounded-full blur-[100px] -z-10 pointer-events-none" />
+    <div className="min-h-screen bg-[#fafbfc] dark:bg-zinc-950 flex flex-col relative overflow-hidden">
+      {/* Premium Background Glows */}
+      <div className="absolute top-0 left-1/4 w-[600px] h-[400px] bg-violet-200/40 dark:bg-violet-900/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-indigo-200/30 dark:bg-indigo-900/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
 
       {/* Header */}
-      <header className="sticky top-0 z-40 glass border-b border-zinc-200/50 dark:border-white/5 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-xl px-6 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary to-violet-500 flex items-center justify-center shadow-lg shadow-primary/20">
-            <CalendarIcon className="w-4 h-4 text-white" />
+      <header className="sticky top-0 z-40 border-b border-slate-200/60 dark:border-white/5 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-2xl px-6 py-4 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.03)] transition-all">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+            <CalendarIcon className="w-4.5 h-4.5 text-white" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-zinc-900 to-zinc-500 dark:from-white dark:to-zinc-400">Timeora</h1>
+          <h1 className="text-xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-zinc-400">Timeora</h1>
         </div>
-        <Button variant="ghost" size="sm" onClick={handleLogout} className="hover:bg-red-500/10 hover:text-red-500 transition-colors">
+        <Button variant="ghost" size="sm" onClick={handleLogout} className="hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-500 transition-colors font-medium rounded-xl">
           <LogOut className="w-4 h-4 mr-2" />
           Logout
         </Button>
       </header>
 
-      <main className="flex-1 max-w-[1400px] w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-8 z-10">
+      <main className="flex-1 max-w-[1400px] w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-10 z-10">
         <motion.div 
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="flex justify-center"
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="flex justify-center mt-4"
         >
           <div 
             onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
-            className="group relative w-full max-w-2xl rounded-2xl bg-white/60 dark:bg-zinc-900/60 p-4 cursor-text flex items-center shadow-sm hover:shadow-md transition-all duration-300 border border-zinc-200/50 dark:border-white/10 hover:border-primary/50 backdrop-blur-md overflow-hidden"
+            className="group relative w-full max-w-2xl rounded-2xl bg-white/80 dark:bg-zinc-900/80 p-4 sm:p-5 cursor-text flex items-center shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgba(124,58,237,0.08)] transition-all duration-300 border border-slate-200/60 dark:border-white/10 hover:border-violet-300/50 backdrop-blur-xl overflow-hidden hover:-translate-y-0.5"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10" />
-            <div className="p-2 bg-primary/10 rounded-xl mr-3 group-hover:scale-110 transition-transform duration-300">
-              <Sparkles className="w-5 h-5 text-primary" />
+            <div className="absolute inset-0 bg-gradient-to-r from-violet-500/0 via-violet-500/5 to-violet-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10" />
+            <div className="p-2.5 bg-violet-100 dark:bg-violet-900/30 rounded-xl mr-4 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 shadow-inner">
+              <BrainCircuit className="w-5 h-5 text-violet-600 dark:text-violet-400" />
             </div>
-            <span className="flex-1 text-left text-zinc-500 dark:text-zinc-400 text-lg">
-              Jadwalkan sesuatu dengan AI...
+            <span className="flex-1 text-left text-slate-500 dark:text-slate-400 text-lg font-medium">
+              Jadwalkan dengan AI...
             </span>
-            <kbd className="hidden sm:inline-flex h-7 items-center gap-1 rounded-md border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-zinc-800 px-2 font-mono text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
-              <span className="text-xs">⌘</span>K
+            <kbd className="hidden sm:inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-zinc-800 px-3 font-sans text-xs font-semibold text-slate-500 dark:text-slate-400 shadow-sm">
+              ⌘ K
             </kbd>
           </div>
         </motion.div>
         
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="glass rounded-2xl bg-white/40 dark:bg-zinc-900/40 p-2 sm:p-4 backdrop-blur-md border border-zinc-200/50 dark:border-white/5"
+          transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          className="rounded-3xl bg-white/70 dark:bg-zinc-900/60 p-4 sm:p-6 lg:p-8 backdrop-blur-2xl border border-slate-200/60 dark:border-white/10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] ring-1 ring-slate-100 dark:ring-white/5"
         >
           <WeeklyCalendar 
             events={events}
