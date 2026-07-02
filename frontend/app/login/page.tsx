@@ -25,7 +25,8 @@ export default function LoginPage() {
       // We will send JSON for now based on a typical FastAPI setup, or x-www-form-urlencoded if it uses OAuth2PasswordRequestForm
       // Let's check backend auth.py later, but standard is JSON or Form. 
       // Fastapi OAuth2 uses form-data:
-      const response = await fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api') + '/auth/login', {
+      const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/+$/, '');
+      const response = await fetch(baseUrl + '/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
