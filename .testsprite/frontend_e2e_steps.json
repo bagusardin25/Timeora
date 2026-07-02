@@ -1,0 +1,78 @@
+[
+  {
+    "type": "action",
+    "description": "Navigate to the URL https://timeora-alpha.vercel.app/register"
+  },
+  {
+    "type": "action",
+    "description": "Type a unique email in the format e2e-ui- followed by random digits then @timeora.app into the email field"
+  },
+  {
+    "type": "action",
+    "description": "Type 'TimeoraE2E123!' into the password field"
+  },
+  {
+    "type": "action",
+    "description": "Type 'TimeoraE2E123!' into the confirm password field"
+  },
+  {
+    "type": "action",
+    "description": "Type 'E2E Test User' into the full name field"
+  },
+  {
+    "type": "action",
+    "description": "Click the 'Sign Up' button"
+  },
+  {
+    "type": "action",
+    "description": "Wait for 5 seconds for the dashboard to load"
+  },
+  {
+    "type": "action",
+    "description": "Click the 'Logout' button in the dashboard header"
+  },
+  {
+    "type": "action",
+    "description": "Wait for 2 seconds for the login page to appear"
+  },
+  {
+    "type": "action",
+    "description": "Type the same email address used during registration into the email input field on the login page"
+  },
+  {
+    "type": "action",
+    "description": "Type 'TimeoraE2E123!' into the password input field on the login page"
+  },
+  {
+    "type": "action",
+    "description": "Click the 'Sign In' button"
+  },
+  {
+    "type": "action",
+    "description": "Wait for 3 seconds for the dashboard and weekly calendar to load"
+  },
+  {
+    "type": "action",
+    "description": "Click on a white empty cell in the weekly calendar time grid at 10:00 on a weekday column"
+  },
+  {
+    "type": "action",
+    "description": "Wait for 2 seconds for the event dialog to open"
+  },
+  {
+    "type": "action",
+    "description": "Type 'Team Standup E2E' into the title input field labeled 'Judul Event' in the event dialog"
+  },
+  {
+    "type": "action",
+    "description": "Click the 'Simpan Event' button in the event dialog"
+  },
+  {
+    "type": "action",
+    "description": "Wait for 3 seconds for the event to save"
+  },
+  {
+    "type": "assertion",
+    "description": "Verify the weekly calendar grid shows an event block containing 'Team Standup E2E' or 'Standup' in the calendar area"
+  }
+]
