@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { format, parse } from "date-fns";
+import { format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Clock, CalendarIcon, Users } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export type ConflictData = {
   message: string;
@@ -136,123 +137,171 @@ export function EventDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{formData.id ? "Edit Event" : "New Event"}</DialogTitle>
+      <DialogContent className="sm:max-w-[460px] glass border border-zinc-200/50 dark:border-white/10 bg-white/90 dark:bg-zinc-950/90 shadow-2xl backdrop-blur-2xl rounded-2xl overflow-hidden p-0 gap-0">
+        <DialogHeader className="px-6 py-5 border-b border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-black/20">
+          <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <CalendarIcon className="w-4 h-4 text-primary" />
+            </div>
+            {formData.id ? "Edit Event" : "New Event"}
+          </DialogTitle>
         </DialogHeader>
         
-        {conflictData && (
-          <div className="bg-orange-50 border border-orange-200 text-orange-800 p-4 rounded-md text-sm space-y-3">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
-              <div>
-                <strong className="block font-semibold">Jadwal Bentrok!</strong>
-                <p>Waktu ini bertabrakan dengan event: "{conflictData.conflicting_event}"</p>
+        <div className="px-6 py-5 overflow-y-auto max-h-[70vh]">
+          <AnimatePresence>
+            {conflictData && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                animate={{ opacity: 1, height: "auto", scale: 1 }}
+                exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                transition={{ duration: 0.3, type: "spring", bounce: 0.2 }}
+                className="overflow-hidden mb-5"
+              >
+                <div className="bg-orange-500/10 border border-orange-500/20 text-orange-700 dark:text-orange-400 p-4 rounded-xl text-sm space-y-3 relative overflow-hidden shadow-inner">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
+                  <div className="flex items-start gap-3">
+                    <div className="p-1.5 bg-orange-500/20 rounded-full flex-shrink-0">
+                      <AlertTriangle className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <div>
+                      <strong className="block font-semibold text-orange-800 dark:text-orange-300 mb-1">Jadwal Bentrok!</strong>
+                      <p className="opacity-90">Waktu ini bertabrakan dengan: <span className="font-medium bg-orange-500/10 px-1 py-0.5 rounded">"{conflictData.conflicting_event}"</span></p>
+                    </div>
+                  </div>
+                  
+                  {conflictData.alternatives && conflictData.alternatives.length > 0 && (
+                    <div className="pt-3 mt-1 border-t border-orange-500/20">
+                      <p className="font-medium mb-2 flex items-center gap-1.5 opacity-90">
+                        <Sparkles className="w-3.5 h-3.5" /> Saran AI (Slot Kosong):
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {conflictData.alternatives.map((alt, idx) => (
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            key={idx}
+                            onClick={() => applyAlternative(alt)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 transition-colors"
+                          >
+                            <Clock className="w-3 h-3" />
+                            {alt.start_time.substring(0, 5)} ({alt.duration_minutes}m)
+                          </motion.button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="grid gap-5">
+            <div className="grid gap-2">
+              <Label htmlFor="title" className="text-zinc-600 dark:text-zinc-400">Judul Event</Label>
+              <Input
+                id="title"
+                value={formData.title || ""}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Meeting with team"
+                className="bg-zinc-50 dark:bg-black/20 border-zinc-200 dark:border-white/10 focus-visible:ring-primary shadow-sm"
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="date" className="text-zinc-600 dark:text-zinc-400">Tanggal</Label>
+              <Input
+                id="date"
+                type="date"
+                value={formData.date || ""}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                className="bg-zinc-50 dark:bg-black/20 border-zinc-200 dark:border-white/10 focus-visible:ring-primary shadow-sm"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="startTime" className="text-zinc-600 dark:text-zinc-400">Mulai</Label>
+                <div className="relative">
+                  <Input
+                    id="startTime"
+                    type="time"
+                    value={(formData.start_time || "").substring(0, 5)}
+                    onChange={(e) => {
+                      const newStart = e.target.value;
+                      setFormData({ 
+                        ...formData, 
+                        start_time: newStart,
+                        duration_minutes: calculateDuration(newStart, endTime)
+                      });
+                    }}
+                    className="bg-zinc-50 dark:bg-black/20 border-zinc-200 dark:border-white/10 focus-visible:ring-primary shadow-sm"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="endTime" className="text-zinc-600 dark:text-zinc-400">Selesai</Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => {
+                    setEndTime(e.target.value);
+                    if (formData.start_time) {
+                      setFormData({
+                        ...formData,
+                        duration_minutes: calculateDuration(formData.start_time, e.target.value)
+                      });
+                    }
+                  }}
+                  className="bg-zinc-50 dark:bg-black/20 border-zinc-200 dark:border-white/10 focus-visible:ring-primary shadow-sm"
+                />
               </div>
             </div>
             
-            {conflictData.alternatives && conflictData.alternatives.length > 0 && (
-              <div className="pt-2 border-t border-orange-200">
-                <p className="font-medium mb-2">Saran AI (Slot Kosong):</p>
-                <div className="flex flex-wrap gap-2">
-                  {conflictData.alternatives.map((alt, idx) => (
-                    <Button
-                      key={idx}
-                      size="sm"
-                      variant="outline"
-                      className="bg-white border-orange-300 hover:bg-orange-100 text-orange-700"
-                      onClick={() => applyAlternative(alt)}
-                    >
-                      {alt.start_time.substring(0, 5)} ({alt.duration_minutes}m)
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="title">Title</Label>
-            <Input
-              id="title"
-              value={formData.title || ""}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Meeting with team"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="date">Date</Label>
-            <Input
-              id="date"
-              type="date"
-              value={formData.date || ""}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="startTime">Start Time</Label>
+              <Label htmlFor="participants" className="text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5" /> Partisipan (Opsional)
+              </Label>
               <Input
-                id="startTime"
-                type="time"
-                value={(formData.start_time || "").substring(0, 5)}
-                onChange={(e) => {
-                  const newStart = e.target.value;
-                  setFormData({ 
-                    ...formData, 
-                    start_time: newStart,
-                    duration_minutes: calculateDuration(newStart, endTime)
-                  });
-                }}
+                id="participants"
+                value={formData.participants || ""}
+                onChange={(e) => setFormData({ ...formData, participants: e.target.value })}
+                placeholder="Comma separated emails"
+                className="bg-zinc-50 dark:bg-black/20 border-zinc-200 dark:border-white/10 focus-visible:ring-primary shadow-sm"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="endTime">End Time</Label>
-              <Input
-                id="endTime"
-                type="time"
-                value={endTime}
-                onChange={(e) => {
-                  setEndTime(e.target.value);
-                  if (formData.start_time) {
-                    setFormData({
-                      ...formData,
-                      duration_minutes: calculateDuration(formData.start_time, e.target.value)
-                    });
-                  }
-                }}
-              />
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="participants">Participants (Optional)</Label>
-            <Input
-              id="participants"
-              value={formData.participants || ""}
-              onChange={(e) => setFormData({ ...formData, participants: e.target.value })}
-              placeholder="Comma separated emails"
-            />
           </div>
         </div>
-        <DialogFooter className="flex justify-between sm:justify-between w-full">
-          {formData.id ? (
-            <Button 
-              type="button" 
-              variant="destructive" 
-              onClick={() => onDelete?.(formData.id as string)}
-              disabled={isSaving}
-            >
-              Delete
-            </Button>
-          ) : <div></div>}
+        
+        <DialogFooter className="px-6 py-4 border-t border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-black/20 flex sm:justify-between w-full items-center">
+          <div>
+            {formData.id && (
+              <Button 
+                type="button" 
+                variant="destructive" 
+                onClick={() => onDelete?.(formData.id as string)}
+                disabled={isSaving}
+                className="bg-red-500/10 text-red-600 hover:bg-red-500/20 hover:text-red-700 border-none shadow-none"
+              >
+                Hapus
+              </Button>
+            )}
+          </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
-              Cancel
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving} className="border-zinc-200 dark:border-white/10 bg-transparent hover:bg-zinc-100 dark:hover:bg-white/5">
+              Batal
             </Button>
-            <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? "Saving..." : "Save Event"}
+            <Button 
+              onClick={handleSave} 
+              disabled={isSaving}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_4px_14px_0_rgba(var(--primary),0.39)] transition-all"
+            >
+              {isSaving ? (
+                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
+                  <Clock className="w-4 h-4 mr-2" />
+                </motion.div>
+              ) : null}
+              {isSaving ? "Menyimpan..." : "Simpan Event"}
             </Button>
           </div>
         </DialogFooter>

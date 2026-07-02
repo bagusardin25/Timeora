@@ -128,3 +128,91 @@
     @apply font-sans;
   }
 }
+
+/* Glassmorphism Utilities */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.dark .glass {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* FullCalendar Overrides for Sleeker Look */
+.fc {
+  --fc-border-color: rgba(150, 150, 150, 0.15);
+  --fc-daygrid-event-dot-width: 8px;
+  --fc-event-bg-color: hsl(var(--primary));
+  --fc-event-border-color: transparent;
+  --fc-today-bg-color: rgba(var(--primary), 0.05);
+}
+
+.dark .fc {
+  --fc-border-color: rgba(255, 255, 255, 0.05);
+  --fc-today-bg-color: rgba(255, 255, 255, 0.03);
+}
+
+.fc .fc-timegrid-slot {
+  height: 48px; /* taller slots */
+  border-bottom: 1px dashed var(--fc-border-color) !important;
+}
+
+.fc-theme-standard td, .fc-theme-standard th, .fc-theme-standard .fc-scrollgrid {
+  border: none !important;
+}
+
+.fc-theme-standard .fc-scrollgrid {
+  border: 1px solid var(--fc-border-color) !important;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.fc-timegrid-col-events {
+  margin: 0 4px;
+}
+
+.fc-timegrid-event {
+  border-radius: var(--radius-md) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+}
+
+.fc-timegrid-event:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+  z-index: 10 !important;
+}
+
+.fc-event-main {
+  padding: 4px 6px;
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
+}
+
+.fc-v-event .fc-event-main-frame {
+  display: flex;
+  flex-direction: column;
+}
+
+.fc-v-event .fc-event-title-container {
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: -0.01em;
+}
+
+/* Accent Color Override - Violet/Indigo Vibe */
+:root {
+  --primary: 260 100% 65%; /* Indigo/Violet */
+  --primary-foreground: 0 0% 100%;
+}
+
+.dark {
+  --primary: 260 100% 65%; 
+  --primary-foreground: 0 0% 100%;
+}
