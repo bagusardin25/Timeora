@@ -1,0 +1,5 @@
+{
+  "rootCauseHypothesis": "TEST BLOCKED\n\nThe dashboard could not be reached — sign-in failed with a network/fetch error.\n\nObservations:\n- The login page displays a red error banner reading 'Failed to fetch'.\n- Email and Password fields are present (email prefilled) and the Sign In button does not navigate to the dashboard.\n\nBecause the sign-in process failed and the dashboard was not loaded, the calendar view could not be verified.",
+  "recommendedFixTarget": null,
+  "evidence": []
+}

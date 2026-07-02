@@ -1,0 +1,44 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Phase 3 Command Bar AI Test",
+  "description": "Verify that the command bar can trigger the AI parser and open the EventDialog",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the URL https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Enter 'demo@timeora.app' into the email input field and 'TimeoraDemo123!' into the password input field"
+    },
+    {
+      "type": "action",
+      "description": "Click the 'Sign in' button"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 3 seconds for the dashboard to load"
+    },
+    {
+      "type": "action",
+      "description": "Click on the input placeholder containing 'Jadwalkan sesuatu dengan AI'"
+    },
+    {
+      "type": "action",
+      "description": "Type 'Lunch break tomorrow at 12pm for 60 minutes' into the Command Bar input field"
+    },
+    {
+      "type": "action",
+      "description": "Press the Enter key"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 5 seconds for the AI to parse the request"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify that the Event Dialog is visible and the Title input field contains 'Lunch break' or similar"
+    }
+  ]
+}

@@ -8,6 +8,8 @@ import { WeeklyCalendar } from "@/components/calendar/WeeklyCalendar";
 import { EventDialog, EventData } from "@/components/calendar/EventDialog";
 import { fetchApi } from "@/lib/api";
 import { format } from "date-fns";
+import { CommandBar } from "@/components/CommandBar";
+import { Sparkles } from "lucide-react";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -63,6 +65,11 @@ export default function DashboardPage() {
       start_time: format(clickedDate, "HH:mm:ss"),
       duration_minutes: 60,
     });
+    setIsDialogOpen(true);
+  };
+
+  const handleParsedNL = (parsedData: Partial<EventData>) => {
+    setSelectedEvent(parsedData);
     setIsDialogOpen(true);
   };
 
@@ -156,8 +163,15 @@ export default function DashboardPage() {
         </Button>
       </header>
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
-        <div className="rounded-xl border bg-white dark:bg-zinc-900 p-8 text-center text-zinc-500">
-          Command Bar Placeholder (Phase 3)
+        <div 
+          onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+          className="rounded-xl border bg-white dark:bg-zinc-900 p-4 text-zinc-500 cursor-text flex items-center hover:bg-zinc-50 transition-colors shadow-sm"
+        >
+          <Sparkles className="w-5 h-5 mr-3 text-primary" />
+          <span className="flex-1 text-left">Jadwalkan sesuatu dengan AI... (ketik "meeting besok jam 2")</span>
+          <kbd className="hidden sm:inline-flex h-6 items-center gap-1 rounded border bg-muted px-2 font-mono text-[11px] font-medium text-muted-foreground opacity-100">
+            <span className="text-xs">⌘</span>K
+          </kbd>
         </div>
         
         <WeeklyCalendar 
@@ -177,6 +191,7 @@ export default function DashboardPage() {
         onDelete={handleDeleteEvent}
         isSaving={isSaving}
       />
+      <CommandBar onParsed={handleParsedNL} />
     </div>
   );
 }

@@ -25,3 +25,10 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
 
   return response.json();
 }
+
+export async function parseEventNL(text: string) {
+  return fetchApi('/parse', {
+    method: 'POST',
+    body: JSON.stringify({ text }),
+  });
+}
