@@ -1,0 +1,18 @@
+{
+  "testId": "c5e8a050-3046-4b67-b8f9-20fde0374130",
+  "status": "failed",
+  "startedAt": "2026-07-02T04:46:50.036Z",
+  "finishedAt": "2026-07-02T04:50:41.336Z",
+  "videoUrl": "https://testsprite-videos.s3.us-east-1.amazonaws.com/a4787478-8011-7097-f2bc-9f18d8ab2e80/1782967839104626//tmp/5a4bb81f-a6ba-40ac-b191-7b760f1a97d1/result.webm",
+  "failureAnalysisUrl": null,
+  "snapshotId": "snap_fbb153aed620ef16",
+  "runIdIfAvailable": "2edfe021-26cb-4d43-8f69-1fb58d0c0629",
+  "codeVersion": "v1",
+  "targetUrl": "https://timeora-alpha.vercel.app",
+  "targetUrlSource": "run",
+  "failedStepIndex": 5,
+  "failureKind": "unknown",
+  "verdict": "failed",
+  "executionStatus": "completed",
+  "summary": "Failed: TEST FAILURE\n\nThe command bar feature could not be exercised — the UI does not expose an interactive command input to trigger the AI parser.\n\nObservations:\n- After signing in, the page displays the text 'Command Bar Placeholder (Phase 3)' but no interactive command input is present.\n- Searching the page returned zero input, textarea, combobox, or contenteditable elements, and pressing '/' did not reveal an input.\n- Because the command-input cannot be opened or found, the AI parsing flow…"
+}

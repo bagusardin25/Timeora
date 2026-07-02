@@ -1,0 +1,84 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Phase 4 Conflict UI Test",
+  "description": "Verify that creating a conflicting event shows the AI suggestion UI and allows resolving it",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the URL https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Enter 'demo@timeora.app' into the email input field and 'TimeoraDemo123!' into the password input field"
+    },
+    {
+      "type": "action",
+      "description": "Click the 'Sign in' button"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 3 seconds for the dashboard to load"
+    },
+    {
+      "type": "action",
+      "description": "Click on the input placeholder containing 'Jadwalkan sesuatu dengan AI'"
+    },
+    {
+      "type": "action",
+      "description": "Type 'Meeting A tomorrow at 12pm' into the Command Bar input field"
+    },
+    {
+      "type": "action",
+      "description": "Press the Enter key"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 5 seconds for the AI to parse the request and the Event Dialog to appear"
+    },
+    {
+      "type": "action",
+      "description": "Click the 'Save Event' button to save Meeting A"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 2 seconds"
+    },
+    {
+      "type": "action",
+      "description": "Click on the input placeholder containing 'Jadwalkan sesuatu dengan AI' again"
+    },
+    {
+      "type": "action",
+      "description": "Type 'Meeting B tomorrow at 12pm' into the Command Bar input field"
+    },
+    {
+      "type": "action",
+      "description": "Press the Enter key"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 5 seconds for the AI to parse the request and the Event Dialog to appear"
+    },
+    {
+      "type": "action",
+      "description": "Click the 'Save Event' button to save Meeting B"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 2 seconds"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify that the warning text 'Jadwal Bentrok!' is visible on the screen"
+    },
+    {
+      "type": "action",
+      "description": "Click on the first button under 'Saran AI (Slot Kosong)'"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify that the warning text 'Jadwal Bentrok!' disappears and the Start Time input has changed"
+    }
+  ]
+}

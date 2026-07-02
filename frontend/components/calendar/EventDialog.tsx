@@ -12,6 +12,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AlertTriangle } from "lucide-react";
+
+export type ConflictData = {
+  message: string;
+  conflicting_event: string;
+  alternatives: Array<{ start_time: string; duration_minutes: number }>;
+};
 
 export type EventData = {
   id?: string;
@@ -29,6 +36,8 @@ interface EventDialogProps {
   onSave: (data: EventData) => void;
   onDelete?: (id: string) => void;
   isSaving?: boolean;
+  conflictData?: ConflictData | null;
+  onClearConflict?: () => void;
 }
 
 export function EventDialog({
@@ -38,6 +47,8 @@ export function EventDialog({
   onSave,
   onDelete,
   isSaving,
+  conflictData,
+  onClearConflict,
 }: EventDialogProps) {
   const [formData, setFormData] = useState<Partial<EventData>>({});
   const [endTime, setEndTime] = useState("");
@@ -66,6 +77,7 @@ export function EventDialog({
       } else {
          setEndTime("10:00");
       }
+      if (onClearConflict) onClearConflict();
     }
   }, [open, initialData]);
 
@@ -101,12 +113,65 @@ export function EventDialog({
     });
   };
 
+  const applyAlternative = (alt: { start_time: string; duration_minutes: number }) => {
+    const newStart = alt.start_time;
+    setFormData({
+      ...formData,
+      start_time: newStart,
+      duration_minutes: alt.duration_minutes,
+    });
+    
+    try {
+      const [hours, minutes] = newStart.split(":");
+      const d = new Date();
+      d.setHours(parseInt(hours, 10));
+      d.setMinutes(parseInt(minutes, 10));
+      d.setSeconds(0);
+      d.setMinutes(d.getMinutes() + alt.duration_minutes);
+      setEndTime(format(d, "HH:mm"));
+    } catch(e) {}
+    
+    if (onClearConflict) onClearConflict();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{formData.id ? "Edit Event" : "New Event"}</DialogTitle>
         </DialogHeader>
+        
+        {conflictData && (
+          <div className="bg-orange-50 border border-orange-200 text-orange-800 p-4 rounded-md text-sm space-y-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <strong className="block font-semibold">Jadwal Bentrok!</strong>
+                <p>Waktu ini bertabrakan dengan event: "{conflictData.conflicting_event}"</p>
+              </div>
+            </div>
+            
+            {conflictData.alternatives && conflictData.alternatives.length > 0 && (
+              <div className="pt-2 border-t border-orange-200">
+                <p className="font-medium mb-2">Saran AI (Slot Kosong):</p>
+                <div className="flex flex-wrap gap-2">
+                  {conflictData.alternatives.map((alt, idx) => (
+                    <Button
+                      key={idx}
+                      size="sm"
+                      variant="outline"
+                      className="bg-white border-orange-300 hover:bg-orange-100 text-orange-700"
+                      onClick={() => applyAlternative(alt)}
+                    >
+                      {alt.start_time.substring(0, 5)} ({alt.duration_minutes}m)
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="title">Title</Label>

@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { WeeklyCalendar } from "@/components/calendar/WeeklyCalendar";
-import { EventDialog, EventData } from "@/components/calendar/EventDialog";
-import { fetchApi } from "@/lib/api";
+import { EventDialog, EventData, ConflictData } from "@/components/calendar/EventDialog";
+import { fetchApi, ApiError } from "@/lib/api";
 import { format } from "date-fns";
 import { CommandBar } from "@/components/CommandBar";
 import { Sparkles } from "lucide-react";
@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Partial<EventData> | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [conflictData, setConflictData] = useState<ConflictData | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -65,11 +66,13 @@ export default function DashboardPage() {
       start_time: format(clickedDate, "HH:mm:ss"),
       duration_minutes: 60,
     });
+    setConflictData(null);
     setIsDialogOpen(true);
   };
 
   const handleParsedNL = (parsedData: Partial<EventData>) => {
     setSelectedEvent(parsedData);
+    setConflictData(null);
     setIsDialogOpen(true);
   };
 
@@ -83,6 +86,7 @@ export default function DashboardPage() {
       duration_minutes: event.extendedProps.duration_minutes,
       participants: event.extendedProps.participants,
     });
+    setConflictData(null);
     setIsDialogOpen(true);
   };
 
@@ -126,10 +130,15 @@ export default function DashboardPage() {
           body: JSON.stringify(data),
         });
       }
+      setConflictData(null);
       setIsDialogOpen(false);
       loadEvents();
     } catch (err: any) {
-      alert(err.message || "Failed to save event");
+      if (err instanceof ApiError && err.status === 409) {
+        setConflictData(err.data.detail);
+      } else {
+        alert(err.message || "Failed to save event");
+      }
     } finally {
       setIsSaving(false);
     }
@@ -185,11 +194,16 @@ export default function DashboardPage() {
 
       <EventDialog
         open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
+        onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) setConflictData(null);
+        }}
         initialData={selectedEvent}
         onSave={handleSaveEvent}
         onDelete={handleDeleteEvent}
         isSaving={isSaving}
+        conflictData={conflictData}
+        onClearConflict={() => setConflictData(null)}
       />
       <CommandBar onParsed={handleParsedNL} />
     </div>
