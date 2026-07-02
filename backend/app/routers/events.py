@@ -68,7 +68,6 @@ async def _generate_alternatives(
     return slots
 
 
-@router.get("", response_model=list[EventResponse])
 def _require_pool():
     pool = get_pool()
     if pool is None:
@@ -79,6 +78,7 @@ def _require_pool():
     return pool
 
 
+@router.get("", response_model=list[EventResponse])
 async def list_events(user: dict = Depends(get_current_user)):
     pool = _require_pool()
     async with pool.acquire() as conn:

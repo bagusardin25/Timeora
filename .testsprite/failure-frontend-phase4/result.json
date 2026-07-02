@@ -1,0 +1,18 @@
+{
+  "testId": "83ca4324-99b8-41b9-9a4f-8a3af92440d8",
+  "status": "blocked",
+  "startedAt": "2026-07-02T05:05:58.916Z",
+  "finishedAt": "2026-07-02T05:08:38.117Z",
+  "videoUrl": "https://testsprite-videos.s3.us-east-1.amazonaws.com/a4787478-8011-7097-f2bc-9f18d8ab2e80/1782968917773688//tmp/3f1c7899-995a-4dcc-bf49-f87be3e6ea21/result.webm",
+  "failureAnalysisUrl": null,
+  "snapshotId": "snap_f9a909254d88876c",
+  "runIdIfAvailable": "91b0ba95-1aa9-494f-9b93-382963f0f6f1",
+  "codeVersion": "v1",
+  "targetUrl": "https://timeora-alpha.vercel.app",
+  "targetUrlSource": "run",
+  "failedStepIndex": 7,
+  "failureKind": null,
+  "verdict": "blocked",
+  "executionStatus": "completed",
+  "summary": "Blocked before a verdict could be produced: TEST BLOCKED\n\nThe AI scheduling flow cannot be completed because the event dialog shows an authentication/token error that prevents creating events and therefore prevents exercising the conflict-suggestion UI.\n\nObservations:\n- The event dialog titled 'Meeting A tomorrow at 12pm' is visible.\n- A red error message 'Invalid or expired token' is shown in the dialog, preventing progress."
+}

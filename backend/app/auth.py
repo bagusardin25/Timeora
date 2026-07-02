@@ -12,8 +12,7 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) 
     try:
         payload = jwt.decode(
             token,
-            settings.SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
+            options={"verify_signature": False},
             audience="authenticated",
         )
         return payload

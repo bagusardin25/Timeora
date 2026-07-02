@@ -1,0 +1,5 @@
+{
+  "rootCauseHypothesis": "TEST BLOCKED\n\nThe AI scheduling flow cannot be completed because the event dialog shows an authentication/token error that prevents creating events and therefore prevents exercising the conflict-suggestion UI.\n\nObservations:\n- The event dialog titled 'Meeting A tomorrow at 12pm' is visible.\n- A red error message 'Invalid or expired token' is shown in the dialog, preventing progress.",
+  "recommendedFixTarget": null,
+  "evidence": []
+}
