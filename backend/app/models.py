@@ -63,6 +63,17 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class RegisterRequest(BaseModel):
+    email: str
+    password: str = Field(..., min_length=6)
+
+
+class AuthResponse(BaseModel):
+    access_token: str | None = None
+    token_type: str = "bearer"
+    message: str | None = None
+
+
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
