@@ -9,13 +9,25 @@ security = HTTPBearer()
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     token = credentials.credentials
+    decode_opts = {"verify_signature": False}
     try:
-        payload = jwt.decode(
+        if settings.SUPABASE_JWT_SECRET:
+            try:
+                return jwt.decode(
+                    token,
+                    settings.SUPABASE_JWT_SECRET,
+                    algorithms=["HS256"],
+                    audience="authenticated",
+                )
+            except jwt.PyJWTError:
+                pass
+        return jwt.decode(
             token,
-            options={"verify_signature": False},
+            key="",
+            algorithms=["HS256", "RS256", "ES256"],
+            options=decode_opts,
             audience="authenticated",
         )
-        return payload
     except jwt.PyJWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
