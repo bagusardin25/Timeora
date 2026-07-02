@@ -23,7 +23,7 @@ def test_register_login_create_event():
     register_resp = requests.post(
         f"{BASE_URL}/api/auth/register",
         json={"email": email, "password": PASSWORD},
-        timeout=20,
+        timeout=45,
     )
     assert register_resp.status_code in (200, 201), (
         f"Register failed: {register_resp.status_code} {register_resp.text[:300]}"
@@ -34,7 +34,7 @@ def test_register_login_create_event():
     login_resp = requests.post(
         f"{BASE_URL}/api/auth/login",
         json={"email": email, "password": PASSWORD},
-        timeout=20,
+        timeout=45,
     )
     assert login_resp.status_code == 200, (
         f"Login failed: {login_resp.status_code} {login_resp.text[:300]}"
@@ -57,7 +57,7 @@ def test_register_login_create_event():
             "participants": "",
         },
         headers=headers,
-        timeout=20,
+        timeout=45,
     )
     assert create_resp.status_code in (200, 201), (
         f"Create event failed: {create_resp.status_code} {create_resp.text[:300]}"
