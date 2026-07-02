@@ -1,0 +1,20 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Register page UI render",
+  "description": "Verify the register page loads with the sign-up form and link back to login",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to the URL https://timeora-alpha.vercel.app/register"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the register page shows the heading 'Create Account' and input fields for email and password are visible in the sign-up form card"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the page shows a 'Sign in' link for users who already have an account"
+    }
+  ]
+}
