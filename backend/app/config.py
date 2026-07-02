@@ -5,6 +5,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/timeora"
+    SUPABASE_DB_PASSWORD: str = ""
+    SUPABASE_DB_REGION: str = ""
 
     SUPABASE_URL: str = ""
     SUPABASE_JWT_SECRET: str = ""
