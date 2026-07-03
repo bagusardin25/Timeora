@@ -50,7 +50,7 @@ export default function RegisterPage() {
 
       if (data.access_token) {
         localStorage.setItem('token', data.access_token);
-        router.push('/');
+        router.push('/dashboard');
       } else {
         setSuccess('Account created! Redirecting to login...');
         setTimeout(() => {

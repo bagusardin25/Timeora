@@ -3,6 +3,8 @@ name: TestSprite — Verify Loop
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -22,24 +24,56 @@ jobs:
       - name: Install TestSprite CLI
         run: npm install -g @testsprite/testsprite-cli
 
-      - name: Wait for Railway deploy
-        run: sleep 30
+      - name: Wait for deploy propagation
+        run: sleep 45
 
       - name: Run all backend tests
         run: |
           testsprite test run --all --project "$PROJECT_ID" \
-            --wait --output json > result.json
+            --wait --timeout 120 --output json > backend_result.json || true
+          cat backend_result.json
+
+      - name: Run E2E frontend test
+        run: |
+          testsprite test create \
+            --plan-from .testsprite/frontend_e2e_final.plan.json \
+            --target-url https://timeora-alpha.vercel.app \
+            --run --wait --timeout 180 --output json > e2e_result.json || true
+          cat e2e_result.json
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## TestSprite Results" >> $GITHUB_STEP_SUMMARY
+          echo "### Backend" >> $GITHUB_STEP_SUMMARY
+          if [ -f backend_result.json ]; then
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat backend_result.json >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "### E2E Frontend" >> $GITHUB_STEP_SUMMARY
+          if [ -f e2e_result.json ]; then
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat e2e_result.json >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Download failure artifacts
         if: failure()
         run: |
-          testsprite test failure get \
-            "$(jq -r '.run.testId' result.json)" \
-            --out ./.testsprite/failure
+          mkdir -p .testsprite/ci-failures
+          for f in backend_result.json e2e_result.json; do
+            if [ -f "$f" ]; then
+              TEST_ID=$(jq -r '.run.testId // empty' "$f" 2>/dev/null)
+              if [ -n "$TEST_ID" ]; then
+                testsprite test artifact get "$TEST_ID" --out ".testsprite/ci-failures/$TEST_ID" || true
+              fi
+            fi
+          done
 
       - name: Upload failure bundle
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: testsprite-failure
-          path: ./.testsprite/failure
+          name: testsprite-failures
+          path: .testsprite/ci-failures

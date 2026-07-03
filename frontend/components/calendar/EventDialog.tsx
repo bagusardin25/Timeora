@@ -218,7 +218,7 @@ export function EventDialog({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="startTime" className="text-zinc-600 dark:text-zinc-400">Mulai</Label>
                 <div className="relative">
@@ -273,7 +273,7 @@ export function EventDialog({
           </div>
         </div>
         
-        <DialogFooter className="px-6 py-4 border-t border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-black/20 flex sm:justify-between w-full items-center">
+        <DialogFooter className="m-0 rounded-b-2xl px-6 py-4 border-t border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-black/20 flex sm:justify-between w-full items-center">
           <div>
             {formData.id && (
               <Button 
@@ -287,14 +287,19 @@ export function EventDialog({
               </Button>
             )}
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving} className="border-zinc-200 dark:border-white/10 bg-transparent hover:bg-zinc-100 dark:hover:bg-white/5">
+          <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => onOpenChange(false)} 
+              disabled={isSaving} 
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 border-transparent dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300 shadow-sm transition-all font-medium rounded-xl px-5"
+            >
               Batal
             </Button>
             <Button 
               onClick={handleSave} 
               disabled={isSaving}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_4px_14px_0_rgba(var(--primary),0.39)] transition-all"
+              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all font-semibold rounded-xl px-6"
             >
               {isSaving ? (
                 <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
