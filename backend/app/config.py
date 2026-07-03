@@ -13,7 +13,9 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_ROLE_KEY: str = ""
 
     OPENROUTE_API_KEY: str = ""
+    OPENROUTER_MODEL: str = "google/gemma-4-31b-it:free"
     OPENAI_API_KEY: str = ""
+    OPENAI_MODEL: str = "gpt-4o-mini"
 
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
 
