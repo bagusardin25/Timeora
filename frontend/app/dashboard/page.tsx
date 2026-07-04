@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut, Calendar as CalendarIcon, BrainCircuit } from "lucide-react";
 import { WeeklyCalendar } from "@/components/calendar/WeeklyCalendar";
 import { EventDialog, EventData, ConflictData } from "@/components/calendar/EventDialog";
-import { fetchApi, ApiError } from "@/lib/api";
+import { fetchApi, ApiError, AssistantResult } from "@/lib/api";
 import { format } from "date-fns";
 import { CommandBar } from "@/components/CommandBar";
 import { motion } from "framer-motion";
@@ -19,6 +19,7 @@ export default function DashboardPage() {
   const [selectedEvent, setSelectedEvent] = useState<Partial<EventData> | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [conflictData, setConflictData] = useState<ConflictData | null>(null);
+  const [assistantToast, setAssistantToast] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -69,10 +70,30 @@ export default function DashboardPage() {
     setIsDialogOpen(true);
   };
 
-  const handleParsedNL = (parsedData: Partial<EventData>) => {
+  const handleParsedNL = (
+    parsedData: Partial<EventData>,
+    meta?: { source?: string; warnings?: string[] }
+  ) => {
     setSelectedEvent(parsedData);
     setConflictData(null);
+    setAssistantToast(
+      meta?.source === "fallback"
+        ? "Parsed offline — please verify date and time before saving."
+        : null
+    );
     setIsDialogOpen(true);
+  };
+
+  const handleAssistant = (result: AssistantResult) => {
+    setAssistantToast(result.message);
+    if (result.intent === "find_slot" && Array.isArray(result.result) && result.result.length > 0) {
+      const first = result.result[0] as { start_time?: string; reason?: string };
+      if (first.start_time) {
+        setAssistantToast(
+          `${result.message} First slot: ${first.start_time}${first.reason ? ` — ${first.reason}` : ""}`
+        );
+      }
+    }
   };
 
   const handleEventClick = (arg: any) => {
@@ -181,6 +202,15 @@ export default function DashboardPage() {
       </header>
 
       <main className="flex-1 max-w-[1400px] w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-10 z-10">
+        {assistantToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl border border-violet-200/60 dark:border-violet-900/40 bg-violet-50/80 dark:bg-violet-950/30 px-4 py-3 text-sm text-violet-800 dark:text-violet-200"
+          >
+            {assistantToast}
+          </motion.div>
+        )}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -233,7 +263,7 @@ export default function DashboardPage() {
         conflictData={conflictData}
         onClearConflict={() => setConflictData(null)}
       />
-      <CommandBar onParsed={handleParsedNL} />
+      <CommandBar onParsed={handleParsedNL} onAssistant={handleAssistant} />
     </div>
   );
 }

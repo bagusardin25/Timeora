@@ -41,8 +41,32 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
   return response.json();
 }
 
-export async function parseEventNL(text: string) {
+export type ParseResult = {
+  intent?: string;
+  title: string;
+  date: string;
+  start_time: string;
+  duration_minutes: number;
+  participants?: string;
+  source?: 'ai' | 'fallback';
+  warnings?: string[];
+};
+
+export type AssistantResult = {
+  intent: string;
+  result: unknown;
+  message: string;
+};
+
+export async function parseEventNL(text: string): Promise<ParseResult> {
   return fetchApi('/parse', {
+    method: 'POST',
+    body: JSON.stringify({ text }),
+  });
+}
+
+export async function callAssistant(text: string): Promise<AssistantResult> {
+  return fetchApi('/assistant', {
     method: 'POST',
     body: JSON.stringify({ text }),
   });
