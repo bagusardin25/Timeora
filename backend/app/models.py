@@ -18,6 +18,7 @@ class EventUpdate(BaseModel):
     start_time: Time | None = None
     duration_minutes: int | None = Field(None, ge=5, le=1440)
     participants: str | None = None
+    recurrence_rule: str | None = None
 
 
 class EventResponse(BaseModel):
