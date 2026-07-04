@@ -30,15 +30,15 @@
     },
     {
       "type": "action",
-      "description": "Click the Export .ics button in the dashboard header"
+      "description": "Click the header toolbar button whose visible label text is exactly Export .ics located in the top sticky header bar beside the Logout button"
     },
     {
       "type": "action",
-      "description": "Wait for 3 seconds for the download to start"
+      "description": "Wait for 3 seconds for the export to complete"
     },
     {
       "type": "assertion",
-      "description": "Verify a calendar file download was triggered or the browser received an ICS calendar response containing VCALENDAR content"
+      "description": "Verify the dashboard shows a success banner message confirming the calendar was exported and timeora.ics was downloaded"
     }
   ]
 }

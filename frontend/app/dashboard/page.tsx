@@ -85,6 +85,7 @@ export default function DashboardPage() {
       a.download = "timeora.ics";
       a.click();
       URL.revokeObjectURL(url);
+      setAssistantToast("Calendar exported — timeora.ics downloaded.");
     } catch (err: any) {
       alert(err.message || "Failed to export calendar");
     } finally {
