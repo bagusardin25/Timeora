@@ -374,12 +374,11 @@ def parse(text: str, today: date | None = None) -> dict[str, Any]:
     # 2. Recurrence
     recurrence, remaining = _parse_recurrence(remaining)
 
-    # 3. Date
+    # 3. Date — only default to today for create; cancel/reschedule match by title alone
     parsed_date, remaining = _parse_date(remaining, today)
-    if parsed_date is None:
+    if parsed_date is None and intent == "create":
         parsed_date = today
-        if intent == "create":
-            warnings.append("No date found — defaulting to today")
+        warnings.append("No date found — defaulting to today")
 
     # 4. Time
     parsed_time, remaining = _parse_time(remaining)
@@ -399,19 +398,27 @@ def parse(text: str, today: date | None = None) -> dict[str, Any]:
     title = _extract_title(remaining)
 
     # 7. Compute ISO datetimes for convenience
-    start_dt = datetime.combine(parsed_date, parsed_time)
-    end_dt = start_dt + timedelta(minutes=duration)
+    if parsed_date is not None:
+        start_dt = datetime.combine(parsed_date, parsed_time)
+        end_dt = start_dt + timedelta(minutes=duration)
+        start_at = start_dt.isoformat()
+        end_at = end_dt.isoformat()
+        date_value: str | None = parsed_date.isoformat()
+    else:
+        start_at = None
+        end_at = None
+        date_value = None
 
     return {
         "intent": intent,
         "title": title,
-        "date": parsed_date.isoformat(),
+        "date": date_value,
         "start_time": parsed_time.strftime("%H:%M"),
         "duration_minutes": duration,
         "recurrence": recurrence,
         "participants": "",
         "warnings": warnings,
         "source": "fallback",
-        "start_at": start_dt.isoformat(),
-        "end_at": end_dt.isoformat(),
+        "start_at": start_at,
+        "end_at": end_at,
     }

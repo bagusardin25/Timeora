@@ -2,7 +2,7 @@
   "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
   "type": "frontend",
   "name": "Tier 3 assistant confirm cancels event on dashboard",
-  "description": "User creates an event, asks the assistant to cancel it via Command Bar, confirms the amber banner, and the event disappears from the weekly calendar",
+  "description": "User schedules Tier3CancelTarget via Command Bar, cancels it through assistant confirm banner, and sees a cancellation success or undo message on the dashboard",
   "planSteps": [
     {
       "type": "action",
@@ -30,11 +30,19 @@
     },
     {
       "type": "action",
-      "description": "Click an empty time slot on the weekly calendar to open the new event dialog"
+      "description": "Press Control+K or Meta+K to open the Command Bar"
     },
     {
       "type": "action",
-      "description": "Type Tier3 Assistant Cancel Event into the event title field"
+      "description": "Type Jadwalkan Tier3CancelTarget besok jam 10 pagi selama 1 jam into the Command Bar input"
+    },
+    {
+      "type": "action",
+      "description": "Press Enter"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 3 seconds for the new event dialog to open"
     },
     {
       "type": "action",
@@ -42,35 +50,35 @@
     },
     {
       "type": "action",
-      "description": "Wait for 3 seconds for the event to appear on the calendar"
+      "description": "Wait for 4 seconds for the calendar to refresh"
     },
     {
       "type": "action",
-      "description": "Press Ctrl+K or Cmd+K to open the Command Bar"
+      "description": "Press Control+K or Meta+K to open the Command Bar again"
     },
     {
       "type": "action",
-      "description": "Type cancel Tier3 Assistant Cancel Event into the Command Bar input"
+      "description": "Type cancel Tier3CancelTarget into the Command Bar input"
     },
     {
       "type": "action",
-      "description": "Press Enter to submit the assistant command"
+      "description": "Press Enter"
     },
     {
       "type": "action",
-      "description": "Wait for 3 seconds for the assistant confirmation banner to appear on the dashboard"
+      "description": "Wait for 3 seconds for the amber assistant confirmation banner above the calendar"
     },
     {
       "type": "action",
-      "description": "Click the Confirm button in the amber assistant confirmation banner above the calendar"
+      "description": "Click the Confirm button in the amber assistant confirmation banner"
     },
     {
       "type": "action",
-      "description": "Wait for 3 seconds for the calendar to refresh"
+      "description": "Wait for 3 seconds for the dashboard to update"
     },
     {
       "type": "assertion",
-      "description": "Verify the weekly calendar no longer shows Tier3 Assistant Cancel Event after confirming the assistant cancel"
+      "description": "Verify the dashboard message area above the calendar shows an event cancelled success message or an undo banner for the deleted event"
     }
   ]
 }
