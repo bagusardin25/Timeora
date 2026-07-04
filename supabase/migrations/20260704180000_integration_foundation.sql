@@ -1,12 +1,4 @@
--- Timeora database schema
--- Run this in Supabase SQL Editor
-
--- Users table (auto-synced saat login lewat auth.py)
-CREATE TABLE IF NOT EXISTS users (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email       TEXT UNIQUE NOT NULL,
-    created_at  TIMESTAMPTZ DEFAULT NOW()
-);
+-- Timeora integration foundation.
 
 DO $$
 BEGIN
@@ -16,27 +8,10 @@ EXCEPTION
 END
 $$;
 
--- Events table
-CREATE TABLE IF NOT EXISTS events (
-    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id           UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    title             TEXT NOT NULL,
-    date              DATE NOT NULL,
-    start_time        TIME NOT NULL,
-    duration_minutes  INTEGER NOT NULL CHECK (duration_minutes >= 5 AND duration_minutes <= 1440),
-    participants      TEXT DEFAULT '',
-    recurrence_rule   TEXT DEFAULT NULL,
-    category          TEXT DEFAULT NULL,
-    deleted_at        TIMESTAMPTZ DEFAULT NULL,
-    external_ids      JSONB NOT NULL DEFAULT '{}'::jsonb,
-    sync_status       event_sync_status NOT NULL DEFAULT 'not_synced',
-    last_synced_at    TIMESTAMPTZ DEFAULT NULL,
-    created_at        TIMESTAMPTZ DEFAULT NOW(),
-    updated_at        TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_events_user_date ON events(user_id, date);
-CREATE INDEX IF NOT EXISTS idx_events_external_ids ON events USING GIN (external_ids);
+ALTER TABLE events
+    ADD COLUMN IF NOT EXISTS external_ids JSONB NOT NULL DEFAULT '{}'::jsonb,
+    ADD COLUMN IF NOT EXISTS sync_status event_sync_status NOT NULL DEFAULT 'not_synced',
+    ADD COLUMN IF NOT EXISTS last_synced_at TIMESTAMPTZ DEFAULT NULL;
 
 CREATE TABLE IF NOT EXISTS integrations (
     id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -73,6 +48,7 @@ CREATE TABLE IF NOT EXISTS sync_logs (
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS idx_events_external_ids ON events USING GIN (external_ids);
 CREATE INDEX IF NOT EXISTS idx_integrations_user ON integrations (user_id);
 CREATE INDEX IF NOT EXISTS idx_webhooks_user_active
     ON webhook_subscriptions (user_id, active);
@@ -82,18 +58,3 @@ CREATE INDEX IF NOT EXISTS idx_sync_logs_user_created
 ALTER TABLE integrations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE webhook_subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sync_logs ENABLE ROW LEVEL SECURITY;
-
--- Auto-update updated_at trigger
-CREATE OR REPLACE FUNCTION update_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS events_updated_at ON events;
-CREATE TRIGGER events_updated_at
-    BEFORE UPDATE ON events
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at();
