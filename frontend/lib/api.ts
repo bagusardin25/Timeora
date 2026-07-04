@@ -122,6 +122,12 @@ export async function executeAssistant(params: AssistantExecuteParams): Promise<
   });
 }
 
+export type InsightAction = {
+  type: 'block_focus_time' | 'spread_load';
+  label: string;
+  description: string;
+};
+
 export type WeeklyInsight = {
   hours_per_day: Record<string, number>;
   total_hours: number;
@@ -133,11 +139,34 @@ export type WeeklyInsight = {
   }>;
   fragmentation_score: number;
   suggestion: string;
+  actions?: InsightAction[];
+};
+
+export type InsightActionResult = {
+  action_type: string;
+  message: string;
+  event?: {
+    id: string;
+    title: string;
+    date: string;
+    start_time: string;
+    duration_minutes: number;
+  };
 };
 
 export async function fetchWeeklyInsights(refDate?: string): Promise<WeeklyInsight> {
   const qs = refDate ? `?date=${refDate}` : '';
   return fetchApi(`/analytics/week${qs}`);
+}
+
+export async function applyBlockFocusTime(refDate?: string): Promise<InsightActionResult> {
+  const qs = refDate ? `?date=${refDate}` : '';
+  return fetchApi(`/analytics/actions/block-focus${qs}`, { method: 'POST' });
+}
+
+export async function applySpreadLoad(refDate?: string): Promise<InsightActionResult> {
+  const qs = refDate ? `?date=${refDate}` : '';
+  return fetchApi(`/analytics/actions/spread-load${qs}`, { method: 'POST' });
 }
 
 export async function restoreEvent(eventId: string) {

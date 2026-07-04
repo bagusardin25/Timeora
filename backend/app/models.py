@@ -125,6 +125,12 @@ class AssistantResponse(BaseModel):
     executed: bool = False
 
 
+class InsightAction(BaseModel):
+    type: str
+    label: str
+    description: str
+
+
 class WeeklyInsight(BaseModel):
     """Weekly analytics summary."""
     hours_per_day: dict[str, float]
@@ -132,3 +138,10 @@ class WeeklyInsight(BaseModel):
     deep_work_blocks: list[dict]
     fragmentation_score: float
     suggestion: str
+    actions: list[InsightAction] = []
+
+
+class InsightActionResponse(BaseModel):
+    action_type: str
+    message: str
+    event: EventResponse | None = None

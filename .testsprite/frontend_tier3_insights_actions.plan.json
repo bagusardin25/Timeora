@@ -1,0 +1,56 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Tier 3 insights block focus time creates calendar event",
+  "description": "Logged-in user opens the Weekly Insights sidebar and clicks Block focus time to add a Focus Block event that appears on the weekly calendar",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type a unique email using tier3-insights- plus random digits then @timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraE2E123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click the Sign In button"
+    },
+    {
+      "type": "action",
+      "description": "If login fails because account does not exist, navigate to the register page, create the same account, then return to login and sign in"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 5 seconds for the dashboard weekly calendar and Weekly Insights sidebar to load"
+    },
+    {
+      "type": "action",
+      "description": "Scroll to the Weekly Insights panel on the right side of the dashboard"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 3 seconds for the Quick actions section to appear in the Weekly Insights panel"
+    },
+    {
+      "type": "action",
+      "description": "Click the Block focus time button in the Quick actions section of the Weekly Insights panel"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 4 seconds for the calendar and insights panel to refresh"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the Weekly Insights panel shows a green success message about a focus block being added"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the weekly calendar shows a Focus Block event after applying the insight action"
+    }
+  ]
+}

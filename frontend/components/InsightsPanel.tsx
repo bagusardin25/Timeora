@@ -1,35 +1,66 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { BarChart3, Brain, Clock, Lightbulb, Loader2 } from "lucide-react";
-import { fetchWeeklyInsights, WeeklyInsight } from "@/lib/api";
+import { useCallback, useEffect, useState } from "react";
+import { BarChart3, Brain, Clock, Lightbulb, Loader2, Sparkles } from "lucide-react";
+import {
+  applyBlockFocusTime,
+  applySpreadLoad,
+  fetchWeeklyInsights,
+  InsightAction,
+  WeeklyInsight,
+} from "@/lib/api";
+import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
 const DAY_ORDER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-export function InsightsPanel() {
+interface InsightsPanelProps {
+  refreshKey?: number;
+  onActionApplied?: (message: string) => void;
+}
+
+export function InsightsPanel({ refreshKey = 0, onActionApplied }: InsightsPanelProps) {
   const [insights, setInsights] = useState<WeeklyInsight | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [applying, setApplying] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+
+  const loadInsights = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchWeeklyInsights();
+      setInsights(data);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load insights");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await fetchWeeklyInsights();
-        if (!cancelled) setInsights(data);
-      } catch (err: unknown) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load insights");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    loadInsights();
+  }, [loadInsights, refreshKey]);
+
+  const handleAction = async (action: InsightAction) => {
+    setApplying(action.type);
+    setActionMessage(null);
+    try {
+      const result =
+        action.type === "block_focus_time"
+          ? await applyBlockFocusTime()
+          : await applySpreadLoad();
+      setActionMessage(result.message);
+      onActionApplied?.(result.message);
+      await loadInsights();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to apply action";
+      setActionMessage(message);
+    } finally {
+      setApplying(null);
+    }
+  };
 
   const maxHours = insights
     ? Math.max(...DAY_ORDER.map((d) => insights.hours_per_day[d] ?? 0), 1)
@@ -143,6 +174,40 @@ export function InsightsPanel() {
               </p>
             </div>
           </div>
+
+          {(insights.actions?.length ?? 0) > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                Quick actions
+              </p>
+              {insights.actions!.map((action) => (
+                <Button
+                  key={action.type}
+                  variant="outline"
+                  size="sm"
+                  disabled={applying !== null}
+                  onClick={() => handleAction(action)}
+                  className="w-full justify-start h-auto py-2.5 px-3 rounded-xl border-violet-200/70 dark:border-violet-900/40 hover:bg-violet-50 dark:hover:bg-violet-950/30 text-left"
+                >
+                  <Sparkles className="w-3.5 h-3.5 mr-2 shrink-0 text-violet-600 dark:text-violet-400" />
+                  <span className="flex flex-col items-start gap-0.5 min-w-0">
+                    <span className="font-semibold text-slate-800 dark:text-slate-100">
+                      {applying === action.type ? "Applying…" : action.label}
+                    </span>
+                    <span className="text-xs font-normal text-slate-500 dark:text-slate-400 truncate w-full">
+                      {action.description}
+                    </span>
+                  </span>
+                </Button>
+              ))}
+            </div>
+          )}
+
+          {actionMessage && (
+            <p className="text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/50 dark:border-emerald-900/30 rounded-xl px-3 py-2">
+              {actionMessage}
+            </p>
+          )}
         </div>
       )}
     </motion.aside>

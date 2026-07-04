@@ -33,6 +33,7 @@ export default function DashboardPage() {
   const [undoDelete, setUndoDelete] = useState<{ id: string; title: string } | null>(null);
   const [dateRange, setDateRange] = useState<{ from: string; to: string } | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [insightsRefreshKey, setInsightsRefreshKey] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -421,7 +422,14 @@ export default function DashboardPage() {
               onDatesChange={handleDatesChange}
             />
           </motion.div>
-          <InsightsPanel key={events.length} />
+          <InsightsPanel
+            refreshKey={insightsRefreshKey}
+            onActionApplied={(message) => {
+              setAssistantToast(message);
+              setInsightsRefreshKey((k) => k + 1);
+              loadEvents();
+            }}
+          />
         </div>
       </main>
 

@@ -10,6 +10,8 @@ from __future__ import annotations
 import calendar as _cal
 from datetime import date, datetime, time, timedelta
 
+from app.core import conflicts as conflicts_engine
+
 
 def _to_minutes(t) -> int:
     """Convert time or HH:MM string to minutes since midnight."""
@@ -126,12 +128,17 @@ def weekly_summary(
     # ---- Suggestion ----
     suggestion = _generate_suggestion(hours_per_day, deep_work_blocks, fragmentation_score)
 
+    actions = recommend_actions(
+        hours_per_day, week_events, monday, deep_work_blocks
+    )
+
     return {
         "hours_per_day": hours_per_day,
         "total_hours": total_hours,
         "deep_work_blocks": deep_work_blocks,
         "fragmentation_score": fragmentation_score,
         "suggestion": suggestion,
+        "actions": actions,
     }
 
 
@@ -164,3 +171,184 @@ def _generate_suggestion(
 
     heaviest = max(hours_per_day, key=hours_per_day.get)  # type: ignore
     return f"Busiest day is {heaviest} ({hours_per_day[heaviest]}h). Balance your load by moving non-urgent items to lighter days."
+
+
+def recommend_actions(
+    hours_per_day: dict[str, float],
+    week_events: list[dict],
+    monday: date,
+    deep_work_blocks: list[dict],
+) -> list[dict]:
+    """Return one-click insight actions for the current week."""
+    weekdays = {k: v for k, v in hours_per_day.items() if k in _DAY_NAMES_SHORT[:5]}
+    actions: list[dict] = []
+
+    if sum(weekdays.values()) == 0:
+        actions.append({
+            "type": "block_focus_time",
+            "label": "Block focus time",
+            "description": "Reserve a 2-hour focus block this week",
+        })
+        return actions
+
+    lightest = min(weekdays, key=weekdays.get)  # type: ignore[arg-type]
+    heaviest = max(weekdays, key=weekdays.get)  # type: ignore[arg-type]
+
+    if len(deep_work_blocks) == 0 or weekdays[lightest] < 3:
+        actions.append({
+            "type": "block_focus_time",
+            "label": "Block focus time",
+            "description": f"Reserve 2h on {lightest} for deep work",
+        })
+
+    if (
+        heaviest != lightest
+        and weekdays[heaviest] - weekdays[lightest] >= 2
+        and weekdays[heaviest] >= 3
+    ):
+        actions.append({
+            "type": "spread_load",
+            "label": "Spread load",
+            "description": f"Move an event from {heaviest} to {lightest}",
+        })
+
+    return actions
+
+
+def _weekday_date(monday: date, day_short: str) -> date:
+    idx = _DAY_NAMES_SHORT.index(day_short)
+    return monday + timedelta(days=idx)
+
+
+def _parse_time_str(value: str) -> time:
+    parts = value.split(":")
+    return time(int(parts[0]), int(parts[1]))
+
+
+def plan_block_focus_time(
+    events: list[dict],
+    reference_date: date | None = None,
+    duration_minutes: int = 120,
+) -> dict:
+    """Pick the lightest weekday and a free slot for a focus block."""
+    if reference_date is None:
+        reference_date = date.today()
+
+    summary = weekly_summary(events, reference_date)
+    weekdays = {
+        k: v
+        for k, v in summary["hours_per_day"].items()
+        if k in _DAY_NAMES_SHORT[:5]
+    }
+    lightest = min(weekdays, key=weekdays.get)  # type: ignore[arg-type]
+    monday, _ = _week_bounds(reference_date)
+    target_date = _weekday_date(monday, lightest)
+
+    alternatives = conflicts_engine.find_alternatives(
+        events, target_date, time(9, 0), duration_minutes, count=1
+    )
+    if not alternatives:
+        from fastapi import HTTPException, status
+
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"No free {duration_minutes}-minute slot on {lightest}",
+        )
+
+    slot = alternatives[0]
+    return {
+        "title": "Focus Block",
+        "date": target_date,
+        "start_time": _parse_time_str(slot["start_time"]),
+        "duration_minutes": duration_minutes,
+        "day": lightest,
+    }
+
+
+def plan_spread_load(
+    events: list[dict],
+    reference_date: date | None = None,
+) -> dict:
+    """Pick the shortest event on the heaviest day and a slot on the lightest day."""
+    if reference_date is None:
+        reference_date = date.today()
+
+    summary = weekly_summary(events, reference_date)
+    weekdays = {
+        k: v
+        for k, v in summary["hours_per_day"].items()
+        if k in _DAY_NAMES_SHORT[:5]
+    }
+    if not weekdays:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=400, detail="No weekday events to rebalance")
+
+    lightest = min(weekdays, key=weekdays.get)  # type: ignore[arg-type]
+    heaviest = max(weekdays, key=weekdays.get)  # type: ignore[arg-type]
+    if heaviest == lightest or weekdays[heaviest] - weekdays[lightest] < 2:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=400, detail="Schedule is already balanced")
+
+    monday, _ = _week_bounds(reference_date)
+    heavy_date = _weekday_date(monday, heaviest)
+    light_date = _weekday_date(monday, lightest)
+
+    heavy_events: list[dict] = []
+    for ev in events:
+        ev_date = ev.get("date")
+        if isinstance(ev_date, str):
+            ev_date = date.fromisoformat(ev_date)
+        if ev_date == heavy_date:
+            heavy_events.append(ev)
+
+    if not heavy_events:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=400, detail=f"No events on {heaviest} to move")
+
+    movable = min(heavy_events, key=lambda e: int(e["duration_minutes"]))
+    start_val = movable["start_time"]
+    if isinstance(start_val, str):
+        requested_time = _parse_time_str(start_val)
+    else:
+        requested_time = start_val
+
+    alternatives = conflicts_engine.find_alternatives(
+        events,
+        light_date,
+        requested_time,
+        int(movable["duration_minutes"]),
+        count=3,
+    )
+    slot = None
+    for alt in alternatives:
+        slot_time = _parse_time_str(alt["start_time"])
+        conflicts = conflicts_engine.check_conflicts(
+            events,
+            light_date,
+            slot_time,
+            int(movable["duration_minutes"]),
+            exclude_id=str(movable.get("id")),
+        )
+        if not conflicts:
+            slot = alt
+            break
+
+    if slot is None:
+        from fastapi import HTTPException, status
+
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"No free slot on {lightest} for this event",
+        )
+
+    return {
+        "event_id": str(movable["id"]),
+        "title": movable.get("title", "Event"),
+        "from_day": heaviest,
+        "to_day": lightest,
+        "date": light_date,
+        "start_time": _parse_time_str(slot["start_time"]),
+    }
