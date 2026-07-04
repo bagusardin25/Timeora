@@ -71,3 +71,25 @@ export async function callAssistant(text: string): Promise<AssistantResult> {
     body: JSON.stringify({ text }),
   });
 }
+
+export type WeeklyInsight = {
+  hours_per_day: Record<string, number>;
+  total_hours: number;
+  deep_work_blocks: Array<{
+    date: string;
+    start: string;
+    end: string;
+    duration_minutes: number;
+  }>;
+  fragmentation_score: number;
+  suggestion: string;
+};
+
+export async function fetchWeeklyInsights(refDate?: string): Promise<WeeklyInsight> {
+  const qs = refDate ? `?date=${refDate}` : '';
+  return fetchApi(`/analytics/week${qs}`);
+}
+
+export async function restoreEvent(eventId: string) {
+  return fetchApi(`/events/${eventId}/restore`, { method: 'POST' });
+}

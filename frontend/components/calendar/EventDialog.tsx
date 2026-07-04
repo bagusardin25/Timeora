@@ -35,7 +35,7 @@ interface EventDialogProps {
   onOpenChange: (open: boolean) => void;
   initialData: Partial<EventData> | null;
   onSave: (data: EventData) => void;
-  onDelete?: (id: string) => void;
+  onDelete?: (id: string, title?: string) => void;
   isSaving?: boolean;
   conflictData?: ConflictData | null;
   onClearConflict?: () => void;
@@ -285,7 +285,7 @@ export function EventDialog({
               <Button 
                 type="button" 
                 variant="destructive" 
-                onClick={() => onDelete?.(formData.id as string)}
+                onClick={() => onDelete?.(formData.id as string, formData.title)}
                 disabled={isSaving}
                 className="bg-red-500/10 text-red-600 hover:bg-red-500/20 hover:text-red-700 border-none shadow-none"
               >

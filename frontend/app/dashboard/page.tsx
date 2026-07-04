@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { LogOut, Calendar as CalendarIcon, BrainCircuit } from "lucide-react";
 import { WeeklyCalendar } from "@/components/calendar/WeeklyCalendar";
 import { EventDialog, EventData, ConflictData } from "@/components/calendar/EventDialog";
-import { fetchApi, ApiError, AssistantResult } from "@/lib/api";
+import { fetchApi, ApiError, AssistantResult, restoreEvent } from "@/lib/api";
 import { format } from "date-fns";
 import { CommandBar } from "@/components/CommandBar";
+import { InsightsPanel } from "@/components/InsightsPanel";
 import { motion } from "framer-motion";
 
 export default function DashboardPage() {
@@ -20,6 +21,7 @@ export default function DashboardPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [conflictData, setConflictData] = useState<ConflictData | null>(null);
   const [assistantToast, setAssistantToast] = useState<string | null>(null);
+  const [undoDelete, setUndoDelete] = useState<{ id: string; title: string } | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -163,7 +165,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDeleteEvent = async (id: string) => {
+  const handleDeleteEvent = async (id: string, title?: string) => {
     if (!confirm("Are you sure you want to delete this event?")) return;
     setIsSaving(true);
     try {
@@ -171,11 +173,23 @@ export default function DashboardPage() {
         method: "DELETE",
       });
       setIsDialogOpen(false);
+      setUndoDelete({ id, title: title || "Event" });
       loadEvents();
     } catch (err: any) {
       alert(err.message || "Failed to delete event");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleUndoDelete = async () => {
+    if (!undoDelete) return;
+    try {
+      await restoreEvent(undoDelete.id);
+      setUndoDelete(null);
+      loadEvents();
+    } catch (err: any) {
+      alert(err.message || "Failed to restore event");
     }
   };
 
@@ -234,20 +248,43 @@ export default function DashboardPage() {
           </div>
         </motion.div>
         
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          className="rounded-3xl bg-white/70 dark:bg-zinc-900/60 p-4 sm:p-6 lg:p-8 backdrop-blur-2xl border border-slate-200/60 dark:border-white/10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] ring-1 ring-slate-100 dark:ring-white/5"
-        >
-          <WeeklyCalendar 
-            events={events}
-            onDateClick={handleDateClick}
-            onEventClick={handleEventClick}
-            onEventDrop={handleEventDropOrResize}
-            onEventResize={handleEventDropOrResize}
-          />
-        </motion.div>
+        {undoDelete && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-between rounded-xl border border-slate-200/60 dark:border-white/10 bg-white/90 dark:bg-zinc-900/80 px-4 py-3 text-sm shadow-sm"
+          >
+            <span className="text-slate-600 dark:text-slate-300">
+              &ldquo;{undoDelete.title}&rdquo; deleted
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleUndoDelete}
+              className="font-semibold text-violet-600 hover:text-violet-700 hover:bg-violet-50 dark:hover:bg-violet-950/30"
+            >
+              Undo
+            </Button>
+          </motion.div>
+        )}
+
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6 items-start">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            className="rounded-3xl bg-white/70 dark:bg-zinc-900/60 p-4 sm:p-6 lg:p-8 backdrop-blur-2xl border border-slate-200/60 dark:border-white/10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] ring-1 ring-slate-100 dark:ring-white/5"
+          >
+            <WeeklyCalendar 
+              events={events}
+              onDateClick={handleDateClick}
+              onEventClick={handleEventClick}
+              onEventDrop={handleEventDropOrResize}
+              onEventResize={handleEventDropOrResize}
+            />
+          </motion.div>
+          <InsightsPanel key={events.length} />
+        </div>
       </main>
 
       <EventDialog
