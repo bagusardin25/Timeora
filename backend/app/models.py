@@ -10,6 +10,7 @@ class EventCreate(BaseModel):
     duration_minutes: int = Field(..., ge=5, le=1440)
     participants: str = ""
     recurrence_rule: str | None = None
+    category: str | None = None
 
 
 class EventUpdate(BaseModel):
@@ -19,6 +20,7 @@ class EventUpdate(BaseModel):
     duration_minutes: int | None = Field(None, ge=5, le=1440)
     participants: str | None = None
     recurrence_rule: str | None = None
+    category: str | None = None
 
 
 class EventResponse(BaseModel):
@@ -30,6 +32,7 @@ class EventResponse(BaseModel):
     duration_minutes: int
     participants: str
     recurrence_rule: str | None = None
+    category: str | None = None
 
 
 class ParsedEvent(BaseModel):

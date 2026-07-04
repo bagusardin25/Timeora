@@ -43,6 +43,7 @@ def _row_to_event(row) -> EventResponse:
         duration_minutes=row["duration_minutes"],
         participants=row.get("participants", ""),
         recurrence_rule=row.get("recurrence_rule"),
+        category=row.get("category"),
     )
 
 
@@ -187,8 +188,8 @@ async def create_event(user_id: str, body: EventCreate) -> EventResponse:
         async with pool.acquire() as conn:
             row = await conn.fetchrow(
                 """
-                INSERT INTO events (user_id, title, date, start_time, duration_minutes, participants, recurrence_rule)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                INSERT INTO events (user_id, title, date, start_time, duration_minutes, participants, recurrence_rule, category)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 RETURNING *
                 """,
                 user_id,
@@ -198,6 +199,7 @@ async def create_event(user_id: str, body: EventCreate) -> EventResponse:
                 body.duration_minutes,
                 body.participants,
                 body.recurrence_rule,
+                body.category,
             )
             return _row_to_event(row)
     return await supabase_store.create_event(user_id, body)
