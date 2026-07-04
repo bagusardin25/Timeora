@@ -145,3 +145,25 @@ class InsightActionResponse(BaseModel):
     action_type: str
     message: str
     event: EventResponse | None = None
+
+
+class AvailabilityCell(BaseModel):
+    day: str
+    hour: int
+    score: float
+    date: str
+
+
+class AvailabilitySlot(BaseModel):
+    day: str
+    start_hour: int
+    end_hour: int
+    duration_hours: int
+
+
+class AvailabilityHeatmap(BaseModel):
+    days: list[str]
+    hours: list[int]
+    cells: list[AvailabilityCell]
+    best_slots: list[AvailabilitySlot]
+    availability_pct: float

@@ -10,6 +10,7 @@ import { fetchApi, ApiError, AssistantResult, restoreEvent, fetchEventsExpanded,
 import { format } from "date-fns";
 import { CommandBar } from "@/components/CommandBar";
 import { InsightsPanel } from "@/components/InsightsPanel";
+import { AvailabilityHeatmap } from "@/components/AvailabilityHeatmap";
 import { motion } from "framer-motion";
 
 export default function DashboardPage() {
@@ -422,14 +423,17 @@ export default function DashboardPage() {
               onDatesChange={handleDatesChange}
             />
           </motion.div>
-          <InsightsPanel
-            refreshKey={insightsRefreshKey}
-            onActionApplied={(message) => {
-              setAssistantToast(message);
-              setInsightsRefreshKey((k) => k + 1);
-              loadEvents();
-            }}
-          />
+          <div className="space-y-6">
+            <InsightsPanel
+              refreshKey={insightsRefreshKey}
+              onActionApplied={(message) => {
+                setAssistantToast(message);
+                setInsightsRefreshKey((k) => k + 1);
+                loadEvents();
+              }}
+            />
+            <AvailabilityHeatmap refreshKey={insightsRefreshKey} />
+          </div>
         </div>
       </main>
 

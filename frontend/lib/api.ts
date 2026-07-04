@@ -169,6 +169,33 @@ export async function applySpreadLoad(refDate?: string): Promise<InsightActionRe
   return fetchApi(`/analytics/actions/spread-load${qs}`, { method: 'POST' });
 }
 
+export type AvailabilityCell = {
+  day: string;
+  hour: number;
+  score: number;
+  date: string;
+};
+
+export type AvailabilitySlot = {
+  day: string;
+  start_hour: number;
+  end_hour: number;
+  duration_hours: number;
+};
+
+export type AvailabilityHeatmapData = {
+  days: string[];
+  hours: number[];
+  cells: AvailabilityCell[];
+  best_slots: AvailabilitySlot[];
+  availability_pct: number;
+};
+
+export async function fetchAvailabilityHeatmap(refDate?: string): Promise<AvailabilityHeatmapData> {
+  const qs = refDate ? `?date=${refDate}` : '';
+  return fetchApi(`/analytics/availability${qs}`);
+}
+
 export async function restoreEvent(eventId: string) {
   return fetchApi(`/events/${eventId}/restore`, { method: 'POST' });
 }
