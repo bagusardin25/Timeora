@@ -109,13 +109,20 @@ class ParseResponseV2(BaseModel):
 
 
 class AssistantRequest(BaseModel):
-    text: str = Field(..., min_length=1, max_length=1000)
+    text: str | None = Field(None, max_length=1000)
+    confirm: bool = False
+    event_id: str | None = None
+    action: str | None = None
+    new_date: str | None = None
+    new_time: str | None = None
 
 
 class AssistantResponse(BaseModel):
     intent: str
     result: dict | list | None = None
     message: str
+    requires_confirmation: bool = False
+    executed: bool = False
 
 
 class WeeklyInsight(BaseModel):

@@ -1,33 +1,85 @@
 """
 Multi-intent assistant endpoint.
 
-Handles reschedule, cancel, query, and find_slot intents
-that the Command Bar now supports in addition to create.
+Handles reschedule, cancel, query, and find_slot intents.
+Tier 3: confirm + execute for cancel/reschedule.
 """
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime, time
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.auth import get_current_user
 from app import data_access
 from app.core import nlparser, conflicts as conflicts_engine
-from app.models import AssistantRequest, AssistantResponse
+from app.models import AssistantRequest, AssistantResponse, EventUpdate
 
 router = APIRouter()
 
 
+def _event_to_dict(ev) -> dict:
+    if hasattr(ev, "model_dump"):
+        return ev.model_dump(mode="json")
+    return ev
+
+
+def _parse_date_value(value) -> date | None:
+    if value is None:
+        return None
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        return date.fromisoformat(value[:10])
+    return None
+
+
+def _parse_time_value(value: str | None) -> time | None:
+    if not value:
+        return None
+    parts = value.split(":")
+    h, m = int(parts[0]), int(parts[1])
+    s = int(parts[2]) if len(parts) > 2 else 0
+    return time(h, m, s)
+
+
+def _find_matches(all_events, parsed: dict) -> list[dict]:
+    """Match events by title substring and optional parsed date."""
+    title_query = (parsed.get("title") or "").lower().strip()
+    target_date = _parse_date_value(parsed.get("date"))
+    matches: list[dict] = []
+
+    for ev in all_events:
+        ev_dict = _event_to_dict(ev)
+        ev_title = (ev_dict.get("title") or "").lower()
+        if title_query and title_query not in ev_title:
+            continue
+        if target_date is not None:
+            ev_date = _parse_date_value(ev_dict.get("date"))
+            if ev_date != target_date:
+                continue
+        matches.append(ev_dict)
+
+    return matches
+
+
 @router.post("/assistant", response_model=AssistantResponse)
 async def assistant(body: AssistantRequest, user: dict = Depends(get_current_user)):
-    """Execute a multi-intent command from the Command Bar."""
+    """Execute or preview a multi-intent command from the Command Bar."""
+    if body.confirm:
+        return await _execute_confirmed(user, body)
+
+    if not body.text or not body.text.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="text is required unless confirm=true",
+        )
+
     parsed = nlparser.parse(body.text, today=datetime.now().date())
     intent = parsed["intent"]
 
     if intent == "create":
-        # For create intent, redirect to /parse — the assistant
-        # endpoint handles the other four intents.
         return AssistantResponse(
             intent="create",
             result=parsed,
@@ -53,25 +105,64 @@ async def assistant(body: AssistantRequest, user: dict = Depends(get_current_use
     )
 
 
-async def _handle_query(user: dict, parsed: dict) -> AssistantResponse:
-    """Search events for the parsed date."""
-    from datetime import date
+async def _execute_confirmed(user: dict, body: AssistantRequest) -> AssistantResponse:
+    if not body.event_id or not body.action:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="event_id and action are required when confirm=true",
+        )
 
-    target_date = parsed.get("date")
-    if isinstance(target_date, str):
-        target_date = date.fromisoformat(target_date)
+    base_id = body.event_id.split("_")[0]
+
+    if body.action == "cancel":
+        await data_access.delete_event(base_id, user["id"])
+        return AssistantResponse(
+            intent="cancel",
+            result={"event_id": base_id, "deleted": True},
+            message="Event cancelled.",
+            executed=True,
+        )
+
+    if body.action == "reschedule":
+        if not body.new_date or not body.new_time:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="new_date and new_time are required for reschedule",
+            )
+        new_time = _parse_time_value(body.new_time)
+        if new_time is None:
+            raise HTTPException(status_code=400, detail="Invalid new_time")
+        updated = await data_access.update_event(
+            base_id,
+            user["id"],
+            EventUpdate(
+                date=date.fromisoformat(body.new_date[:10]),
+                start_time=new_time,
+            ),
+        )
+        return AssistantResponse(
+            intent="reschedule",
+            result=_event_to_dict(updated),
+            message=f"Rescheduled to {body.new_date} {body.new_time}.",
+            executed=True,
+        )
+
+    raise HTTPException(status_code=400, detail=f"Unknown action: {body.action}")
+
+
+async def _handle_query(user: dict, parsed: dict) -> AssistantResponse:
+    target_date = _parse_date_value(parsed.get("date"))
+    if target_date is None:
+        target_date = datetime.now().date()
 
     all_events = await data_access.list_events(user["id"])
     matching = []
     for ev in all_events:
-        ev_date = ev.date if hasattr(ev, "date") else ev.get("date")
-        if isinstance(ev_date, str):
-            ev_date = date.fromisoformat(ev_date)
+        ev_date = _parse_date_value(
+            ev.date if hasattr(ev, "date") else ev.get("date")
+        )
         if ev_date == target_date:
-            if hasattr(ev, "model_dump"):
-                matching.append(ev.model_dump(mode="json"))
-            else:
-                matching.append(ev)
+            matching.append(_event_to_dict(ev))
 
     if not matching:
         return AssistantResponse(
@@ -88,23 +179,13 @@ async def _handle_query(user: dict, parsed: dict) -> AssistantResponse:
 
 
 async def _handle_find_slot(user: dict, parsed: dict) -> AssistantResponse:
-    """Find free time slots on the parsed date."""
-    from datetime import date, time
-
-    target_date = parsed.get("date")
-    if isinstance(target_date, str):
-        target_date = date.fromisoformat(target_date)
+    target_date = _parse_date_value(parsed.get("date"))
+    if target_date is None:
+        target_date = datetime.now().date()
 
     duration = parsed.get("duration_minutes", 60)
-
-    # Get existing events as dicts
     all_events = await data_access.list_events(user["id"])
-    event_dicts = []
-    for ev in all_events:
-        if hasattr(ev, "model_dump"):
-            event_dicts.append(ev.model_dump(mode="json"))
-        elif isinstance(ev, dict):
-            event_dicts.append(ev)
+    event_dicts = [_event_to_dict(ev) for ev in all_events]
 
     requested_time_str = parsed.get("start_time", "09:00")
     parts = requested_time_str.split(":")
@@ -129,18 +210,8 @@ async def _handle_find_slot(user: dict, parsed: dict) -> AssistantResponse:
 
 
 async def _handle_cancel(user: dict, parsed: dict) -> AssistantResponse:
-    """Find matching event(s) to cancel (soft-delete)."""
-    title_query = parsed.get("title", "").lower()
     all_events = await data_access.list_events(user["id"])
-
-    matches = []
-    for ev in all_events:
-        ev_title = ev.title if hasattr(ev, "title") else ev.get("title", "")
-        if title_query and title_query in ev_title.lower():
-            if hasattr(ev, "model_dump"):
-                matches.append(ev.model_dump(mode="json"))
-            else:
-                matches.append(ev)
+    matches = _find_matches(all_events, parsed)
 
     if not matches:
         return AssistantResponse(
@@ -149,27 +220,22 @@ async def _handle_cancel(user: dict, parsed: dict) -> AssistantResponse:
             message=f"No event matching '{parsed.get('title', '')}' found to cancel.",
         )
 
-    # Return matches for user to confirm
+    primary = matches[0]
     return AssistantResponse(
         intent="cancel",
-        result=matches,
-        message=f"Found {len(matches)} event(s) matching '{parsed.get('title', '')}'. Confirm to cancel.",
+        result={
+            "events": matches,
+            "primary_event_id": primary["id"],
+            "primary_title": primary.get("title", "Event"),
+        },
+        message=f"Cancel \"{primary.get('title', 'Event')}\"? Confirm to proceed.",
+        requires_confirmation=True,
     )
 
 
 async def _handle_reschedule(user: dict, parsed: dict) -> AssistantResponse:
-    """Find matching event(s) to reschedule."""
-    title_query = parsed.get("title", "").lower()
     all_events = await data_access.list_events(user["id"])
-
-    matches = []
-    for ev in all_events:
-        ev_title = ev.title if hasattr(ev, "title") else ev.get("title", "")
-        if title_query and title_query in ev_title.lower():
-            if hasattr(ev, "model_dump"):
-                matches.append(ev.model_dump(mode="json"))
-            else:
-                matches.append(ev)
+    matches = _find_matches(all_events, parsed)
 
     if not matches:
         return AssistantResponse(
@@ -178,12 +244,21 @@ async def _handle_reschedule(user: dict, parsed: dict) -> AssistantResponse:
             message=f"No event matching '{parsed.get('title', '')}' found to reschedule.",
         )
 
+    primary = matches[0]
+    new_date = parsed.get("date")
+    new_time = parsed.get("start_time")
     return AssistantResponse(
         intent="reschedule",
         result={
             "events": matches,
-            "new_date": parsed.get("date"),
-            "new_time": parsed.get("start_time"),
+            "primary_event_id": primary["id"],
+            "primary_title": primary.get("title", "Event"),
+            "new_date": new_date,
+            "new_time": new_time,
         },
-        message=f"Found {len(matches)} event(s) to reschedule to {parsed.get('date')} {parsed.get('start_time')}.",
+        message=(
+            f"Reschedule \"{primary.get('title', 'Event')}\" to "
+            f"{new_date} {new_time}? Confirm to proceed."
+        ),
+        requires_confirmation=True,
     )
