@@ -59,6 +59,9 @@ def _row_to_event(row: dict) -> EventResponse:
         participants=row.get("participants") or "",
         recurrence_rule=row.get("recurrence_rule"),
         category=row.get("category"),
+        external_ids=row.get("external_ids") or {},
+        sync_status=row.get("sync_status") or "not_synced",
+        last_synced_at=row.get("last_synced_at"),
     )
 
 
@@ -110,6 +113,24 @@ async def list_events(user_id: str) -> list[EventResponse]:
     if resp.status_code != 200:
         raise HTTPException(status_code=502, detail="Failed to fetch events")
     return [_row_to_event(row) for row in resp.json()]
+
+
+async def has_external_event_id(
+    user_id: str, provider: str, external_id: str
+) -> bool:
+    url = f"{_base()}/events"
+    params = {
+        "user_id": f"eq.{user_id}",
+        f"external_ids->>{provider}": f"eq.{external_id}",
+        "deleted_at": "is.null",
+        "select": "id",
+        "limit": "1",
+    }
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.get(url, params=params, headers=_HEADERS())
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail="Failed to check imported event")
+    return bool(resp.json())
 
 
 async def get_event(event_id: str, user_id: str) -> EventResponse:
@@ -191,6 +212,7 @@ async def create_event(user_id: str, body: EventCreate) -> EventResponse:
             "participants": body.participants,
             "recurrence_rule": body.recurrence_rule,
             "category": body.category,
+            "external_ids": body.external_ids,
         }
     )
     url = f"{_base()}/events"

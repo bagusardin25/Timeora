@@ -17,6 +17,16 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4o-mini"
 
+    INTEGRATION_ENCRYPTION_KEY: str = ""
+    INTEGRATION_SIGNING_KEY: str = ""
+    INTEGRATION_DEFAULT_TIMEZONE: str = "Asia/Jakarta"
+    INTEGRATION_ALLOW_HTTP_WEBHOOKS: bool = False
+    INTEGRATION_WEBHOOK_MAX_PER_USER: int = 10
+    INTEGRATION_WEBHOOK_TIMEOUT_SECONDS: float = 10.0
+    INTEGRATION_RESEND_API_KEY: str = ""
+    INTEGRATION_RESEND_FROM_EMAIL: str = ""
+    INTEGRATION_EMAIL_NOTIFICATIONS_ENABLED: bool = False
+
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
 
 

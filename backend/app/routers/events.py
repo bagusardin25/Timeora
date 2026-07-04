@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from datetime import date as DateType
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 
 from app.auth import get_current_user
 from app import data_access
 from app.core.recurrence import expand_recurrence
+from app.integrations.events import notify_event_change
 from app.models import (
     ConflictCheckRequest,
     ConflictCheckResponse,
@@ -46,6 +47,10 @@ def _expand_events(
                     duration_minutes=event.duration_minutes,
                     participants=event.participants,
                     recurrence_rule=event.recurrence_rule,
+                    category=event.category,
+                    external_ids=event.external_ids,
+                    sync_status=event.sync_status,
+                    last_synced_at=event.last_synced_at,
                 )
             )
     expanded.sort(key=lambda e: (e.date, e.start_time))
@@ -82,8 +87,19 @@ async def list_events(
 
 
 @router.post("", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
-async def create_event(body: EventCreate, user: dict = Depends(get_current_user)):
-    return await data_access.create_event(user["id"], body)
+async def create_event(
+    body: EventCreate,
+    background_tasks: BackgroundTasks,
+    user: dict = Depends(get_current_user),
+):
+    event = await data_access.create_event(user["id"], body)
+    background_tasks.add_task(
+        notify_event_change,
+        user["id"],
+        "event.created",
+        event.model_dump(mode="json"),
+    )
+    return event
 
 
 @router.get("/{event_id}", response_model=EventResponse)
@@ -95,21 +111,51 @@ async def get_event(event_id: str, user: dict = Depends(get_current_user)):
 async def update_event(
     event_id: str,
     body: EventUpdate,
+    background_tasks: BackgroundTasks,
     user: dict = Depends(get_current_user),
 ):
-    return await data_access.update_event(event_id, user["id"], body)
+    event = await data_access.update_event(event_id, user["id"], body)
+    background_tasks.add_task(
+        notify_event_change,
+        user["id"],
+        "event.updated",
+        event.model_dump(mode="json"),
+    )
+    return event
 
 
 @router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_event(event_id: str, user: dict = Depends(get_current_user)):
+async def delete_event(
+    event_id: str,
+    background_tasks: BackgroundTasks,
+    user: dict = Depends(get_current_user),
+):
     """Soft-delete an event (sets deleted_at)."""
+    event = await data_access.get_event(event_id, user["id"])
     await data_access.delete_event(event_id, user["id"])
+    background_tasks.add_task(
+        notify_event_change,
+        user["id"],
+        "event.deleted",
+        event.model_dump(mode="json"),
+    )
 
 
 @router.post("/{event_id}/restore", response_model=EventResponse)
-async def restore_event(event_id: str, user: dict = Depends(get_current_user)):
+async def restore_event(
+    event_id: str,
+    background_tasks: BackgroundTasks,
+    user: dict = Depends(get_current_user),
+):
     """Restore a soft-deleted event."""
-    return await data_access.restore_event(event_id, user["id"])
+    event = await data_access.restore_event(event_id, user["id"])
+    background_tasks.add_task(
+        notify_event_change,
+        user["id"],
+        "event.restored",
+        event.model_dump(mode="json"),
+    )
+    return event
 
 
 @router.post("/check-conflict", response_model=ConflictCheckResponse)
