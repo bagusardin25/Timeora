@@ -99,6 +99,7 @@ async def list_events(user_id: str) -> list[EventResponse]:
     url = f"{_base()}/events"
     params = {
         "user_id": f"eq.{user_id}",
+        "deleted_at": "is.null",
         "order": "date.asc,start_time.asc",
         "select": "*",
     }
@@ -111,7 +112,12 @@ async def list_events(user_id: str) -> list[EventResponse]:
 
 async def get_event(event_id: str, user_id: str) -> EventResponse:
     url = f"{_base()}/events"
-    params = {"id": f"eq.{event_id}", "user_id": f"eq.{user_id}", "select": "*"}
+    params = {
+        "id": f"eq.{event_id}",
+        "user_id": f"eq.{user_id}",
+        "deleted_at": "is.null",
+        "select": "*",
+    }
     async with httpx.AsyncClient(timeout=15) as client:
         resp = await client.get(url, params=params, headers=_HEADERS())
     if resp.status_code != 200:
@@ -223,12 +229,43 @@ async def update_event(
 
 
 async def delete_event(event_id: str, user_id: str) -> None:
+    """Soft-delete via PATCH deleted_at."""
     url = f"{_base()}/events"
-    params = {"id": f"eq.{event_id}", "user_id": f"eq.{user_id}"}
+    params = {"id": f"eq.{event_id}", "user_id": f"eq.{user_id}", "deleted_at": "is.null"}
+    headers = {**_HEADERS(), "Prefer": "return=representation"}
     async with httpx.AsyncClient(timeout=15) as client:
-        resp = await client.delete(url, params=params, headers=_HEADERS())
-    if resp.status_code not in (200, 204):
+        resp = await client.patch(
+            url,
+            params=params,
+            json={"deleted_at": datetime.utcnow().isoformat() + "Z"},
+            headers=headers,
+        )
+    if resp.status_code != 200 or not resp.json():
         raise HTTPException(status_code=404, detail="Event not found")
+
+
+async def restore_event(event_id: str, user_id: str) -> EventResponse:
+    """Restore a soft-deleted event."""
+    url = f"{_base()}/events"
+    params = {
+        "id": f"eq.{event_id}",
+        "user_id": f"eq.{user_id}",
+        "deleted_at": "not.is.null",
+    }
+    headers = {**_HEADERS(), "Prefer": "return=representation"}
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.patch(
+            url,
+            params=params,
+            json={"deleted_at": None},
+            headers=headers,
+        )
+    if resp.status_code != 200:
+        raise HTTPException(status_code=404, detail="Event not found or not deleted")
+    rows = resp.json()
+    if not rows:
+        raise HTTPException(status_code=404, detail="Event not found or not deleted")
+    return _row_to_event(rows[0])
 
 
 async def check_conflict(

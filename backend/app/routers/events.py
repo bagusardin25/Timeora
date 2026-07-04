@@ -39,7 +39,14 @@ async def update_event(
 
 @router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_event(event_id: str, user: dict = Depends(get_current_user)):
+    """Soft-delete an event (sets deleted_at)."""
     await data_access.delete_event(event_id, user["id"])
+
+
+@router.post("/{event_id}/restore", response_model=EventResponse)
+async def restore_event(event_id: str, user: dict = Depends(get_current_user)):
+    """Restore a soft-deleted event."""
+    return await data_access.restore_event(event_id, user["id"])
 
 
 @router.post("/check-conflict", response_model=ConflictCheckResponse)
