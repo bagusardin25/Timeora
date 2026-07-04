@@ -103,3 +103,12 @@ class AssistantResponse(BaseModel):
     intent: str
     result: dict | list | None = None
     message: str
+
+
+class WeeklyInsight(BaseModel):
+    """Weekly analytics summary."""
+    hours_per_day: dict[str, float]
+    total_hours: float
+    deep_work_blocks: list[dict]
+    fragmentation_score: float
+    suggestion: str

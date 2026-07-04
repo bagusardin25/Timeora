@@ -55,6 +55,7 @@ async def _check_conflict_sql(
         SELECT id, title, start_time, duration_minutes
         FROM events
         WHERE user_id = $1 AND date = $2
+          AND (deleted_at IS NULL)
           AND start_time < $3
           AND (start_time + (duration_minutes::text || ' minutes')::interval) > $4
     """
@@ -139,7 +140,7 @@ async def list_events(user_id: str) -> list[EventResponse]:
     if pool is not None:
         async with pool.acquire() as conn:
             rows = await conn.fetch(
-                "SELECT * FROM events WHERE user_id = $1 ORDER BY date, start_time",
+                "SELECT * FROM events WHERE user_id = $1 AND (deleted_at IS NULL) ORDER BY date, start_time",
                 user_id,
             )
             return [_row_to_event(r) for r in rows]
@@ -151,7 +152,7 @@ async def get_event(event_id: str, user_id: str) -> EventResponse:
     if pool is not None:
         async with pool.acquire() as conn:
             row = await conn.fetchrow(
-                "SELECT * FROM events WHERE id = $1 AND user_id = $2",
+                "SELECT * FROM events WHERE id = $1 AND user_id = $2 AND (deleted_at IS NULL)",
                 event_id,
                 user_id,
             )
@@ -207,7 +208,7 @@ async def update_event(
     if pool is not None:
         async with pool.acquire() as conn:
             existing = await conn.fetchrow(
-                "SELECT * FROM events WHERE id = $1 AND user_id = $2",
+                "SELECT * FROM events WHERE id = $1 AND user_id = $2 AND (deleted_at IS NULL)",
                 event_id,
                 user_id,
             )
@@ -238,11 +239,12 @@ async def update_event(
 
 
 async def delete_event(event_id: str, user_id: str) -> None:
+    """Soft-delete: sets deleted_at instead of removing the row."""
     pool = await ensure_pool()
     if pool is not None:
         async with pool.acquire() as conn:
             result = await conn.execute(
-                "DELETE FROM events WHERE id = $1 AND user_id = $2",
+                "UPDATE events SET deleted_at = NOW() WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL",
                 event_id,
                 user_id,
             )
@@ -252,6 +254,24 @@ async def delete_event(event_id: str, user_id: str) -> None:
                 raise HTTPException(status_code=404, detail="Event not found")
         return
     await supabase_store.delete_event(event_id, user_id)
+
+
+async def restore_event(event_id: str, user_id: str) -> EventResponse:
+    """Restore a soft-deleted event by clearing deleted_at."""
+    pool = await ensure_pool()
+    if pool is not None:
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "UPDATE events SET deleted_at = NULL WHERE id = $1 AND user_id = $2 AND deleted_at IS NOT NULL RETURNING *",
+                event_id,
+                user_id,
+            )
+            if not row:
+                from fastapi import HTTPException
+
+                raise HTTPException(status_code=404, detail="Event not found or not deleted")
+            return _row_to_event(row)
+    return await supabase_store.restore_event(event_id, user_id)
 
 
 async def check_conflict(
