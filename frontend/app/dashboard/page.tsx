@@ -329,6 +329,8 @@ export default function DashboardPage() {
       <main className="flex-1 max-w-[1400px] w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-10 z-10">
         {assistantConfirm && (
           <motion.div
+            role="region"
+            aria-label="Assistant confirmation"
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             className="flex items-center justify-between gap-4 rounded-xl border border-amber-200/70 dark:border-amber-900/40 bg-amber-50/90 dark:bg-amber-950/30 px-4 py-3 text-sm shadow-sm"
@@ -340,6 +342,7 @@ export default function DashboardPage() {
                 size="sm"
                 disabled={confirmingAssistant}
                 onClick={() => setAssistantConfirm(null)}
+                aria-label="Dismiss assistant confirmation"
                 className="font-medium text-slate-600 hover:text-slate-800 dark:text-slate-300"
               >
                 Dismiss
@@ -348,6 +351,7 @@ export default function DashboardPage() {
                 size="sm"
                 disabled={confirmingAssistant}
                 onClick={handleConfirmAssistant}
+                aria-label="Confirm assistant action"
                 className="font-semibold bg-amber-600 hover:bg-amber-700 text-white"
               >
                 {confirmingAssistant ? "Working…" : "Confirm"}

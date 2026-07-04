@@ -70,7 +70,7 @@
     },
     {
       "type": "action",
-      "description": "Click the Confirm button in the amber assistant confirmation banner"
+      "description": "Click the Confirm assistant action button inside the Assistant confirmation banner region"
     },
     {
       "type": "action",
