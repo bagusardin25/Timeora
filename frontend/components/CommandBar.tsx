@@ -241,7 +241,7 @@ export function CommandBar({ onParsed, onAssistant }: CommandBarProps) {
                 Natural language commands
               </span>
               <span>⌘K open • Esc close • Enter submit</span>
-              <span>Examples: "jadwalkan meeting besok", "pindahkan standup", "cari slot kosong"</span>
+              <span>Examples: &ldquo;jadwalkan meeting besok&rdquo;, &ldquo;pindahkan standup&rdquo;, &ldquo;cari slot kosong&rdquo;</span>
             </div>
           </motion.div>
         </div>

@@ -50,6 +50,8 @@ export default function ProfilePage() {
     }
 
     const email = getTokenEmail();
+    // Profile data is sourced from browser-only token storage after hydration.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setUserEmail(email);
 
     // Load from localStorage
@@ -82,7 +84,7 @@ export default function ProfilePage() {
       // Optional: sync to backend later
       setMessage("Preferences saved successfully!");
       setTimeout(() => setMessage(null), 2500);
-    } catch (err) {
+    } catch {
       setMessage("Failed to save preferences.");
     } finally {
       setIsSaving(false);
@@ -215,7 +217,7 @@ export default function ProfilePage() {
                 className="mt-1.5"
                 placeholder="e.g. Asia/Jakarta"
               />
-              <p className="text-[11px] text-slate-400 mt-1">Leave empty to use your browser's timezone.</p>
+              <p className="text-[11px] text-slate-400 mt-1">Leave empty to use your browser&apos;s timezone.</p>
             </div>
 
             {/* Default Duration */}
@@ -300,4 +302,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
