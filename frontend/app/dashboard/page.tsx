@@ -1,22 +1,95 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { LogOut, Calendar as CalendarIcon, BrainCircuit, Download } from "lucide-react";
 import { WeeklyCalendar } from "@/components/calendar/WeeklyCalendar";
 import { EventDialog, EventData, ConflictData } from "@/components/calendar/EventDialog";
-import { fetchApi, ApiError, AssistantResult, restoreEvent, fetchEventsExpanded, exportIcs, executeAssistant } from "@/lib/api";
+import {
+  fetchApi,
+  ApiError,
+  type ApiEvent,
+  type AssistantResult,
+  restoreEvent,
+  fetchEventsExpanded,
+  exportIcs,
+  executeAssistant,
+} from "@/lib/api";
 import { format } from "date-fns";
 import { CommandBar } from "@/components/CommandBar";
 import { InsightsPanel } from "@/components/InsightsPanel";
 import { AvailabilityHeatmap } from "@/components/AvailabilityHeatmap";
 import { motion } from "framer-motion";
+import type {
+  EventClickArg,
+  EventDropArg,
+  EventInput,
+} from "@fullcalendar/core";
+import type {
+  DateClickArg,
+  EventResizeDoneArg,
+} from "@fullcalendar/interaction";
+
+type DateRange = { from: string; to: string };
+
+type CalendarExtendedProps = {
+  duration_minutes?: number;
+  participants?: string;
+  recurrence_rule?: string | null;
+};
+
+function initialDateRange(): DateRange {
+  const today = new Date();
+  const from = new Date(today);
+  from.setDate(from.getDate() - 14);
+  const to = new Date(today);
+  to.setDate(to.getDate() + 60);
+  return {
+    from: format(from, "yyyy-MM-dd"),
+    to: format(to, "yyyy-MM-dd"),
+  };
+}
+
+const INITIAL_DATE_RANGE = initialDateRange();
+
+function toCalendarEvents(events: ApiEvent[]): EventInput[] {
+  return events.map((event) => {
+    const startDate = new Date(`${event.date}T${event.start_time}`);
+    const endDate = new Date(
+      startDate.getTime() + event.duration_minutes * 60_000,
+    );
+    return {
+      id: event.id,
+      title: event.title,
+      start: startDate.toISOString(),
+      end: endDate.toISOString(),
+      extendedProps: {
+        duration_minutes: event.duration_minutes,
+        participants: event.participants || "",
+        recurrence_rule: event.recurrence_rule || null,
+      },
+    };
+  });
+}
+
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function isConflictData(value: unknown): value is ConflictData {
+  if (typeof value !== "object" || value === null) return false;
+  const detail = value as Record<string, unknown>;
+  return (
+    typeof detail.message === "string"
+    && typeof detail.conflicting_event === "string"
+    && Array.isArray(detail.alternatives)
+  );
+}
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<EventInput[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Partial<EventData> | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -32,53 +105,45 @@ export default function DashboardPage() {
   } | null>(null);
   const [confirmingAssistant, setConfirmingAssistant] = useState(false);
   const [undoDelete, setUndoDelete] = useState<{ id: string; title: string } | null>(null);
-  const [dateRange, setDateRange] = useState<{ from: string; to: string } | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange>(INITIAL_DATE_RANGE);
   const [exporting, setExporting] = useState(false);
   const [insightsRefreshKey, setInsightsRefreshKey] = useState(0);
 
-  useEffect(() => {
-    setMounted(true);
-    const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/");
-    } else if (!dateRange) {
-      const today = new Date();
-      const from = new Date(today);
-      from.setDate(from.getDate() - 14);
-      const to = new Date(today);
-      to.setDate(to.getDate() + 60);
-      const range = { from: format(from, "yyyy-MM-dd"), to: format(to, "yyyy-MM-dd") };
-      setDateRange(range);
-      loadEvents(range.from, range.to);
-    }
-  }, [router]);
-
-  const loadEvents = async (from?: string, to?: string) => {
+  const loadEvents = useCallback(async (
+    from = dateRange.from,
+    to = dateRange.to,
+  ) => {
     try {
-      const rangeFrom = from || dateRange?.from;
-      const rangeTo = to || dateRange?.to;
-      const data = rangeFrom && rangeTo
-        ? await fetchEventsExpanded(rangeFrom, rangeTo)
-        : await fetchApi("/events");
-      const formattedEvents = data.map((e: any) => {
-        const startDate = new Date(`${e.date}T${e.start_time}`);
-        const endDate = new Date(startDate.getTime() + e.duration_minutes * 60000);
-        return {
-          id: e.id,
-          title: e.title,
-          start: startDate.toISOString(),
-          end: endDate.toISOString(),
-          extendedProps: {
-            duration_minutes: e.duration_minutes,
-            participants: e.participants,
-          }
-        };
-      });
-      setEvents(formattedEvents);
+      const data = await fetchEventsExpanded(from, to);
+      setEvents(toCalendarEvents(data));
     } catch (err) {
       console.error("Failed to load events", err);
     }
-  };
+  }, [dateRange.from, dateRange.to]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    let cancelled = false;
+    fetchEventsExpanded(
+      INITIAL_DATE_RANGE.from,
+      INITIAL_DATE_RANGE.to,
+    )
+      .then((data) => {
+        if (!cancelled) setEvents(toCalendarEvents(data));
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to load events", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -97,20 +162,20 @@ export default function DashboardPage() {
       a.click();
       URL.revokeObjectURL(url);
       setAssistantToast("Calendar exported — timeora.ics downloaded.");
-    } catch (err: any) {
-      alert(err.message || "Failed to export calendar");
+    } catch (err: unknown) {
+      alert(errorMessage(err, "Failed to export calendar"));
     } finally {
       setExporting(false);
     }
   };
 
   const handleDatesChange = (from: string, to: string) => {
-    if (dateRange?.from === from && dateRange?.to === to) return;
+    if (dateRange.from === from && dateRange.to === to) return;
     setDateRange({ from, to });
-    loadEvents(from, to);
+    void loadEvents(from, to);
   };
 
-  const handleDateClick = (arg: any) => {
+  const handleDateClick = (arg: DateClickArg) => {
     const clickedDate = arg.date;
     setSelectedEvent({
       date: format(clickedDate, "yyyy-MM-dd"),
@@ -181,7 +246,7 @@ export default function DashboardPage() {
       if (action === "cancel") {
         setUndoDelete({ id: eventId, title });
       }
-      loadEvents();
+      void loadEvents();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to execute command";
       alert(message);
@@ -190,35 +255,45 @@ export default function DashboardPage() {
     }
   };
 
-  const handleEventClick = (arg: any) => {
+  const handleEventClick = (arg: EventClickArg) => {
     const { event } = arg;
+    if (!event.start) return;
+    const extendedProps = event.extendedProps as CalendarExtendedProps;
     setSelectedEvent({
       id: event.id,
       title: event.title,
       date: format(event.start, "yyyy-MM-dd"),
       start_time: format(event.start, "HH:mm:ss"),
-      duration_minutes: event.extendedProps.duration_minutes,
-      participants: event.extendedProps.participants,
+      duration_minutes: extendedProps.duration_minutes || 60,
+      participants: extendedProps.participants || "",
+      recurrence_rule: extendedProps.recurrence_rule || null,
     });
     setConflictData(null);
     setIsDialogOpen(true);
   };
 
-  const handleEventDropOrResize = async (arg: any) => {
+  const handleEventDropOrResize = async (
+    arg: EventDropArg | EventResizeDoneArg,
+  ) => {
     const { event } = arg;
+    if (!event.start) {
+      arg.revert();
+      return;
+    }
+    const end = event.end || new Date(event.start.getTime() + 60 * 60_000);
     try {
       await fetchApi(`/events/${event.id}`, {
         method: "PUT",
         body: JSON.stringify({
           date: format(event.start, "yyyy-MM-dd"),
           start_time: format(event.start, "HH:mm:ss"),
-          duration_minutes: (event.end.getTime() - event.start.getTime()) / 60000
+          duration_minutes: (end.getTime() - event.start.getTime()) / 60_000,
         }),
       });
-      loadEvents();
-    } catch (err: any) {
+      void loadEvents();
+    } catch (err: unknown) {
       console.error(err);
-      alert(err.message || "Failed to move event (Conflict?)");
+      alert(errorMessage(err, "Failed to move event"));
       arg.revert();
     }
   };
@@ -234,7 +309,8 @@ export default function DashboardPage() {
              date: data.date,
              start_time: data.start_time,
              duration_minutes: data.duration_minutes,
-             participants: data.participants
+             participants: data.participants,
+             recurrence_rule: data.recurrence_rule || null,
           }),
         });
       } else {
@@ -252,12 +328,17 @@ export default function DashboardPage() {
       }
       setConflictData(null);
       setIsDialogOpen(false);
-      loadEvents();
-    } catch (err: any) {
+      void loadEvents();
+    } catch (err: unknown) {
       if (err instanceof ApiError && err.status === 409) {
-        setConflictData(err.data.detail);
+        const detail = err.data.detail;
+        if (isConflictData(detail)) {
+          setConflictData(detail);
+        } else {
+          alert("The selected time conflicts with another event");
+        }
       } else {
-        alert(err.message || "Failed to save event");
+        alert(errorMessage(err, "Failed to save event"));
       }
     } finally {
       setIsSaving(false);
@@ -273,9 +354,9 @@ export default function DashboardPage() {
       });
       setIsDialogOpen(false);
       setUndoDelete({ id, title: title || "Event" });
-      loadEvents();
-    } catch (err: any) {
-      alert(err.message || "Failed to delete event");
+      void loadEvents();
+    } catch (err: unknown) {
+      alert(errorMessage(err, "Failed to delete event"));
     } finally {
       setIsSaving(false);
     }
@@ -286,13 +367,11 @@ export default function DashboardPage() {
     try {
       await restoreEvent(undoDelete.id);
       setUndoDelete(null);
-      loadEvents();
-    } catch (err: any) {
-      alert(err.message || "Failed to restore event");
+      void loadEvents();
+    } catch (err: unknown) {
+      alert(errorMessage(err, "Failed to restore event"));
     }
   };
-
-  if (!mounted) return null;
 
   return (
     <div className="min-h-screen bg-[#fafbfc] dark:bg-zinc-950 flex flex-col relative overflow-hidden">
@@ -433,7 +512,7 @@ export default function DashboardPage() {
               onActionApplied={(message) => {
                 setAssistantToast(message);
                 setInsightsRefreshKey((k) => k + 1);
-                loadEvents();
+                void loadEvents();
               }}
             />
             <AvailabilityHeatmap refreshKey={insightsRefreshKey} />
@@ -441,19 +520,21 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      <EventDialog
-        open={isDialogOpen}
-        onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) setConflictData(null);
-        }}
-        initialData={selectedEvent}
-        onSave={handleSaveEvent}
-        onDelete={handleDeleteEvent}
-        isSaving={isSaving}
-        conflictData={conflictData}
-        onClearConflict={() => setConflictData(null)}
-      />
+      {isDialogOpen && (
+        <EventDialog
+          open={isDialogOpen}
+          onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) setConflictData(null);
+          }}
+          initialData={selectedEvent}
+          onSave={handleSaveEvent}
+          onDelete={handleDeleteEvent}
+          isSaving={isSaving}
+          conflictData={conflictData}
+          onClearConflict={() => setConflictData(null)}
+        />
+      )}
       <CommandBar onParsed={handleParsedNL} onAssistant={handleAssistant} />
     </div>
   );

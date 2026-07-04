@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { format } from "date-fns";
 import {
   Dialog,
@@ -42,6 +42,28 @@ interface EventDialogProps {
   onClearConflict?: () => void;
 }
 
+function defaultEventData(initialData: Partial<EventData> | null): Partial<EventData> {
+  return initialData || {
+    title: "",
+    date: format(new Date(), "yyyy-MM-dd"),
+    start_time: "09:00:00",
+    duration_minutes: 60,
+    participants: "",
+  };
+}
+
+function calculateEndTime(data: Partial<EventData>): string {
+  if (!data.start_time || !data.duration_minutes) return "10:00";
+
+  const [hours, minutes] = data.start_time.split(":").map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return "10:00";
+
+  const end = new Date();
+  end.setHours(hours, minutes, 0, 0);
+  end.setMinutes(end.getMinutes() + data.duration_minutes);
+  return format(end, "HH:mm");
+}
+
 export function EventDialog({
   open,
   onOpenChange,
@@ -52,48 +74,20 @@ export function EventDialog({
   conflictData,
   onClearConflict,
 }: EventDialogProps) {
-  const [formData, setFormData] = useState<Partial<EventData>>({});
-  const [endTime, setEndTime] = useState("");
-
-  useEffect(() => {
-    if (open) {
-      setFormData(
-        initialData || {
-          title: "",
-          date: format(new Date(), "yyyy-MM-dd"),
-          start_time: "09:00:00",
-          duration_minutes: 60,
-          participants: "",
-        }
-      );
-      if (initialData?.start_time && initialData?.duration_minutes) {
-         try {
-           const [hours, minutes] = initialData.start_time.split(":");
-           const d = new Date();
-           d.setHours(parseInt(hours, 10));
-           d.setMinutes(parseInt(minutes, 10));
-           d.setSeconds(0);
-           d.setMinutes(d.getMinutes() + initialData.duration_minutes);
-           setEndTime(format(d, "HH:mm"));
-         } catch(e) {}
-      } else {
-         setEndTime("10:00");
-      }
-      if (onClearConflict) onClearConflict();
-    }
-  }, [open, initialData]);
+  const initialFormData = defaultEventData(initialData);
+  const [formData, setFormData] =
+    useState<Partial<EventData>>(initialFormData);
+  const [endTime, setEndTime] = useState(() => calculateEndTime(initialFormData));
 
   const calculateDuration = (start: string, end: string) => {
-     try {
-       const [h1, m1] = start.split(":");
-       const [h2, m2] = end.split(":");
-       const d1 = new Date(); d1.setHours(parseInt(h1, 10), parseInt(m1, 10), 0);
-       const d2 = new Date(); d2.setHours(parseInt(h2, 10), parseInt(m2, 10), 0);
-       const diff = (d2.getTime() - d1.getTime()) / 60000;
-       return diff > 0 ? diff : 60;
-     } catch(e) {
-       return 60;
-     }
+    const [h1, m1] = start.split(":").map(Number);
+    const [h2, m2] = end.split(":").map(Number);
+    if (![h1, m1, h2, m2].every(Number.isFinite)) return 60;
+
+    const startMinutes = h1 * 60 + m1;
+    const endMinutes = h2 * 60 + m2;
+    const difference = endMinutes - startMinutes;
+    return difference > 0 ? difference : 60;
   };
 
   const handleSave = () => {
@@ -106,12 +100,13 @@ export function EventDialog({
     }
 
     onSave({
-      id: formData.id as any,
+      id: formData.id,
       title: formData.title,
       date: formData.date,
       start_time: finalStart,
       duration_minutes: formData.duration_minutes || 60,
       participants: formData.participants || "",
+      recurrence_rule: formData.recurrence_rule || null,
     });
   };
 
@@ -123,15 +118,10 @@ export function EventDialog({
       duration_minutes: alt.duration_minutes,
     });
     
-    try {
-      const [hours, minutes] = newStart.split(":");
-      const d = new Date();
-      d.setHours(parseInt(hours, 10));
-      d.setMinutes(parseInt(minutes, 10));
-      d.setSeconds(0);
-      d.setMinutes(d.getMinutes() + alt.duration_minutes);
-      setEndTime(format(d, "HH:mm"));
-    } catch(e) {}
+    setEndTime(calculateEndTime({
+      start_time: newStart,
+      duration_minutes: alt.duration_minutes,
+    }));
     
     if (onClearConflict) onClearConflict();
   };
@@ -166,7 +156,7 @@ export function EventDialog({
                     </div>
                     <div>
                       <strong className="block font-semibold text-orange-800 dark:text-orange-300 mb-1">Jadwal Bentrok!</strong>
-                      <p className="opacity-90">Waktu ini bertabrakan dengan: <span className="font-medium bg-orange-500/10 px-1 py-0.5 rounded">"{conflictData.conflicting_event}"</span></p>
+                      <p className="opacity-90">Waktu ini bertabrakan dengan: <span className="font-medium bg-orange-500/10 px-1 py-0.5 rounded">&ldquo;{conflictData.conflicting_event}&rdquo;</span></p>
                     </div>
                   </div>
                   
