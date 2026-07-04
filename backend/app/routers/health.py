@@ -20,7 +20,7 @@ def health():
     payload = {
         "status": "ok",
         "service": "timeora-api",
-        "auth": "jwt-v2",
+        "auth": "jwt-signature-verified",
         "db": "connected" if data_access.db_available() else "disconnected",
         "db_mode": db_mode,
     }
