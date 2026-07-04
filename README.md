@@ -14,21 +14,40 @@
 
 ## ✨ Features
 
-### 1. Natural Language Scheduling (AI-Powered)
-Type natural language like *"Jadwalkan meeting tim marketing besok jam 10 selama 45 menit"* and our AI parses it into a structured event with title, date, time, and duration — all from a sleek **Command Bar** (⌘K).
+### Natural-language scheduling and assistant
 
-### 2. Interactive Weekly Calendar (Full CRUD)
-A beautiful weekly calendar powered by FullCalendar with:
-- **Create** events by clicking time slots or using the AI Command Bar
-- **Read** events displayed as color-coded blocks on the calendar
-- **Update** events via drag-and-drop, resize, or clicking to edit
-- **Delete** events with one click from the event dialog
+The Command Bar understands Indonesian and English. It can create, query,
+reschedule, cancel, and find free slots from commands such as:
 
-### 3. Smart Conflict Detection
-When a new event overlaps with an existing one, the backend detects the conflict and returns AI-suggested alternative time slots. The frontend renders an orange warning banner with clickable alternatives.
+- *"Jadwalkan meeting tim marketing besok jam 2 siang selama 45 menit"*
+- *"Pindahkan standup ke jam 3 sore"*
+- *"What do I have on Friday?"*
+- *"Cari waktu kosong 2 jam besok"*
 
-### 4. Session Authentication
-Email/password login via Supabase Auth with JWT-protected API endpoints. Includes registration and login pages with a premium, modern UI.
+OpenAI/OpenRouter is used when available. A deterministic bilingual parser
+takes over during provider outages and clearly marks the result as an offline
+parse.
+
+### Calendar and scheduling intelligence
+
+- Weekly/day calendar with create, read, update, delete, drag, and resize
+- Conflict detection on create and update, including explained alternative slots
+- Daily, weekday, weekly, and monthly recurring events
+- Soft delete with one-click Undo
+- `.ics` export for Google Calendar, Apple Calendar, and Outlook
+
+### Actionable time analytics
+
+- Weekly workload, deep-work, and fragmentation insights
+- One-click **Block focus time** and **Spread load** actions
+- Day-by-hour availability heatmap with recommended free windows
+
+### Secure sessions
+
+Supabase email/password authentication includes refresh tokens. API access
+tokens require a valid signature, issuer, audience, expiry, and subject.
+Legacy HS256 tokens use the configured secret; ES256/RS256 tokens use the
+project JWKS.
 
 ---
 
@@ -40,7 +59,7 @@ Email/password login via Supabase Auth with JWT-protected API endpoints. Include
 | **Backend** | FastAPI (Python 3.11) + asyncpg |
 | **Database** | PostgreSQL via Supabase |
 | **Auth** | Supabase Auth (email/password, JWT) |
-| **AI Parsing** | OpenRouter API (GPT-4o-mini) |
+| **AI Parsing** | OpenAI/OpenRouter + deterministic bilingual fallback |
 | **Frontend Hosting** | Vercel |
 | **Backend Hosting** | Railway |
 | **Testing & CI/CD** | TestSprite CLI + GitHub Actions |
@@ -51,22 +70,26 @@ Email/password login via Supabase Auth with JWT-protected API endpoints. Include
 
 This project was built with a strict **write → verify → fail → fix → verify** loop, documented transparently in [`LOOP.md`](./LOOP.md).
 
-### TestSprite Loop Coverage
+### Verification coverage
 
-| # | Checkpoint | Type | Status |
-|---|-----------|------|--------|
-| 1 | Health endpoint | Backend | ✅ Passed |
-| 2 | Login endpoint | Backend | ✅ Passed |
-| 3 | Frontend skeleton + Login UI | Frontend | ✅ Passed |
-| 4 | Calendar UI + CRUD | Frontend | ✅ Passed |
-| 5 | Command Bar + NL AI Parse | Frontend | ✅ Passed |
-| 6 | Register flow (API + UI) | Backend + Frontend | ✅ Passed |
-| 7 | E2E: Register → Login → Create Event | Frontend | ✅ Passed (auth) / ⚠️ DB intermittent |
-| 8 | Final E2E: Full flow with Command Bar | Frontend | 🔄 Phase 5 |
+| Layer | Coverage | Current local result |
+|---|---|---|
+| Backend unit | JWT security, bilingual parsing, conflict ranking, recurrence, analytics, availability, ICS | **38/38 passed** |
+| Frontend static | ESLint + strict TypeScript | **Passed** |
+| Frontend build | Next.js production bundle | **Passed** |
+| TestSprite backend | Health, DB, signed JWT, forged-JWT rejection, parse, availability | Final gate |
+| TestSprite frontend | Register → login → Command Bar → save → calendar assertion | Final gate |
 
-### CI/CD Integration (+5 Innovation Points)
+The complete maker → verify → failure → fix history is documented in
+[`LOOP.md`](./LOOP.md), with platform test IDs and matching commits.
 
-TestSprite CLI is wired into GitHub Actions (`.github/workflows/testsprite.yml`). Every push to `main` automatically triggers the full test suite against the live deployment.
+### CI/CD verification gate (+5 bonus)
+
+GitHub Actions runs local quality checks first, waits for the matching Vercel
+revision and a healthy Railway deployment, then executes fixed TestSprite
+backend and frontend test IDs. Failed or blocked TestSprite verdicts fail the
+workflow and trigger failure-bundle collection; they are not converted into
+false-green builds.
 
 ---
 
@@ -80,10 +103,18 @@ TestSprite CLI is wired into GitHub Actions (`.github/workflows/testsprite.yml`)
 | `GET` | `/api/events` | List user events |
 | `POST` | `/api/events` | Create event (with conflict detection) |
 | `GET` | `/api/events/{id}` | Get single event |
-| `PUT` | `/api/events/{id}` | Update event |
-| `DELETE` | `/api/events/{id}` | Delete event |
-| `POST` | `/api/parse` | Parse natural language → structured event |
+| `PUT` | `/api/events/{id}` | Update event with conflict checking |
+| `DELETE` | `/api/events/{id}` | Soft-delete event |
+| `POST` | `/api/events/{id}/restore` | Restore a deleted event |
+| `POST` | `/api/parse` | Hybrid AI/offline natural-language parse |
+| `POST` | `/api/assistant` | Query, find slot, preview, and execute assistant actions |
 | `POST` | `/api/events/check-conflict` | Check time slot conflicts |
+| `GET` | `/api/analytics/week` | Weekly workload and insight actions |
+| `GET` | `/api/analytics/availability` | Availability heatmap and best slots |
+| `POST` | `/api/analytics/actions/block-focus` | Add a recommended focus block |
+| `POST` | `/api/analytics/actions/spread-load` | Rebalance the busiest weekday |
+| `GET` | `/api/export/ics` | Export the calendar as iCalendar |
+| `POST` | `/api/auth/refresh` | Refresh an expired access token |
 
 ---
 
@@ -122,6 +153,22 @@ OPENROUTER_API_KEY=...
 **Frontend** (`.env.local`):
 ```
 NEXT_PUBLIC_API_URL=http://localhost:8000/api
+```
+
+---
+
+## ✅ Local Verification
+
+```bash
+# Backend
+cd backend
+python -m unittest discover -s tests -v
+
+# Frontend
+cd frontend
+npm run lint
+npx tsc --noEmit
+npm run build
 ```
 
 ---
