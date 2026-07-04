@@ -13,6 +13,9 @@ export const metadata: Metadata = {
   description: "AI-powered natural language scheduling. Type what you want, and Timeora handles the rest. Built for TestSprite Hackathon Season 3.",
   keywords: ["scheduling", "AI", "calendar", "natural language", "time management"],
   authors: [{ name: "Bagus Ardin Prayoga" }],
+  other: {
+    "timeora-revision": process.env.VERCEL_GIT_COMMIT_SHA || "local",
+  },
 };
 
 export default function RootLayout({
