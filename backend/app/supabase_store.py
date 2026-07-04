@@ -58,6 +58,7 @@ def _row_to_event(row: dict) -> EventResponse:
         duration_minutes=int(row["duration_minutes"]),
         participants=row.get("participants") or "",
         recurrence_rule=row.get("recurrence_rule"),
+        category=row.get("category"),
     )
 
 
@@ -189,6 +190,7 @@ async def create_event(user_id: str, body: EventCreate) -> EventResponse:
             "duration_minutes": body.duration_minutes,
             "participants": body.participants,
             "recurrence_rule": body.recurrence_rule,
+            "category": body.category,
         }
     )
     url = f"{_base()}/events"
