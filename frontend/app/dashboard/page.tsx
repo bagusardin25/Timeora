@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut, Calendar as CalendarIcon, BrainCircuit, Download } from "lucide-react";
 import { WeeklyCalendar } from "@/components/calendar/WeeklyCalendar";
 import { EventDialog, EventData, ConflictData } from "@/components/calendar/EventDialog";
-import { fetchApi, ApiError, AssistantResult, restoreEvent, fetchEventsExpanded, exportIcs } from "@/lib/api";
+import { fetchApi, ApiError, AssistantResult, restoreEvent, fetchEventsExpanded, exportIcs, executeAssistant } from "@/lib/api";
 import { format } from "date-fns";
 import { CommandBar } from "@/components/CommandBar";
 import { InsightsPanel } from "@/components/InsightsPanel";
@@ -21,6 +21,15 @@ export default function DashboardPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [conflictData, setConflictData] = useState<ConflictData | null>(null);
   const [assistantToast, setAssistantToast] = useState<string | null>(null);
+  const [assistantConfirm, setAssistantConfirm] = useState<{
+    eventId: string;
+    action: "cancel" | "reschedule";
+    title: string;
+    newDate?: string;
+    newTime?: string;
+    message: string;
+  } | null>(null);
+  const [confirmingAssistant, setConfirmingAssistant] = useState(false);
   const [undoDelete, setUndoDelete] = useState<{ id: string; title: string } | null>(null);
   const [dateRange, setDateRange] = useState<{ from: string; to: string } | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -125,6 +134,24 @@ export default function DashboardPage() {
   };
 
   const handleAssistant = (result: AssistantResult) => {
+    if (result.requires_confirmation && result.result && typeof result.result === "object") {
+      const r = result.result as Record<string, unknown>;
+      const eventId = r.primary_event_id as string | undefined;
+      if (eventId) {
+        setAssistantConfirm({
+          eventId,
+          action: result.intent === "reschedule" ? "reschedule" : "cancel",
+          title: (r.primary_title as string) || "Event",
+          newDate: r.new_date as string | undefined,
+          newTime: r.new_time as string | undefined,
+          message: result.message,
+        });
+        setAssistantToast(null);
+        return;
+      }
+    }
+
+    setAssistantConfirm(null);
     setAssistantToast(result.message);
     if (result.intent === "find_slot" && Array.isArray(result.result) && result.result.length > 0) {
       const first = result.result[0] as { start_time?: string; reason?: string };
@@ -133,6 +160,31 @@ export default function DashboardPage() {
           `${result.message} First slot: ${first.start_time}${first.reason ? ` — ${first.reason}` : ""}`
         );
       }
+    }
+  };
+
+  const handleConfirmAssistant = async () => {
+    if (!assistantConfirm) return;
+    setConfirmingAssistant(true);
+    try {
+      const result = await executeAssistant({
+        event_id: assistantConfirm.eventId,
+        action: assistantConfirm.action,
+        new_date: assistantConfirm.newDate,
+        new_time: assistantConfirm.newTime,
+      });
+      const { eventId, title, action } = assistantConfirm;
+      setAssistantConfirm(null);
+      setAssistantToast(result.message);
+      if (action === "cancel") {
+        setUndoDelete({ id: eventId, title });
+      }
+      loadEvents();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to execute command";
+      alert(message);
+    } finally {
+      setConfirmingAssistant(false);
     }
   };
 
@@ -273,6 +325,34 @@ export default function DashboardPage() {
       </header>
 
       <main className="flex-1 max-w-[1400px] w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-10 z-10">
+        {assistantConfirm && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-between gap-4 rounded-xl border border-amber-200/70 dark:border-amber-900/40 bg-amber-50/90 dark:bg-amber-950/30 px-4 py-3 text-sm shadow-sm"
+          >
+            <span className="text-amber-900 dark:text-amber-100">{assistantConfirm.message}</span>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={confirmingAssistant}
+                onClick={() => setAssistantConfirm(null)}
+                className="font-medium text-slate-600 hover:text-slate-800 dark:text-slate-300"
+              >
+                Dismiss
+              </Button>
+              <Button
+                size="sm"
+                disabled={confirmingAssistant}
+                onClick={handleConfirmAssistant}
+                className="font-semibold bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                {confirmingAssistant ? "Working…" : "Confirm"}
+              </Button>
+            </div>
+          </motion.div>
+        )}
         {assistantToast && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}

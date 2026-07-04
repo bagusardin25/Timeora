@@ -1,0 +1,76 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Tier 3 assistant confirm cancels event on dashboard",
+  "description": "User creates an event, asks the assistant to cancel it via Command Bar, confirms the amber banner, and the event disappears from the weekly calendar",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type a unique email using tier3-asst- plus random digits then @timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraE2E123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click the Sign In button"
+    },
+    {
+      "type": "action",
+      "description": "If login fails because account does not exist, navigate to the register page, create the same account, then return to login and sign in"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 5 seconds for the dashboard weekly calendar to load"
+    },
+    {
+      "type": "action",
+      "description": "Click an empty time slot on the weekly calendar to open the new event dialog"
+    },
+    {
+      "type": "action",
+      "description": "Type Tier3 Assistant Cancel Event into the event title field"
+    },
+    {
+      "type": "action",
+      "description": "Click the Save button in the event dialog"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 3 seconds for the event to appear on the calendar"
+    },
+    {
+      "type": "action",
+      "description": "Press Ctrl+K or Cmd+K to open the Command Bar"
+    },
+    {
+      "type": "action",
+      "description": "Type cancel Tier3 Assistant Cancel Event into the Command Bar input"
+    },
+    {
+      "type": "action",
+      "description": "Press Enter to submit the assistant command"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 3 seconds for the assistant confirmation banner to appear on the dashboard"
+    },
+    {
+      "type": "action",
+      "description": "Click the Confirm button in the amber assistant confirmation banner above the calendar"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 3 seconds for the calendar to refresh"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the weekly calendar no longer shows Tier3 Assistant Cancel Event after confirming the assistant cancel"
+    }
+  ]
+}

@@ -84,6 +84,15 @@ export type AssistantResult = {
   intent: string;
   result: unknown;
   message: string;
+  requires_confirmation?: boolean;
+  executed?: boolean;
+};
+
+export type AssistantExecuteParams = {
+  event_id: string;
+  action: 'cancel' | 'reschedule';
+  new_date?: string;
+  new_time?: string;
 };
 
 export async function parseEventNL(text: string): Promise<ParseResult> {
@@ -97,6 +106,19 @@ export async function callAssistant(text: string): Promise<AssistantResult> {
   return fetchApi('/assistant', {
     method: 'POST',
     body: JSON.stringify({ text }),
+  });
+}
+
+export async function executeAssistant(params: AssistantExecuteParams): Promise<AssistantResult> {
+  return fetchApi('/assistant', {
+    method: 'POST',
+    body: JSON.stringify({
+      confirm: true,
+      event_id: params.event_id,
+      action: params.action,
+      new_date: params.new_date,
+      new_time: params.new_time,
+    }),
   });
 }
 
