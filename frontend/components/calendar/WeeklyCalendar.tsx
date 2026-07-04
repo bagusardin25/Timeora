@@ -12,6 +12,7 @@ interface WeeklyCalendarProps {
   onEventClick: (arg: any) => void;
   onEventDrop: (arg: any) => void;
   onEventResize: (arg: any) => void;
+  onDatesChange?: (from: string, to: string) => void;
 }
 
 export function WeeklyCalendar({
@@ -20,6 +21,7 @@ export function WeeklyCalendar({
   onEventClick,
   onEventDrop,
   onEventResize,
+  onDatesChange,
 }: WeeklyCalendarProps) {
   const calendarRef = useRef<FullCalendar>(null);
   const [isMobile, setIsMobile] = React.useState(false);
@@ -68,6 +70,13 @@ export function WeeklyCalendar({
         eventClick={onEventClick}
         eventDrop={onEventDrop}
         eventResize={onEventResize}
+        datesSet={(arg) => {
+          if (onDatesChange) {
+            const from = arg.start.toISOString().slice(0, 10);
+            const to = arg.end.toISOString().slice(0, 10);
+            onDatesChange(from, to);
+          }
+        }}
         height="100%"
         expandRows={true}
         nowIndicator={true}

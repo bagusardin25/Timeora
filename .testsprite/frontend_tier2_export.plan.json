@@ -1,0 +1,44 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Tier 2 export ICS button downloads calendar file",
+  "description": "Logged-in user clicks the Export .ics button in the dashboard header and receives a calendar download",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type a unique email using tier2-export- plus random digits then @timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraE2E123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click the Sign In button"
+    },
+    {
+      "type": "action",
+      "description": "If login fails because account does not exist, navigate to the register page, create the same account, then return to login and sign in"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 5 seconds for the dashboard to load"
+    },
+    {
+      "type": "action",
+      "description": "Click the Export .ics button in the dashboard header"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 3 seconds for the download to start"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify a calendar file download was triggered or the browser received an ICS calendar response containing VCALENDAR content"
+    }
+  ]
+}

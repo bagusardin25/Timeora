@@ -1,7 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from __future__ import annotations
+
+from datetime import date as DateType
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.auth import get_current_user
 from app import data_access
+from app.core.recurrence import expand_recurrence
 from app.models import (
     ConflictCheckRequest,
     ConflictCheckResponse,
@@ -13,9 +18,67 @@ from app.models import (
 router = APIRouter()
 
 
+def _expand_events(
+    events: list[EventResponse],
+    range_start: DateType,
+    range_end: DateType,
+) -> list[EventResponse]:
+    """Expand recurring events into concrete instances within the date range."""
+    expanded: list[EventResponse] = []
+    for event in events:
+        if not event.recurrence_rule:
+            if range_start <= event.date <= range_end:
+                expanded.append(event)
+            continue
+
+        event_dict = event.model_dump(mode="json")
+        instances = expand_recurrence(event_dict, range_start, range_end)
+        for inst in instances:
+            inst_date = DateType.fromisoformat(inst["date"])
+            inst_id = f"{event.id}_{inst_date.isoformat()}"
+            expanded.append(
+                EventResponse(
+                    id=inst_id,
+                    user_id=event.user_id,
+                    title=event.title,
+                    date=inst_date,
+                    start_time=event.start_time,
+                    duration_minutes=event.duration_minutes,
+                    participants=event.participants,
+                    recurrence_rule=event.recurrence_rule,
+                )
+            )
+    expanded.sort(key=lambda e: (e.date, e.start_time))
+    return expanded
+
+
 @router.get("", response_model=list[EventResponse])
-async def list_events(user: dict = Depends(get_current_user)):
-    return await data_access.list_events(user["id"])
+async def list_events(
+    from_date: str | None = Query(None, alias="from", description="Filter from date (YYYY-MM-DD)"),
+    to_date: str | None = Query(None, alias="to", description="Filter to date (YYYY-MM-DD)"),
+    q: str | None = Query(None, description="Search query for title"),
+    expand: bool = Query(False, description="Expand recurring events into instances"),
+    user: dict = Depends(get_current_user),
+):
+    events = await data_access.list_events(user["id"])
+
+    if q:
+        q_lower = q.lower()
+        events = [e for e in events if q_lower in e.title.lower()]
+
+    if expand and from_date and to_date:
+        fd = DateType.fromisoformat(from_date)
+        td = DateType.fromisoformat(to_date)
+        return _expand_events(events, fd, td)
+
+    if from_date:
+        fd = DateType.fromisoformat(from_date)
+        events = [e for e in events if e.date >= fd]
+    if to_date:
+        td = DateType.fromisoformat(to_date)
+        events = [e for e in events if e.date <= td]
+
+    return events
 
 
 @router.post("", response_model=EventResponse, status_code=status.HTTP_201_CREATED)

@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { LogOut, Calendar as CalendarIcon, BrainCircuit } from "lucide-react";
+import { LogOut, Calendar as CalendarIcon, BrainCircuit, Download } from "lucide-react";
 import { WeeklyCalendar } from "@/components/calendar/WeeklyCalendar";
 import { EventDialog, EventData, ConflictData } from "@/components/calendar/EventDialog";
-import { fetchApi, ApiError, AssistantResult, restoreEvent } from "@/lib/api";
+import { fetchApi, ApiError, AssistantResult, restoreEvent, fetchEventsExpanded, exportIcs } from "@/lib/api";
 import { format } from "date-fns";
 import { CommandBar } from "@/components/CommandBar";
 import { InsightsPanel } from "@/components/InsightsPanel";
@@ -22,20 +22,33 @@ export default function DashboardPage() {
   const [conflictData, setConflictData] = useState<ConflictData | null>(null);
   const [assistantToast, setAssistantToast] = useState<string | null>(null);
   const [undoDelete, setUndoDelete] = useState<{ id: string; title: string } | null>(null);
+  const [dateRange, setDateRange] = useState<{ from: string; to: string } | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     const token = localStorage.getItem("token");
     if (!token) {
       router.push("/");
-    } else {
-      loadEvents();
+    } else if (!dateRange) {
+      const today = new Date();
+      const from = new Date(today);
+      from.setDate(from.getDate() - 14);
+      const to = new Date(today);
+      to.setDate(to.getDate() + 60);
+      const range = { from: format(from, "yyyy-MM-dd"), to: format(to, "yyyy-MM-dd") };
+      setDateRange(range);
+      loadEvents(range.from, range.to);
     }
   }, [router]);
 
-  const loadEvents = async () => {
+  const loadEvents = async (from?: string, to?: string) => {
     try {
-      const data = await fetchApi("/events");
+      const rangeFrom = from || dateRange?.from;
+      const rangeTo = to || dateRange?.to;
+      const data = rangeFrom && rangeTo
+        ? await fetchEventsExpanded(rangeFrom, rangeTo)
+        : await fetchApi("/events");
       const formattedEvents = data.map((e: any) => {
         const startDate = new Date(`${e.date}T${e.start_time}`);
         const endDate = new Date(startDate.getTime() + e.duration_minutes * 60000);
@@ -58,7 +71,31 @@ export default function DashboardPage() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("refresh_token");
     router.push("/");
+  };
+
+  const handleExportIcs = async () => {
+    setExporting(true);
+    try {
+      const blob = await exportIcs();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "timeora.ics";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err.message || "Failed to export calendar");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleDatesChange = (from: string, to: string) => {
+    if (dateRange?.from === from && dateRange?.to === to) return;
+    setDateRange({ from, to });
+    loadEvents(from, to);
   };
 
   const handleDateClick = (arg: any) => {
@@ -148,7 +185,14 @@ export default function DashboardPage() {
       } else {
         await fetchApi("/events", {
           method: "POST",
-          body: JSON.stringify(data),
+          body: JSON.stringify({
+            title: data.title,
+            date: data.date,
+            start_time: data.start_time,
+            duration_minutes: data.duration_minutes,
+            participants: data.participants,
+            recurrence_rule: data.recurrence_rule || null,
+          }),
         });
       }
       setConflictData(null);
@@ -209,10 +253,22 @@ export default function DashboardPage() {
           </div>
           <h1 className="text-xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-zinc-400">Timeora</h1>
         </div>
-        <Button variant="ghost" size="sm" onClick={handleLogout} className="hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-500 transition-colors font-medium rounded-xl">
-          <LogOut className="w-4 h-4 mr-2" />
-          Logout
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleExportIcs}
+            disabled={exporting}
+            className="hover:bg-violet-50 hover:text-violet-600 dark:hover:bg-violet-500/10 dark:hover:text-violet-500 transition-colors font-medium rounded-xl"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export .ics
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleLogout} className="hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-500 transition-colors font-medium rounded-xl">
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
+        </div>
       </header>
 
       <main className="flex-1 max-w-[1400px] w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-10 z-10">
@@ -281,6 +337,7 @@ export default function DashboardPage() {
               onEventClick={handleEventClick}
               onEventDrop={handleEventDropOrResize}
               onEventResize={handleEventDropOrResize}
+              onDatesChange={handleDatesChange}
             />
           </motion.div>
           <InsightsPanel key={events.length} />

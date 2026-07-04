@@ -3,7 +3,14 @@ from fastapi import APIRouter, HTTPException, status
 
 from app.config import settings
 from app import data_access
-from app.models import AuthResponse, LoginRequest, LoginResponse, RegisterRequest
+from app.models import (
+    AuthResponse,
+    LoginRequest,
+    LoginResponse,
+    RefreshRequest,
+    RefreshResponse,
+    RegisterRequest,
+)
 
 router = APIRouter()
 
@@ -66,7 +73,10 @@ async def register(body: RegisterRequest):
 
     if login_resp.status_code == 200:
         login_data = login_resp.json()
-        return AuthResponse(access_token=login_data["access_token"])
+        return AuthResponse(
+            access_token=login_data["access_token"],
+            refresh_token=login_data.get("refresh_token"),
+        )
 
     return AuthResponse(
         message="Account created. Please sign in with your new credentials."
@@ -93,4 +103,31 @@ async def login(body: LoginRequest):
 
     await _ensure_user_row(user_id, email)
 
-    return LoginResponse(access_token=data["access_token"])
+    return LoginResponse(
+        access_token=data["access_token"],
+        refresh_token=data.get("refresh_token"),
+    )
+
+
+@router.post("/refresh", response_model=RefreshResponse)
+async def refresh_session(body: RefreshRequest):
+    """Refresh an expired session using a Supabase refresh token."""
+    url = f"{settings.SUPABASE_URL}/auth/v1/token?grant_type=refresh_token"
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            url,
+            json={"refresh_token": body.refresh_token},
+            headers=_SUPABASE_HEADERS,
+        )
+
+    if resp.status_code != 200:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not refresh session",
+        )
+
+    data = resp.json()
+    return RefreshResponse(
+        access_token=data["access_token"],
+        refresh_token=data.get("refresh_token"),
+    )
