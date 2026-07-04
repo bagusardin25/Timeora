@@ -98,6 +98,7 @@ export type ParseResult = {
   duration_minutes: number;
   participants?: string;
   recurrence?: string | null;
+  category?: string | null;
   source?: 'ai' | 'fallback';
   warnings?: string[];
 };
@@ -227,6 +228,7 @@ export type ApiEvent = {
   duration_minutes: number;
   participants?: string;
   recurrence_rule?: string | null;
+  category?: string | null;
 };
 
 export async function restoreEvent(eventId: string): Promise<ApiEvent> {
