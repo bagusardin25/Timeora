@@ -28,6 +28,7 @@ export type EventData = {
   start_time: string; // HH:MM:SS
   duration_minutes: number;
   participants: string;
+  recurrence_rule?: string | null;
 };
 
 interface EventDialogProps {

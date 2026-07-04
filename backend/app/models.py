@@ -9,6 +9,7 @@ class EventCreate(BaseModel):
     start_time: Time
     duration_minutes: int = Field(..., ge=5, le=1440)
     participants: str = ""
+    recurrence_rule: str | None = None
 
 
 class EventUpdate(BaseModel):
@@ -27,6 +28,7 @@ class EventResponse(BaseModel):
     start_time: Time
     duration_minutes: int
     participants: str
+    recurrence_rule: str | None = None
 
 
 class ParsedEvent(BaseModel):
@@ -77,6 +79,17 @@ class AuthResponse(BaseModel):
 
 class LoginResponse(BaseModel):
     access_token: str
+    refresh_token: str | None = None
+    token_type: str = "bearer"
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
+class RefreshResponse(BaseModel):
+    access_token: str
+    refresh_token: str | None = None
     token_type: str = "bearer"
 
 

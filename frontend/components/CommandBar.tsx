@@ -62,6 +62,7 @@ export function CommandBar({ onParsed, onAssistant }: CommandBarProps) {
             start_time: result.start_time.length === 5 ? `${result.start_time}:00` : result.start_time,
             duration_minutes: result.duration_minutes,
             participants: result.participants || "",
+            recurrence_rule: result.recurrence || null,
           },
           { source: result.source, warnings: result.warnings }
         );

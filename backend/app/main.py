@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import cors_origins
 from app.database import close_pool, init_pool
-from app.routers import analytics, assistant, auth, events, health, parse
+from app.routers import analytics, assistant, auth, events, export, health, parse
 
 
 @asynccontextmanager
@@ -35,6 +35,7 @@ app.include_router(events.router, prefix="/api/events", tags=["events"])
 app.include_router(parse.router, prefix="/api", tags=["parse"])
 app.include_router(assistant.router, prefix="/api", tags=["assistant"])
 app.include_router(analytics.router, prefix="/api", tags=["analytics"])
+app.include_router(export.router, prefix="/api", tags=["export"])
 
 
 @app.get("/")
