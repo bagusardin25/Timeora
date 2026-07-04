@@ -40,8 +40,27 @@ export function InsightsPanel({ refreshKey = 0, onActionApplied }: InsightsPanel
   }, []);
 
   useEffect(() => {
-    loadInsights();
-  }, [loadInsights, refreshKey]);
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await fetchWeeklyInsights();
+        if (!cancelled) setInsights(data);
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load insights");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
 
   const handleAction = async (action: InsightAction) => {
     setApplying(action.type);

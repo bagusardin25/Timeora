@@ -1,19 +1,39 @@
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/+$/, '');
 
+type JsonRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): JsonRecord {
+  return typeof value === 'object' && value !== null
+    ? value as JsonRecord
+    : {};
+}
+
+function errorMessage(data: JsonRecord, defaultMessage: string): string {
+  const detail = data.detail;
+  if (typeof detail === 'string') return detail;
+  if (typeof detail === 'object' && detail !== null) {
+    const message = (detail as JsonRecord).message;
+    if (typeof message === 'string') return message;
+  }
+  return defaultMessage;
+}
+
 export class ApiError extends Error {
   public status: number;
-  public data: any;
+  public data: JsonRecord;
 
-  constructor(status: number, data: any, defaultMessage: string) {
-    let msg = defaultMessage;
-    if (data?.detail) {
-      msg = typeof data.detail === 'string' ? data.detail : (data.detail.message || defaultMessage);
-    }
-    super(msg);
+  constructor(status: number, data: unknown, defaultMessage: string) {
+    const normalizedData = asRecord(data);
+    super(errorMessage(normalizedData, defaultMessage));
     this.status = status;
-    this.data = data;
+    this.data = normalizedData;
   }
 }
+
+type AuthTokenResponse = {
+  access_token?: string;
+  refresh_token?: string;
+};
 
 async function refreshAccessToken(): Promise<boolean> {
   const refreshToken = localStorage.getItem('refresh_token');
@@ -25,7 +45,7 @@ async function refreshAccessToken(): Promise<boolean> {
       body: JSON.stringify({ refresh_token: refreshToken }),
     });
     if (!resp.ok) return false;
-    const data = await resp.json();
+    const data = await resp.json() as AuthTokenResponse;
     if (data.access_token) {
       localStorage.setItem('token', data.access_token);
       if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
@@ -37,14 +57,16 @@ async function refreshAccessToken(): Promise<boolean> {
   return false;
 }
 
-export async function fetchApi(endpoint: string, options: RequestInit = {}, retry = true) {
+export async function fetchApi<T = unknown>(
+  endpoint: string,
+  options: RequestInit = {},
+  retry = true,
+): Promise<T> {
   const token = localStorage.getItem('token');
-  
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...options.headers,
-  };
+
+  const headers = new Headers(options.headers);
+  if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+  if (token) headers.set('Authorization', `Bearer ${token}`);
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
@@ -53,7 +75,7 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}, retr
 
   if (response.status === 401 && retry && !endpoint.includes('/auth/')) {
     const refreshed = await refreshAccessToken();
-    if (refreshed) return fetchApi(endpoint, options, false);
+    if (refreshed) return fetchApi<T>(endpoint, options, false);
   }
 
   if (!response.ok) {
@@ -62,10 +84,10 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}, retr
   }
 
   if (response.status === 204) {
-    return null; // No content
+    return null as T;
   }
 
-  return response.json();
+  return response.json() as Promise<T>;
 }
 
 export type ParseResult = {
@@ -96,21 +118,21 @@ export type AssistantExecuteParams = {
 };
 
 export async function parseEventNL(text: string): Promise<ParseResult> {
-  return fetchApi('/parse', {
+  return fetchApi<ParseResult>('/parse', {
     method: 'POST',
     body: JSON.stringify({ text }),
   });
 }
 
 export async function callAssistant(text: string): Promise<AssistantResult> {
-  return fetchApi('/assistant', {
+  return fetchApi<AssistantResult>('/assistant', {
     method: 'POST',
     body: JSON.stringify({ text }),
   });
 }
 
 export async function executeAssistant(params: AssistantExecuteParams): Promise<AssistantResult> {
-  return fetchApi('/assistant', {
+  return fetchApi<AssistantResult>('/assistant', {
     method: 'POST',
     body: JSON.stringify({
       confirm: true,
@@ -156,17 +178,17 @@ export type InsightActionResult = {
 
 export async function fetchWeeklyInsights(refDate?: string): Promise<WeeklyInsight> {
   const qs = refDate ? `?date=${refDate}` : '';
-  return fetchApi(`/analytics/week${qs}`);
+  return fetchApi<WeeklyInsight>(`/analytics/week${qs}`);
 }
 
 export async function applyBlockFocusTime(refDate?: string): Promise<InsightActionResult> {
   const qs = refDate ? `?date=${refDate}` : '';
-  return fetchApi(`/analytics/actions/block-focus${qs}`, { method: 'POST' });
+  return fetchApi<InsightActionResult>(`/analytics/actions/block-focus${qs}`, { method: 'POST' });
 }
 
 export async function applySpreadLoad(refDate?: string): Promise<InsightActionResult> {
   const qs = refDate ? `?date=${refDate}` : '';
-  return fetchApi(`/analytics/actions/spread-load${qs}`, { method: 'POST' });
+  return fetchApi<InsightActionResult>(`/analytics/actions/spread-load${qs}`, { method: 'POST' });
 }
 
 export type AvailabilityCell = {
@@ -193,20 +215,34 @@ export type AvailabilityHeatmapData = {
 
 export async function fetchAvailabilityHeatmap(refDate?: string): Promise<AvailabilityHeatmapData> {
   const qs = refDate ? `?date=${refDate}` : '';
-  return fetchApi(`/analytics/availability${qs}`);
+  return fetchApi<AvailabilityHeatmapData>(`/analytics/availability${qs}`);
 }
 
-export async function restoreEvent(eventId: string) {
-  return fetchApi(`/events/${eventId}/restore`, { method: 'POST' });
+export type ApiEvent = {
+  id: string;
+  user_id: string;
+  title: string;
+  date: string;
+  start_time: string;
+  duration_minutes: number;
+  participants?: string;
+  recurrence_rule?: string | null;
+};
+
+export async function restoreEvent(eventId: string): Promise<ApiEvent> {
+  return fetchApi<ApiEvent>(`/events/${eventId}/restore`, { method: 'POST' });
 }
 
-export async function fetchEventsExpanded(fromDate: string, toDate: string) {
+export async function fetchEventsExpanded(
+  fromDate: string,
+  toDate: string,
+): Promise<ApiEvent[]> {
   const qs = new URLSearchParams({
     expand: 'true',
     from: fromDate,
     to: toDate,
   });
-  return fetchApi(`/events?${qs.toString()}`);
+  return fetchApi<ApiEvent[]>(`/events?${qs.toString()}`);
 }
 
 export async function exportIcs(): Promise<Blob> {

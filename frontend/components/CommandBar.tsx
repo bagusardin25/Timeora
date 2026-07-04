@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Sparkles, Command, Loader2 } from "lucide-react";
 import { parseEventNL, callAssistant, AssistantResult } from "@/lib/api";
 import { EventData } from "./calendar/EventDialog";
@@ -17,13 +17,19 @@ export function CommandBar({ onParsed, onAssistant }: CommandBarProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assistantMessage, setAssistantMessage] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setOpen((open) => !open);
+        if (open) {
+          setOpen(false);
+        } else {
+          setQuery("");
+          setError(null);
+          setAssistantMessage(null);
+          setOpen(true);
+        }
       }
       if (e.key === "Escape" && open) {
         e.preventDefault();
@@ -32,15 +38,6 @@ export function CommandBar({ onParsed, onAssistant }: CommandBarProps) {
     };
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
-  }, [open]);
-
-  useEffect(() => {
-    if (open) {
-      setQuery("");
-      setError(null);
-      setAssistantMessage(null);
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }
   }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -115,7 +112,7 @@ export function CommandBar({ onParsed, onAssistant }: CommandBarProps) {
                 <Sparkles className="mr-3 h-6 w-6 text-primary" />
               )}
               <input
-                ref={inputRef}
+                autoFocus
                 className="flex h-12 w-full rounded-md bg-transparent text-lg outline-none placeholder:text-zinc-500 dark:placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-50 text-zinc-900 dark:text-zinc-100 font-medium"
                 placeholder="Jadwalkan, tanya jadwal, atau cari waktu kosong..."
                 value={query}

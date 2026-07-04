@@ -131,10 +131,10 @@ def _parse_date(text: str, today: date) -> tuple[date | None, str]:
     # Relative dates — EN
     if re.search(r"\btoday\b", low):
         return today, re.sub(r"\btoday\b", "", text, flags=re.I).strip()
-    if re.search(r"\btomorrow\b", low):
-        return today + timedelta(days=1), re.sub(r"\btomorrow\b", "", text, flags=re.I).strip()
     if re.search(r"\bday\s+after\s+tomorrow\b", low):
         return today + timedelta(days=2), re.sub(r"\bday\s+after\s+tomorrow\b", "", text, flags=re.I).strip()
+    if re.search(r"\btomorrow\b", low):
+        return today + timedelta(days=1), re.sub(r"\btomorrow\b", "", text, flags=re.I).strip()
 
     # "next <day>" / "this <day>"
     m = re.search(r"\b(?:next|this|depan|ini)\s+(\w+)\b", low)
@@ -213,7 +213,9 @@ def _parse_time(text: str) -> tuple[time | None, str]:
         h = int(m.group(1))
         mins = int(m.group(2)) if m.group(2) else 0
         period = m.group(3)
-        if period in ("sore", "malam") and h < 12:
+        if period == "siang" and 1 <= h <= 5:
+            h += 12
+        elif period in ("sore", "malam") and h < 12:
             h += 12
         elif period == "pagi" and h == 12:
             h = 0

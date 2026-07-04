@@ -4,14 +4,22 @@ import React, { useRef } from "react";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
-import interactionPlugin from "@fullcalendar/interaction";
+import interactionPlugin, {
+  type DateClickArg,
+  type EventResizeDoneArg,
+} from "@fullcalendar/interaction";
+import type {
+  EventClickArg,
+  EventDropArg,
+  EventInput,
+} from "@fullcalendar/core";
 
 interface WeeklyCalendarProps {
-  events: any[]; // FullCalendar Event Source format
-  onDateClick: (arg: any) => void;
-  onEventClick: (arg: any) => void;
-  onEventDrop: (arg: any) => void;
-  onEventResize: (arg: any) => void;
+  events: EventInput[];
+  onDateClick: (arg: DateClickArg) => void;
+  onEventClick: (arg: EventClickArg) => void;
+  onEventDrop: (arg: EventDropArg) => void;
+  onEventResize: (arg: EventResizeDoneArg) => void;
   onDatesChange?: (from: string, to: string) => void;
 }
 
