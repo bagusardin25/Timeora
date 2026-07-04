@@ -50,6 +50,7 @@ class ConflictCheckRequest(BaseModel):
 class AlternativeSlot(BaseModel):
     start_time: Time
     duration_minutes: int
+    reason: str = ""
 
 
 class ConflictCheckResponse(BaseModel):
@@ -77,3 +78,28 @@ class AuthResponse(BaseModel):
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class ParseResponseV2(BaseModel):
+    """Hybrid AI + fallback parse result."""
+    intent: str = "create"
+    title: str
+    date: Date
+    start_time: Time
+    duration_minutes: int = Field(60, ge=5, le=1440)
+    participants: str = ""
+    source: str = "ai"
+    start_at: str | None = None
+    end_at: str | None = None
+    warnings: list[str] = []
+    recurrence: str | None = None
+
+
+class AssistantRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=1000)
+
+
+class AssistantResponse(BaseModel):
+    intent: str
+    result: dict | list | None = None
+    message: str
