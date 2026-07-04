@@ -11,7 +11,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.auth import get_current_user
 from app import data_access
 from app.core.analytics import plan_block_focus_time, plan_spread_load, weekly_summary
-from app.models import EventCreate, EventUpdate, InsightActionResponse, WeeklyInsight
+from app.core.availability import availability_heatmap
+from app.models import (
+    AvailabilityHeatmap,
+    EventCreate,
+    EventUpdate,
+    InsightActionResponse,
+    WeeklyInsight,
+)
 
 router = APIRouter()
 
@@ -42,6 +49,18 @@ async def get_weekly_insights(
     all_events = await data_access.list_events(user["id"])
     result = weekly_summary(_events_as_dicts(all_events), reference_date=reference)
     return WeeklyInsight(**result)
+
+
+@router.get("/analytics/availability", response_model=AvailabilityHeatmap)
+async def get_availability_heatmap(
+    ref_date: str | None = Query(None, alias="date", description="YYYY-MM-DD reference date; defaults to today"),
+    user: dict = Depends(get_current_user),
+):
+    """Return a weekly hour-by-day availability heatmap."""
+    reference = _reference_date(ref_date)
+    all_events = await data_access.list_events(user["id"])
+    result = availability_heatmap(_events_as_dicts(all_events), reference_date=reference)
+    return AvailabilityHeatmap(**result)
 
 
 @router.post("/analytics/actions/block-focus", response_model=InsightActionResponse)

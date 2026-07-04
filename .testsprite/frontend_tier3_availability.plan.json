@@ -1,0 +1,48 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Tier 3 availability heatmap renders on dashboard sidebar",
+  "description": "Logged-in user sees the Availability heatmap panel with a day-by-hour color grid and a free-percentage badge in the dashboard sidebar",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type a unique email using tier3-heatmap- plus random digits then @timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraE2E123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click the Sign In button"
+    },
+    {
+      "type": "action",
+      "description": "If login fails because account does not exist, navigate to the register page, create the same account, then return to login and sign in"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 5 seconds for the dashboard to load"
+    },
+    {
+      "type": "action",
+      "description": "Scroll to the Availability panel in the right sidebar below Weekly Insights"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 3 seconds for the availability heatmap grid to finish loading"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the Availability panel heading and a percentage-free badge are visible in the right sidebar"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the Availability panel shows a day-by-hour color grid with weekday column labels and a busy-to-free legend row beneath the grid"
+    }
+  ]
+}
