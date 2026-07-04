@@ -176,7 +176,7 @@ async def create_event(user_id: str, body: EventCreate) -> EventResponse:
             detail={
                 "message": "Time slot conflicts with existing event",
                 "conflicting_event": title,
-                "alternatives": [a.model_dump() for a in alts],
+                "alternatives": [a.model_dump(mode="json") for a in alts],
             },
         )
 
