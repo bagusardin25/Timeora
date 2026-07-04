@@ -1,0 +1,52 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Tier 1 assistant query shows schedule message",
+  "description": "Logged-in user asks what they have on a day via Command Bar and sees an assistant response message on the dashboard",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type a unique email using tier1-query- plus random digits then @timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraE2E123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click the Sign In button"
+    },
+    {
+      "type": "action",
+      "description": "If login fails because account does not exist, navigate to the register page, create the same account, then return to login and sign in"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 5 seconds for the dashboard weekly calendar to load"
+    },
+    {
+      "type": "action",
+      "description": "Press Control+K or Meta+K to open the Command Bar"
+    },
+    {
+      "type": "action",
+      "description": "Type apa jadwal saya hari jumat into the Command Bar input"
+    },
+    {
+      "type": "action",
+      "description": "Press Enter"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 3 seconds for the assistant response"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the dashboard shows an assistant message banner mentioning events or no events found for the requested day"
+    }
+  ]
+}
