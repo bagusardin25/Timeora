@@ -29,7 +29,7 @@ interface WeeklyCalendarProps {
   onEventCategoryChange?: (eventId: string, category: string) => void;
 }
 
-function renderEventContent(arg: EventContentArg, onCategoryChange?: (id: string, cat: string) => void) {
+function renderEventContent(arg: EventContentArg) {
   const ext = arg.event.extendedProps as Record<string, unknown>;
   const cat = getCategoryConfig(ext.category as string | null | undefined);
   const isDayGrid = arg.view.type === "dayGridMonth";
@@ -387,7 +387,7 @@ export function WeeklyCalendar({
           eventClick={onEventClick}
           eventDrop={onEventDrop}
           eventResize={onEventResize}
-          eventContent={(arg) => renderEventContent(arg, onEventCategoryChange)}
+          eventContent={renderEventContent}
           datesSet={(arg) => {
             setCalendarTitle(arg.view.title);
             if (onDatesChange) {

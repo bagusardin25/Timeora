@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { LogOut, Calendar as CalendarIcon, Brain, Download, User } from "lucide-react";
+import { LogOut, Calendar as CalendarIcon, Brain, Download, Settings, User } from "lucide-react";
 import { WeeklyCalendar } from "@/components/calendar/WeeklyCalendar";
 import { EventDialog, EventData, ConflictData } from "@/components/calendar/EventDialog";
 import {
@@ -131,6 +131,8 @@ export default function DashboardPage() {
 
   // Timezone (client only)
   useEffect(() => {
+    // Browser timezone is unavailable during server rendering.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
   }, []);
 
@@ -141,6 +143,7 @@ export default function DashboardPage() {
       try {
         const prefs = JSON.parse(saved);
         if (prefs.defaultDuration) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setDefaultDuration(prefs.defaultDuration);
         }
         if (prefs.timezone) {
@@ -610,6 +613,15 @@ export default function DashboardPage() {
                   className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2"
                 >
                   <User className="w-4 h-4" /> Profile
+                </button>
+                <button
+                  onClick={() => {
+                    router.push("/integrations");
+                    setProfileDropdownOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2"
+                >
+                  <Settings className="w-4 h-4" /> Integrations
                 </button>
                 <button
                   onClick={() => {
