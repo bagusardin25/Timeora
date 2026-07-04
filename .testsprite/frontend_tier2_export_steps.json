@@ -1,0 +1,40 @@
+{
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type a unique email using tier2-export- plus random digits then @timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraE2E123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click the Sign In button"
+    },
+    {
+      "type": "action",
+      "description": "If login fails because account does not exist, navigate to the register page, create the same account, then return to login and sign in"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 5 seconds for the dashboard to load"
+    },
+    {
+      "type": "action",
+      "description": "Click the header toolbar button whose visible label text is exactly Export .ics located in the top sticky header bar beside the Logout button"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 3 seconds for the export to complete"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the dashboard shows a success banner message confirming the calendar was exported and timeora.ics was downloaded"
+    }
+  ]
+}
