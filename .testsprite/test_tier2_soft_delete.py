@@ -4,20 +4,14 @@ from datetime import date, timedelta
 import requests
 
 BASE_URL = "https://timeora-production.up.railway.app"
-PASSWORD = "TimeoraE2E123!"
+EMAIL = "demo@timeora.app"
+PASSWORD = "TimeoraDemo123!"
 
 
 def _token():
-    email = f"tier2-softdel-{uuid.uuid4().hex[:10]}@timeora.app"
-    reg = requests.post(
-        f"{BASE_URL}/api/auth/register",
-        json={"email": email, "password": PASSWORD},
-        timeout=20,
-    )
-    assert reg.status_code in (200, 201), f"register failed: {reg.status_code} {reg.text[:200]}"
     login = requests.post(
         f"{BASE_URL}/api/auth/login",
-        json={"email": email, "password": PASSWORD},
+        json={"email": EMAIL, "password": PASSWORD},
         timeout=20,
     )
     assert login.status_code == 200, f"login failed: {login.status_code}"
@@ -29,13 +23,14 @@ def _token():
 def test_soft_delete_and_restore():
     token = _token()
     headers = {"Authorization": f"Bearer {token}"}
-    event_date = (date.today() + timedelta(days=14)).isoformat()
+    event_date = (date.today() + timedelta(days=380)).isoformat()
+    title = f"Tier2 Soft Delete {uuid.uuid4().hex[:6]}"
 
     create = requests.post(
         f"{BASE_URL}/api/events",
         headers=headers,
         json={
-            "title": "Tier2 Soft Delete Test",
+            "title": title,
             "date": event_date,
             "start_time": "14:00:00",
             "duration_minutes": 60,
@@ -65,12 +60,18 @@ def test_soft_delete_and_restore():
     )
     assert restore.status_code == 200, f"restore failed: {restore.status_code} {restore.text[:300]}"
     assert restore.json()["id"] == event_id
-    assert restore.json()["title"] == "Tier2 Soft Delete Test"
+    assert restore.json()["title"] == title
 
     list_restored = requests.get(f"{BASE_URL}/api/events", headers=headers, timeout=20)
     assert list_restored.status_code == 200
     ids2 = [e["id"] for e in list_restored.json()]
     assert event_id in ids2, "restored event not in list"
+    cleanup = requests.delete(
+        f"{BASE_URL}/api/events/{event_id}",
+        headers=headers,
+        timeout=20,
+    )
+    assert cleanup.status_code == 204, f"cleanup failed: {cleanup.status_code}"
     print("TIER2 SOFT DELETE RESTORE TEST PASSED")
 
 

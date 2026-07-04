@@ -1,22 +1,14 @@
-import uuid
-
 import requests
 
 BASE_URL = "https://timeora-production.up.railway.app"
-PASSWORD = "TimeoraE2E123!"
+EMAIL = "demo@timeora.app"
+PASSWORD = "TimeoraDemo123!"
 
 
 def _token():
-    email = f"tier2-analytics-{uuid.uuid4().hex[:10]}@timeora.app"
-    reg = requests.post(
-        f"{BASE_URL}/api/auth/register",
-        json={"email": email, "password": PASSWORD},
-        timeout=20,
-    )
-    assert reg.status_code in (200, 201), f"register failed: {reg.status_code} {reg.text[:200]}"
     login = requests.post(
         f"{BASE_URL}/api/auth/login",
-        json={"email": email, "password": PASSWORD},
+        json={"email": EMAIL, "password": PASSWORD},
         timeout=20,
     )
     assert login.status_code == 200, f"login failed: {login.status_code}"

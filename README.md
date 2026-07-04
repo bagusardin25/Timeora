@@ -35,6 +35,15 @@ parse.
 - Daily, weekday, weekly, and monthly recurring events
 - Soft delete with one-click Undo
 - `.ics` export for Google Calendar, Apple Calendar, and Outlook
+- `.ics` import with duplicate UID and conflict protection
+
+### Integration foundation
+
+- Outgoing webhooks for event create, update, delete, and restore
+- HMAC signatures, retries, SSRF protection, per-user limits, and sync logs
+- Resend email notifications for event participants
+- Encrypted provider token storage for Google, Zoom, Slack, Microsoft, and Notion
+- Integrations settings UI at `/integrations`
 
 ### Actionable time analytics
 
@@ -74,7 +83,7 @@ This project was built with a strict **write → verify → fail → fix → ver
 
 | Layer | Coverage | Current local result |
 |---|---|---|
-| Backend unit | JWT security, bilingual parsing, conflict ranking, recurrence, analytics, availability, ICS | **38/38 passed** |
+| Backend unit | JWT security, bilingual parsing, conflict ranking, recurrence, analytics, availability, ICS, integration security | **46/46 passed** |
 | Frontend static | ESLint + strict TypeScript | **Passed** |
 | Frontend build | Next.js production bundle | **Passed** |
 | TestSprite backend | Health, DB, signed JWT, forged-JWT rejection, parse, availability | Final gate |
@@ -114,6 +123,13 @@ false-green builds.
 | `POST` | `/api/analytics/actions/block-focus` | Add a recommended focus block |
 | `POST` | `/api/analytics/actions/spread-load` | Rebalance the busiest weekday |
 | `GET` | `/api/export/ics` | Export the calendar as iCalendar |
+| `POST` | `/api/events/import-ics` | Import an iCalendar file |
+| `GET` | `/api/integrations` | List provider readiness and connection status |
+| `PUT` | `/api/integrations/{provider}` | Store an encrypted provider connection |
+| `DELETE` | `/api/integrations/{provider}` | Disconnect a provider |
+| `GET` | `/api/webhooks` | List outgoing webhook subscriptions |
+| `POST` | `/api/webhooks` | Register an outgoing webhook |
+| `DELETE` | `/api/webhooks/{id}` | Delete an outgoing webhook |
 | `POST` | `/api/auth/refresh` | Refresh an expired access token |
 
 ---
@@ -128,6 +144,9 @@ python -m venv .venv
 # source .venv/bin/activate   # macOS/Linux
 pip install -r requirements.txt
 cp .env.example .env          # Fill in your env vars
+# From the repository root, link Supabase once and apply pending migrations:
+# npx --yes supabase@latest link --project-ref <project-ref>
+# npx --yes supabase@latest db push
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -148,6 +167,11 @@ SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=...
 JWT_SECRET=...
 OPENROUTER_API_KEY=...
+INTEGRATION_ENCRYPTION_KEY=...
+INTEGRATION_SIGNING_KEY=...
+INTEGRATION_RESEND_API_KEY=...
+INTEGRATION_RESEND_FROM_EMAIL=Timeora <notifications@example.com>
+INTEGRATION_EMAIL_NOTIFICATIONS_ENABLED=false
 ```
 
 **Frontend** (`.env.local`):

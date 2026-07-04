@@ -1,52 +1,20 @@
 {
   "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
   "type": "frontend",
-  "name": "E2E register login create event",
-  "description": "A new user registers, signs out, signs back in, creates an event via the calendar dialog, and sees it on the weekly calendar",
+  "name": "E2E reusable login create event",
+  "description": "The reusable test user signs in, creates an event via the calendar dialog, verifies it, and deletes it",
   "planSteps": [
     {
       "type": "action",
-      "description": "Navigate to the URL https://timeora-alpha.vercel.app/register"
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
     },
     {
       "type": "action",
-      "description": "Type a unique email in the format e2e-ui- followed by random digits then @timeora.app into the email field"
+      "description": "Type demo@timeora.app into the email field"
     },
     {
       "type": "action",
-      "description": "Type 'TimeoraE2E123!' into the password field"
-    },
-    {
-      "type": "action",
-      "description": "Type 'TimeoraE2E123!' into the confirm password field"
-    },
-    {
-      "type": "action",
-      "description": "Type 'E2E Test User' into the full name field"
-    },
-    {
-      "type": "action",
-      "description": "Click the 'Sign Up' button"
-    },
-    {
-      "type": "action",
-      "description": "Wait for 5 seconds for registration to complete and the dashboard to load"
-    },
-    {
-      "type": "action",
-      "description": "Click the 'Logout' button in the dashboard header"
-    },
-    {
-      "type": "action",
-      "description": "Wait for 2 seconds for the login page to appear"
-    },
-    {
-      "type": "action",
-      "description": "Type the same email address used during registration into the email input field on the login page"
-    },
-    {
-      "type": "action",
-      "description": "Type 'TimeoraE2E123!' into the password input field on the login page"
+      "description": "Type TimeoraDemo123! into the password field"
     },
     {
       "type": "action",
@@ -62,7 +30,7 @@
     },
     {
       "type": "action",
-      "description": "Type 'Team Standup E2E' into the title input field labeled 'Judul Event' in the event dialog"
+      "description": "Type TestSprite Calendar Cleanup into the title input field labeled Judul Event in the event dialog"
     },
     {
       "type": "action",
@@ -74,7 +42,11 @@
     },
     {
       "type": "assertion",
-      "description": "Verify the weekly calendar grid on the dashboard shows an event block containing 'Team Standup E2E' or 'Standup'"
+      "description": "Verify the weekly calendar grid shows an event block containing TestSprite Calendar Cleanup"
+    },
+    {
+      "type": "action",
+      "description": "Open TestSprite Calendar Cleanup, click Hapus, and confirm the browser deletion prompt"
     }
   ]
 }
