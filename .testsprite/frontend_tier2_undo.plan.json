@@ -1,0 +1,76 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Tier 2 soft delete undo restores event on dashboard",
+  "description": "User deletes an event from the event dialog and uses the Undo banner to restore it back onto the calendar",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type a unique email using tier2-undo- plus random digits then @timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraE2E123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click the Sign In button"
+    },
+    {
+      "type": "action",
+      "description": "If login fails because account does not exist, navigate to the register page, create the same account, then return to login and sign in"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 5 seconds for the dashboard weekly calendar to load"
+    },
+    {
+      "type": "action",
+      "description": "Click an empty time slot on the weekly calendar to open the new event dialog"
+    },
+    {
+      "type": "action",
+      "description": "Type Tier2 Undo Test Event into the event title field"
+    },
+    {
+      "type": "action",
+      "description": "Click the Save button in the event dialog"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 3 seconds for the event to appear on the calendar"
+    },
+    {
+      "type": "action",
+      "description": "Click the Tier2 Undo Test Event on the calendar to open the edit dialog"
+    },
+    {
+      "type": "action",
+      "description": "Click the Delete button in the event dialog"
+    },
+    {
+      "type": "action",
+      "description": "Confirm the delete in the browser confirmation dialog"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 2 seconds for the undo banner to appear"
+    },
+    {
+      "type": "action",
+      "description": "Click the Undo button in the deleted-event banner"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 3 seconds for the calendar to refresh"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the weekly calendar shows the Tier2 Undo Test Event again after undo"
+    }
+  ]
+}
