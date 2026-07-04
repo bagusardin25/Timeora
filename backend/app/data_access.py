@@ -206,23 +206,45 @@ async def create_event(user_id: str, body: EventCreate) -> EventResponse:
 async def update_event(
     event_id: str, user_id: str, body: EventUpdate
 ) -> EventResponse:
+    existing = await get_event(event_id, user_id)
+    update_data = body.model_dump(exclude_unset=True)
+    if not update_data:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    event_date = body.date if body.date is not None else existing.date
+    start_time = (
+        body.start_time if body.start_time is not None else existing.start_time
+    )
+    duration_minutes = (
+        body.duration_minutes
+        if body.duration_minutes is not None
+        else existing.duration_minutes
+    )
+    detail = await _conflict_detail(
+        user_id,
+        event_date,
+        start_time,
+        duration_minutes,
+        exclude_id=event_id,
+    )
+    if detail:
+        title, alts = detail
+        from fastapi import HTTPException, status
+
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "message": "Time slot conflicts with existing event",
+                "conflicting_event": title,
+                "alternatives": [a.model_dump(mode="json") for a in alts],
+            },
+        )
+
     pool = await ensure_pool()
     if pool is not None:
         async with pool.acquire() as conn:
-            existing = await conn.fetchrow(
-                "SELECT * FROM events WHERE id = $1 AND user_id = $2 AND (deleted_at IS NULL)",
-                event_id,
-                user_id,
-            )
-            if not existing:
-                from fastapi import HTTPException
-
-                raise HTTPException(status_code=404, detail="Event not found")
-            update_data = body.model_dump(exclude_unset=True)
-            if not update_data:
-                from fastapi import HTTPException
-
-                raise HTTPException(status_code=400, detail="No fields to update")
             set_clauses = []
             values = []
             idx = 1
