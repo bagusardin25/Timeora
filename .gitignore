@@ -14,6 +14,7 @@ env/
 
 # TestSprite
 .testsprite/failure/
+.testsprite/runs/
 
 # Build
 .next/
@@ -35,6 +36,9 @@ logs.*.json
 *.md
 !README.md
 !LOOP.md
+
+# MCP
+mcps/
 
 # Terminals
 terminals/
