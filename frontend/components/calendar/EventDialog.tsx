@@ -18,7 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
 export type ConflictData = {
   message: string;
   conflicting_event: string;
-  alternatives: Array<{ start_time: string; duration_minutes: number }>;
+  alternatives: Array<{ start_time: string; duration_minutes: number; reason?: string }>;
 };
 
 export type EventData = {
@@ -181,10 +181,16 @@ export function EventDialog({
                             whileTap={{ scale: 0.95 }}
                             key={idx}
                             onClick={() => applyAlternative(alt)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 transition-colors"
+                            title={alt.reason || undefined}
+                            className="flex flex-col items-start gap-0.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 transition-colors text-left"
                           >
-                            <Clock className="w-3 h-3" />
-                            {alt.start_time.substring(0, 5)} ({alt.duration_minutes}m)
+                            <span className="flex items-center gap-1.5">
+                              <Clock className="w-3 h-3" />
+                              {alt.start_time.substring(0, 5)} ({alt.duration_minutes}m)
+                            </span>
+                            {alt.reason && (
+                              <span className="text-[10px] opacity-80 font-normal pl-4">{alt.reason}</span>
+                            )}
                           </motion.button>
                         ))}
                       </div>

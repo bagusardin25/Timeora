@@ -1,6 +1,6 @@
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -8,7 +8,8 @@ from pydantic import ValidationError
 
 from app.auth import get_current_user
 from app.config import settings
-from app.models import ParseRequest, ParsedEvent
+from app.core import nlparser
+from app.models import ParseRequest, ParseResponseV2
 
 router = APIRouter()
 
@@ -158,63 +159,64 @@ async def _call_openai(text: str, today_iso: str) -> dict:
         return json.loads(data["choices"][0]["message"]["content"])
 
 
-@router.post("/parse", response_model=ParsedEvent)
+def _ai_raw_to_response(raw: dict, today_iso: str, original_text: str) -> dict:
+    raw = _fill_defaults(raw, today_iso, original_text)
+    start_at = None
+    end_at = None
+    try:
+        dt = datetime.fromisoformat(f"{raw['date']}T{raw['start_time']}")
+        start_at = dt.isoformat()
+        end_at = (dt + timedelta(minutes=int(raw["duration_minutes"]))).isoformat()
+    except Exception:
+        pass
+    return {
+        "intent": "create",
+        "title": raw["title"],
+        "date": raw["date"],
+        "start_time": raw["start_time"],
+        "duration_minutes": raw["duration_minutes"],
+        "participants": raw.get("participants", ""),
+        "source": "ai",
+        "start_at": start_at,
+        "end_at": end_at,
+        "warnings": [],
+        "recurrence": None,
+    }
+
+
+@router.post("/parse", response_model=ParseResponseV2)
 async def parse_natural_language(
     body: ParseRequest, user: dict = Depends(get_current_user)
 ):
     clean_text = _sanitize(body.text)
     today_iso = datetime.now().date().isoformat()
 
-    # Build ordered list of available providers (try all before giving up)
     providers: list[tuple[str, object]] = []
     if settings.OPENAI_API_KEY:
         providers.append(("OpenAI", _call_openai))
     if settings.OPENROUTE_API_KEY:
         providers.append(("OpenRouter", _call_openrouter))
 
-    if not providers:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="No AI provider configured. Set OPENROUTE_API_KEY or OPENAI_API_KEY in .env",
-        )
-
     errors: list[str] = []
     for provider_name, call_fn in providers:
         try:
             raw = await call_fn(clean_text, today_iso)
             print(f"[ai] {provider_name} raw response: {raw}")
-
-            # Fill defaults for any missing fields
-            raw = _fill_defaults(raw, today_iso, clean_text)
-
-            return ParsedEvent(**raw)
-
+            return ParseResponseV2(**_ai_raw_to_response(raw, today_iso, clean_text))
         except httpx.HTTPStatusError as e:
             error_body = e.response.text[:300] if e.response.text else "no body"
             msg = f"{provider_name} HTTP {e.response.status_code}: {error_body}"
             errors.append(msg)
             print(f"[ai] {msg}")
             continue
-
-        except ValueError as e:
-            msg = f"{provider_name} JSON parse error: {e}"
+        except (ValueError, ValidationError, Exception) as e:
+            msg = f"{provider_name} error: {type(e).__name__}: {e}"
             errors.append(msg)
             print(f"[ai] {msg}")
             continue
 
-        except ValidationError as e:
-            msg = f"{provider_name} returned invalid data: {e}"
-            errors.append(msg)
-            print(f"[ai] {msg}")
-            continue
-
-        except Exception as e:
-            msg = f"{provider_name} unexpected error: {type(e).__name__}: {e}"
-            errors.append(msg)
-            print(f"[ai] {msg}")
-            continue
-
-    raise HTTPException(
-        status_code=status.HTTP_502_BAD_GATEWAY,
-        detail=f"All AI providers failed. Errors: {' | '.join(errors)}",
-    )
+    print(f"[parse] AI unavailable ({len(errors)} errors), using fallback parser")
+    fallback = nlparser.parse(clean_text, today=datetime.now().date())
+    if errors:
+        fallback["warnings"].insert(0, "Parsed offline — verify times")
+    return ParseResponseV2(**fallback)

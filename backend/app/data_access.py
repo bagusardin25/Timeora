@@ -1,5 +1,6 @@
 from datetime import date, datetime, time, timedelta
 
+from app.core import conflicts as conflicts_engine
 from app.database import ensure_pool
 from app.models import (
     AlternativeSlot,
@@ -82,6 +83,57 @@ async def _generate_alternatives_sql(
     return slots
 
 
+async def _events_as_dicts(user_id: str) -> list[dict]:
+    events = await list_events(user_id)
+    return [e.model_dump(mode="json") for e in events]
+
+
+def _alternatives_from_engine(
+    event_dicts: list[dict],
+    event_date,
+    start_time: time,
+    duration_minutes: int,
+) -> list[AlternativeSlot]:
+    raw = conflicts_engine.find_alternatives(
+        event_dicts, event_date, start_time, duration_minutes
+    )
+    slots: list[AlternativeSlot] = []
+    for alt in raw:
+        parts = alt["start_time"].split(":")
+        slots.append(
+            AlternativeSlot(
+                start_time=time(int(parts[0]), int(parts[1])),
+                duration_minutes=alt["duration_minutes"],
+                reason=alt.get("reason", ""),
+            )
+        )
+    return slots
+
+
+async def _conflict_detail(
+    user_id: str,
+    event_date,
+    start_time: time,
+    duration_minutes: int,
+    exclude_id: str | None = None,
+) -> tuple[str, list[AlternativeSlot]] | None:
+    event_dicts = await _events_as_dicts(user_id)
+    hits = conflicts_engine.check_conflicts(
+        event_dicts,
+        event_date,
+        start_time,
+        duration_minutes,
+        exclude_id=exclude_id,
+    )
+    if not hits:
+        return None
+    title = hits[0].get("title", "Existing event")
+    alts = _alternatives_from_engine(
+        event_dicts, event_date, start_time, duration_minutes
+    )
+    return title, alts
+
+
 async def list_events(user_id: str) -> list[EventResponse]:
     pool = await ensure_pool()
     if pool is not None:
@@ -112,26 +164,25 @@ async def get_event(event_id: str, user_id: str) -> EventResponse:
 
 
 async def create_event(user_id: str, body: EventCreate) -> EventResponse:
+    detail = await _conflict_detail(
+        user_id, body.date, body.start_time, body.duration_minutes
+    )
+    if detail:
+        title, alts = detail
+        from fastapi import HTTPException, status
+
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "message": "Time slot conflicts with existing event",
+                "conflicting_event": title,
+                "alternatives": [a.model_dump() for a in alts],
+            },
+        )
+
     pool = await ensure_pool()
     if pool is not None:
         async with pool.acquire() as conn:
-            conflict = await _check_conflict_sql(
-                conn, user_id, body.date, body.start_time, body.duration_minutes
-            )
-            if conflict:
-                alts = await _generate_alternatives_sql(
-                    conn, user_id, body.date, body.duration_minutes
-                )
-                from fastapi import HTTPException, status
-
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail={
-                        "message": "Time slot conflicts with existing event",
-                        "conflicting_event": conflict["title"],
-                        "alternatives": [a.model_dump() for a in alts],
-                    },
-                )
             row = await conn.fetchrow(
                 """
                 INSERT INTO events (user_id, title, date, start_time, duration_minutes, participants)
@@ -206,18 +257,10 @@ async def delete_event(event_id: str, user_id: str) -> None:
 async def check_conflict(
     user_id: str, event_date: date, start_time: time, duration_minutes: int
 ):
-    pool = await ensure_pool()
-    if pool is not None:
-        async with pool.acquire() as conn:
-            conflict = await _check_conflict_sql(
-                conn, user_id, event_date, start_time, duration_minutes
-            )
-            if not conflict:
-                return False, None, []
-            alts = await _generate_alternatives_sql(
-                conn, user_id, event_date, duration_minutes
-            )
-            return True, conflict["title"], alts
-    return await supabase_store.check_conflict(
+    detail = await _conflict_detail(
         user_id, event_date, start_time, duration_minutes
     )
+    if not detail:
+        return False, None, []
+    title, alts = detail
+    return True, title, alts
