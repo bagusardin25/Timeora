@@ -57,10 +57,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8fafc] relative overflow-hidden text-slate-900 font-sans">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8fafc] dark:bg-zinc-950 relative overflow-hidden text-slate-900 dark:text-zinc-100 font-sans">
       {/* Subtle Grid Background */}
       <div 
-        className="absolute inset-0 z-0 opacity-40 pointer-events-none" 
+        className="absolute inset-0 z-0 opacity-40 dark:opacity-10 pointer-events-none" 
         style={{ 
           backgroundImage: "linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px)", 
           backgroundSize: "40px 40px" 
@@ -68,36 +68,46 @@ export default function LoginPage() {
       />
       
       {/* Soft radial glow */}
-      <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-100/40 via-transparent to-transparent pointer-events-none" />
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-100/40 dark:from-blue-900/20 via-transparent to-transparent pointer-events-none" />
 
       <div className="z-10 flex flex-col items-center w-full max-w-[420px] px-4">
         {/* Brand Logo Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 bg-zinc-950 rounded-[10px] flex items-center justify-center shadow-md">
-            <span className="text-white font-bold text-xl leading-none tracking-tighter">T</span>
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Timeora</h1>
+        <div className="flex justify-center mb-8">
+          <Link href="/">
+            <img
+              src="/logomark_text_lightmode.png"
+              alt="Timeora Logo"
+              className="block dark:hidden object-contain"
+              style={{ height: "40px", width: "auto" }}
+            />
+            <img
+              src="/logomark_text.png"
+              alt="Timeora Logo"
+              className="hidden dark:block object-contain"
+              style={{ height: "40px", width: "auto" }}
+            />
+          </Link>
         </div>
 
         {/* Main Card */}
-        <div className="w-full bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 p-8 sm:p-10 relative">
+        <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] border border-slate-100 dark:border-zinc-800 p-8 sm:p-10 relative">
           <div className="text-center mb-8">
-            <h2 className="text-[22px] font-bold text-slate-900 mb-1.5">Welcome back</h2>
-            <p className="text-slate-500 text-[14px]">Sign in to your intelligent time companion</p>
+            <h2 className="text-[22px] font-bold text-slate-900 dark:text-zinc-100 mb-1.5">Welcome back</h2>
+            <p className="text-slate-500 dark:text-zinc-400 text-[14px]">Sign in to your intelligent time companion</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
             {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg text-center">
+              <div className="p-3 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900 rounded-lg text-center">
                 {error}
               </div>
             )}
             
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-slate-600 text-xs font-semibold uppercase tracking-wider ml-1">Email</Label>
+              <Label htmlFor="email" className="text-slate-600 dark:text-zinc-400 text-xs font-semibold uppercase tracking-wider ml-1">Email</Label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Mail className="h-4 w-4 text-slate-400" />
+                  <Mail className="h-4 w-4 text-slate-400 dark:text-zinc-500" />
                 </div>
                 <Input 
                   id="email" 
@@ -106,16 +116,16 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="pl-10 h-11 bg-slate-50/50 border-slate-200 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 text-slate-900 placeholder:text-slate-400 rounded-xl transition-all"
+                  className="pl-10 h-11 bg-slate-50/50 dark:bg-zinc-800/50 border-slate-200 dark:border-zinc-700 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 rounded-xl transition-all"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="password" className="text-slate-600 text-xs font-semibold uppercase tracking-wider ml-1">Password</Label>
+              <Label htmlFor="password" className="text-slate-600 dark:text-zinc-400 text-xs font-semibold uppercase tracking-wider ml-1">Password</Label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Lock className="h-4 w-4 text-slate-400" />
+                  <Lock className="h-4 w-4 text-slate-400 dark:text-zinc-500" />
                 </div>
                 <Input 
                   id="password" 
@@ -124,12 +134,12 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="pl-10 pr-10 h-11 bg-slate-50/50 border-slate-200 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 text-slate-900 placeholder:text-slate-400 rounded-xl transition-all"
+                  className="pl-10 pr-10 h-11 bg-slate-50/50 dark:bg-zinc-800/50 border-slate-200 dark:border-zinc-700 focus-visible:ring-blue-500/20 focus-visible:border-blue-500 text-slate-900 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 rounded-xl transition-all"
                 />
                 <button 
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -146,16 +156,16 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-8 text-center text-[13px] text-slate-500">
+          <div className="mt-8 text-center text-[13px] text-slate-500 dark:text-zinc-400">
             Don&apos;t have an account?{' '}
-            <Link href="/register" className="text-[#0f3b8c] font-semibold hover:underline">
+            <Link href="/register" className="text-[#0f3b8c] dark:text-violet-400 font-semibold hover:underline">
               Create one
             </Link>
           </div>
         </div>
 
         {/* Back to home */}
-        <Link href="/" className="mt-8 flex items-center gap-1.5 text-[13px] font-medium text-slate-500 hover:text-slate-800 transition-colors">
+        <Link href="/" className="mt-8 flex items-center gap-1.5 text-[13px] font-medium text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-200 transition-colors">
           <ArrowLeft className="w-3.5 h-3.5" />
           Back to home
         </Link>
