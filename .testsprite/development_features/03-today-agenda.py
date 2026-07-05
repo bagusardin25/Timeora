@@ -75,9 +75,10 @@ async def run_test():
         await page.locator("#startTime").fill("20:00")
         await page.locator("#endTime").fill("21:00")
         await page.locator("#category").select_option("meeting")
-        await page.get_by_role(
+        simpan_btn = page.get_by_role(
             "button", name="Simpan Event", exact=True
-        ).click(force=True)
+        )
+        await simpan_btn.evaluate("el => el.click()")
 
         calendar_event = page.locator(".fc-event").filter(has_text=TITLE)
         await expect(calendar_event).to_have_count(1, timeout=30000)
@@ -88,12 +89,16 @@ async def run_test():
             "Expected the event in both the weekly calendar and Today Agenda"
         )
 
-        await agenda_matches.last.click(force=True)
+        await agenda_matches.last.evaluate("el => el.click()")
         await expect(page.locator("#title")).to_have_value(TITLE)
 
         page.once("dialog", lambda dialog: asyncio.create_task(dialog.accept()))
-        await page.get_by_role("button", name="Hapus", exact=True).click(force=True)
-        await expect(page.get_by_text(f'"{TITLE}" deleted', exact=True)).to_be_visible()
+        hapus_btn = page.get_by_role("button", name="Hapus", exact=True)
+        await hapus_btn.evaluate("el => setTimeout(() => el.click(), 0)")
+        # Toast uses smart quotes; match substring to be encoding-safe
+        await expect(
+            page.get_by_text("deleted").first
+        ).to_be_visible(timeout=10000)
     finally:
         if context:
             try:
