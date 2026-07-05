@@ -184,8 +184,8 @@
   border-bottom: 1px dashed var(--fc-border-color) !important;
 }
 
-.fc-theme-standard td, .fc-theme-standard th, .fc-theme-standard .fc-scrollgrid {
-  border: none !important;
+.fc-theme-standard td, .fc-theme-standard th {
+  border: 1px solid var(--fc-border-color) !important;
 }
 
 .fc-theme-standard .fc-scrollgrid {
