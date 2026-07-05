@@ -223,7 +223,7 @@ export default function IntegrationsPage() {
                   className="mt-2"
                   onChange={(event) => setFile(event.target.files?.[0] || null)}
                 />
-                <p className="mt-2 text-xs text-slate-500">
+                <p className="mt-2 text-xs text-slate-500 dark:text-zinc-400">
                   Maximum 1 MB. Duplicate UIDs and conflicting events are skipped.
                 </p>
               </div>
@@ -337,7 +337,7 @@ export default function IntegrationsPage() {
 
             <div className="space-y-3">
               {webhooks.length === 0 && !loading && (
-                <p className="rounded-xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500 dark:border-zinc-700">
+                <p className="rounded-xl border border-dashed border-slate-300 dark:border-zinc-600 p-5 text-center text-sm text-slate-500 dark:text-zinc-400">
                   No webhook subscriptions yet.
                 </p>
               )}
@@ -348,7 +348,7 @@ export default function IntegrationsPage() {
                 >
                   <div className="min-w-0">
                     <p className="truncate font-medium">{webhook.url}</p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
                       {webhook.description || "No description"} ·{" "}
                       {webhook.event_types.join(", ")}
                     </p>
@@ -359,7 +359,7 @@ export default function IntegrationsPage() {
                     aria-label="Delete webhook"
                     disabled={working}
                     onClick={() => void removeWebhook(webhook.id)}
-                    className="shrink-0 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                    className="shrink-0 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-950/30 dark:hover:text-rose-300"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -384,7 +384,7 @@ export default function IntegrationsPage() {
               >
                 <div>
                   <p className="font-semibold">{PROVIDER_NAMES[provider.provider]}</p>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
                     {provider.connected ? "Connected" : "Foundation ready"}
                   </p>
                 </div>
