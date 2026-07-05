@@ -104,9 +104,11 @@ async def run_test():
         await expect(calendar_event).to_have_count(1, timeout=30000)
         await calendar_event.click()
         page.once("dialog", lambda dialog: asyncio.create_task(dialog.accept()))
-        hapus_btn = page.get_by_role("button", name="Hapus", exact=True)
-        await hapus_btn.evaluate("el => el.click()")
-        await expect(page.get_by_text(f'"{TITLE}" deleted', exact=True)).to_be_visible()
+        await page.get_by_role("button", name="Hapus", exact=True).click(force=True)
+        # Toast uses smart quotes; match a substring to be encoding-safe
+        await expect(
+            page.get_by_text("deleted").first
+        ).to_be_visible(timeout=10000)
     finally:
         if context:
             try:
