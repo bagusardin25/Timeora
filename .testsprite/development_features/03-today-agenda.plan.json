@@ -1,0 +1,60 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Development feature: Today Agenda synchronization",
+  "description": "Create an event in today's calendar column, verify it appears in Today Agenda, open it from the agenda, and clean it up.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click the Sign In button and wait for the dashboard to load"
+    },
+    {
+      "type": "action",
+      "description": "Click + Add Event once and set its date to today with a late free time"
+    },
+    {
+      "type": "action",
+      "description": "Type TS Today Agenda Event into the title field, select Meeting in Kategori, and click Simpan Event"
+    },
+    {
+      "type": "action",
+      "description": "Wait for the calendar and Today Agenda panel to refresh"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the Today Agenda panel shows TS Today Agenda Event with its time range and category indicator"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the Today Agenda event count includes the newly created event"
+    },
+    {
+      "type": "action",
+      "description": "Click the exact TS Today Agenda Event row in the Today Agenda panel, not its calendar duplicate"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the event edit dialog opens with title TS Today Agenda Event"
+    },
+    {
+      "type": "action",
+      "description": "Click Hapus and confirm the browser deletion prompt"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the deleted-event undo banner appears, confirming cleanup"
+    }
+  ]
+}

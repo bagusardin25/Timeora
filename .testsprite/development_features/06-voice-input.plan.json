@@ -1,0 +1,48 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Development feature: Command Bar voice input",
+  "description": "Verify the voice-input control is exposed and either enters listening mode or reports a clear browser-permission/support error without breaking typed input.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click the Sign In button and wait for the dashboard to load"
+    },
+    {
+      "type": "action",
+      "description": "Press Control+K or Meta+K to open the Command Bar"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the Command Bar shows a voice button titled Gunakan input suara"
+    },
+    {
+      "type": "action",
+      "description": "Click the Gunakan input suara button and wait 3 seconds"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify either the button enters listening state titled Hentikan perekaman suara, or a clear Indonesian Web Speech API, permission, or Kesalahan Input Suara message is shown"
+    },
+    {
+      "type": "action",
+      "description": "If listening started, click Hentikan perekaman suara. Then type Cek jadwal hari ini into the Command Bar input without submitting"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify typed input remains usable and displays Cek jadwal hari ini after the voice interaction"
+    }
+  ]
+}

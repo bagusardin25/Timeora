@@ -1,0 +1,64 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Development feature: profile preferences persistence",
+  "description": "Update profile scheduling preferences, reload to verify persistence, and verify the default duration is applied to a new event.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click the Sign In button and wait for the dashboard to load"
+    },
+    {
+      "type": "action",
+      "description": "Click the Profile avatar button, then click Profile in the dropdown"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the Profile page shows Account Information, Scheduling Preferences, and Data & Privacy controls including Export All Data"
+    },
+    {
+      "type": "action",
+      "description": "Set Timezone to Asia/Jakarta, Default Event Duration to 45, Working Hours Start to 08:00, and Working Hours End to 18:00"
+    },
+    {
+      "type": "action",
+      "description": "Click Save Changes"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the message Preferences saved successfully! appears"
+    },
+    {
+      "type": "action",
+      "description": "Reload the Profile page"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify Asia/Jakarta, 45, 08:00, and 18:00 remain populated after reload"
+    },
+    {
+      "type": "action",
+      "description": "Click Back to Dashboard once, wait for /dashboard, then click + Add Event once"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the new event dialog defaults to 09:00–09:45, representing the saved 45-minute duration"
+    },
+    {
+      "type": "action",
+      "description": "Click Batal to close the dialog without creating data"
+    }
+  ]
+}

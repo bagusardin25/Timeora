@@ -1,0 +1,80 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Development feature: category filters and drag assignment",
+  "description": "Create a categorized event, verify category color/filter behavior, drag it to another category, verify persistence, and clean it up.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click the Sign In button and wait for the dashboard weekly calendar to load"
+    },
+    {
+      "type": "action",
+      "description": "Click + Add Event once to open a new event dialog"
+    },
+    {
+      "type": "action",
+      "description": "Type TS Development Category Event into the event title field and choose a late free time in the currently displayed week"
+    },
+    {
+      "type": "action",
+      "description": "Select Focus in the Kategori field"
+    },
+    {
+      "type": "action",
+      "description": "Click Simpan Event and wait for the calendar to refresh"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify TS Development Category Event appears in the calendar and its edit dialog persists Kategori as Focus"
+    },
+    {
+      "type": "action",
+      "description": "Click the Focus category filter chip to disable it"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify TS Development Category Event is hidden from the weekly calendar while the Focus filter is disabled; Today Agenda may remain unfiltered"
+    },
+    {
+      "type": "action",
+      "description": "Click the Focus category filter chip again and wait for the event to reappear"
+    },
+    {
+      "type": "action",
+      "description": "Drag the TS Development Category Event block onto the Personal category filter chip and wait for the update"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the event remains visible with Personal category styling"
+    },
+    {
+      "type": "action",
+      "description": "Click TS Development Category Event to open its edit dialog"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the Kategori field is set to Personal, proving the drag assignment persisted"
+    },
+    {
+      "type": "action",
+      "description": "Click Hapus and confirm the browser deletion prompt"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the deleted-event undo banner appears, confirming cleanup"
+    }
+  ]
+}

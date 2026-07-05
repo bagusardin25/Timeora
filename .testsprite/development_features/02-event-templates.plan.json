@@ -1,0 +1,72 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Development feature: reusable event templates",
+  "description": "Save a custom event template, apply it to a new event, verify the populated values, save the event, and clean it up.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click the Sign In button and wait for the dashboard to load"
+    },
+    {
+      "type": "action",
+      "description": "Click + Add Event once to open a new event dialog"
+    },
+    {
+      "type": "action",
+      "description": "Type TS Reusable Focus Template into the title field, set duration to 45 minutes, and select Focus in the Kategori field"
+    },
+    {
+      "type": "action",
+      "description": "Click Save as Template"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the template action changes to Saved!"
+    },
+    {
+      "type": "action",
+      "description": "Click Batal to close the unsaved event dialog"
+    },
+    {
+      "type": "action",
+      "description": "Click + Add Event once to open a fresh event dialog"
+    },
+    {
+      "type": "action",
+      "description": "Click the exact Quick Template button named TS Reusable Focus Template"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the title is TS Reusable Focus Template, duration is 45 minutes, and Kategori is Focus"
+    },
+    {
+      "type": "action",
+      "description": "Click Simpan Event and wait for the calendar to refresh"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify an event block containing TS Reusable Focus Template appears on the calendar"
+    },
+    {
+      "type": "action",
+      "description": "Click the TS Reusable Focus Template event, click Hapus, and confirm the browser deletion prompt"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the deleted-event undo banner appears, confirming cleanup"
+    }
+  ]
+}

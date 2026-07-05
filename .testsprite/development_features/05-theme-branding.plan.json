@@ -1,0 +1,48 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Development feature: dark mode and Timeora branding",
+  "description": "Verify Timeora branding assets, switch to dark mode, and confirm the theme persists across landing, login, and register pages.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the Timeora landing page shows the Timeora logomark and product name in light mode"
+    },
+    {
+      "type": "action",
+      "description": "Click the Toggle theme button"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the landing page changes to dark mode and the dark-mode Timeora logo is visible"
+    },
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the login page remains in dark mode and shows the dark-mode Timeora branding"
+    },
+    {
+      "type": "action",
+      "description": "Click the Create one registration link"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the register page remains in dark mode and shows the Timeora branding and account creation form"
+    },
+    {
+      "type": "action",
+      "description": "Navigate back to https://timeora-alpha.vercel.app/ and click Toggle theme"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the landing page returns to light mode"
+    }
+  ]
+}

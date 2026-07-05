@@ -1,0 +1,64 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Development feature: integrations and webhook UI",
+  "description": "Verify integration status cards and ICS controls, create a webhook through the UI, verify its signing secret, and delete it.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click the Sign In button and wait for the dashboard to load"
+    },
+    {
+      "type": "action",
+      "description": "Click the Profile avatar button, then click Integrations in the dropdown"
+    },
+    {
+      "type": "action",
+      "description": "Wait for integration and webhook status data to load"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the Integrations page shows Import an .ics file, Import calendar, Export calendar, and Outgoing webhooks controls"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify Provider adapters lists Google Calendar, Zoom, Slack, Microsoft 365, and Notion with Connected or Foundation ready status"
+    },
+    {
+      "type": "action",
+      "description": "Type https://8.8.8.8/hooks/testsprite-development into the HTTPS endpoint field"
+    },
+    {
+      "type": "action",
+      "description": "Type TestSprite development UI verification into the Description field and click Add webhook"
+    },
+    {
+      "type": "action",
+      "description": "Wait for the webhook list to refresh"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the new webhook row and a one-time signing secret are displayed"
+    },
+    {
+      "type": "action",
+      "description": "Click the Delete webhook button on the https://8.8.8.8/hooks/testsprite-development row"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the TestSprite development webhook row is removed, confirming cleanup"
+    }
+  ]
+}

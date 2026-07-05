@@ -29,59 +29,7 @@ interface WeeklyCalendarProps {
   onEventCategoryChange?: (eventId: string, category: string) => void;
 }
 
-function renderEventContent(arg: EventContentArg) {
-  const ext = arg.event.extendedProps as Record<string, unknown>;
-  const cat = getCategoryConfig(ext.category as string | null | undefined);
-  const isDayGrid = arg.view.type === "dayGridMonth";
-  const eventId = arg.event.id as string;
 
-  const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData("text/plain", eventId);
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  if (isDayGrid) {
-    return (
-      <div 
-        draggable 
-        onDragStart={handleDragStart}
-        className="flex items-center gap-1.5 px-1.5 py-0.5 overflow-hidden w-full cursor-grab active:cursor-grabbing"
-      >
-        <span
-          className="w-2 h-2 rounded-full flex-shrink-0"
-          style={{ backgroundColor: cat.calendarBg }}
-        />
-        <span className="text-xs font-medium truncate">
-          {arg.timeText && (
-            <span className="font-semibold mr-1">{arg.timeText}</span>
-          )}
-          {arg.event.title}
-        </span>
-      </div>
-    );
-  }
-
-  return (
-    <div 
-      draggable 
-      onDragStart={handleDragStart}
-      className="flex items-start gap-1.5 px-1.5 py-1 overflow-hidden h-full cursor-grab active:cursor-grabbing"
-    >
-      <span
-        className="w-2 h-2 rounded-full flex-shrink-0 mt-0.5"
-        style={{ backgroundColor: cat.calendarBg }}
-      />
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold truncate leading-tight">
-          {arg.event.title}
-        </p>
-        {arg.timeText && (
-          <p className="text-[10px] opacity-80 truncate">{arg.timeText}</p>
-        )}
-      </div>
-    </div>
-  );
-}
 
 export function WeeklyCalendar({
   events,
@@ -94,6 +42,71 @@ export function WeeklyCalendar({
   onEventCategoryChange,
 }: WeeklyCalendarProps) {
   const calendarRef = useRef<FullCalendar>(null);
+  const categoryDragEventIdRef = useRef<string | null>(null);
+
+  // Render custom event content — defined inside the component so it can
+  // access `categoryDragEventIdRef` as a fallback when FullCalendar's
+  // interactionPlugin swallows the native HTML5 dataTransfer.
+  const renderEventContent = React.useCallback((arg: EventContentArg) => {
+    const ext = arg.event.extendedProps as Record<string, unknown>;
+    const cat = getCategoryConfig(ext.category as string | null | undefined);
+    const isDayGrid = arg.view.type === "dayGridMonth";
+    const eventId = arg.event.id as string;
+    const categoryKey = (ext.category as string) || "uncategorized";
+
+    const handleDragStart = (e: React.DragEvent) => {
+      e.dataTransfer.setData("text/plain", eventId);
+      e.dataTransfer.effectAllowed = "move";
+      // Fallback: FullCalendar may consume dataTransfer, so persist in ref
+      categoryDragEventIdRef.current = eventId;
+    };
+
+    if (isDayGrid) {
+      return (
+        <div
+          draggable
+          onDragStart={handleDragStart}
+          data-timeora-event-id={eventId}
+          data-timeora-category={categoryKey}
+          className="flex items-center gap-1.5 px-1.5 py-0.5 overflow-hidden w-full cursor-grab active:cursor-grabbing"
+        >
+          <span
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ backgroundColor: cat.calendarBg }}
+          />
+          <span className="text-xs font-medium truncate">
+            {arg.timeText && (
+              <span className="font-semibold mr-1">{arg.timeText}</span>
+            )}
+            {arg.event.title}
+          </span>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        draggable
+        onDragStart={handleDragStart}
+        data-timeora-event-id={eventId}
+        data-timeora-category={categoryKey}
+        className="flex items-start gap-1.5 px-1.5 py-1 overflow-hidden h-full cursor-grab active:cursor-grabbing"
+      >
+        <span
+          className="w-2 h-2 rounded-full flex-shrink-0 mt-0.5"
+          style={{ backgroundColor: cat.calendarBg }}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold truncate leading-tight">
+            {arg.event.title}
+          </p>
+          {arg.timeText && (
+            <p className="text-[10px] opacity-80 truncate">{arg.timeText}</p>
+          )}
+        </div>
+      </div>
+    );
+  }, []);
   const [isMobile, setIsMobile] = React.useState(false);
   const [currentView, setCurrentView] = React.useState("timeGridWeek");
   const [calendarTitle, setCalendarTitle] = React.useState("");
@@ -127,7 +140,11 @@ export function WeeklyCalendar({
 
   const handleCategoryDrop = (e: React.DragEvent, newCategory: string) => {
     e.preventDefault();
-    const eventId = e.dataTransfer.getData("text/plain");
+    e.stopPropagation();
+    // Primary: native dataTransfer. Fallback: ref set during onDragStart.
+    const eventId =
+      e.dataTransfer.getData("text/plain") || categoryDragEventIdRef.current;
+    categoryDragEventIdRef.current = null; // clear after use
     if (eventId && onEventCategoryChange) {
       onEventCategoryChange(eventId, newCategory);
     }
@@ -307,7 +324,9 @@ export function WeeklyCalendar({
                 type="button"
                 onClick={() => toggleCategory(cat.key)}
                 onDragOver={handleDragOver}
+                onDragOverCapture={handleDragOver}
                 onDrop={(e) => handleCategoryDrop(e, cat.key)}
+                onDropCapture={(e) => handleCategoryDrop(e, cat.key)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all cursor-pointer font-medium hover:scale-[1.03] ${
                   isActive
                     ? `${cat.bg} ${cat.text} ${cat.border}`
@@ -327,7 +346,9 @@ export function WeeklyCalendar({
             type="button"
             onClick={() => toggleCategory("uncategorized")}
             onDragOver={handleDragOver}
+            onDragOverCapture={handleDragOver}
             onDrop={(e) => handleCategoryDrop(e, "uncategorized")}
+            onDropCapture={(e) => handleCategoryDrop(e, "uncategorized")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all cursor-pointer font-medium hover:scale-[1.03] ${
               selectedCategories.includes("uncategorized")
                 ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800"
@@ -410,6 +431,12 @@ export function WeeklyCalendar({
             info.el.style.backgroundColor = cat.calendarBg;
             info.el.style.borderColor = cat.calendarBorder;
             info.el.style.borderLeftColor = cat.calendarBorder;
+            // Stable selectors for testing and drag fallback
+            info.el.setAttribute("data-timeora-event-id", info.event.id);
+            info.el.setAttribute(
+              "data-timeora-category",
+              (ext.category as string) || "uncategorized"
+            );
           }}
           titleFormat={
             isMobile 
