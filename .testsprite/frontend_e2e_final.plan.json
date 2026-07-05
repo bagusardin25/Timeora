@@ -1,52 +1,24 @@
 {
   "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
   "type": "frontend",
-  "name": "E2E register login command bar event",
-  "description": "A new user registers, signs out, signs back in, creates an event using the AI Command Bar, and verifies it was saved",
+  "name": "E2E reusable login command bar event",
+  "description": "The reusable test user signs in, creates an event using the AI Command Bar, verifies it, and deletes it for test isolation",
   "planSteps": [
     {
       "type": "action",
-      "description": "Navigate to the URL https://timeora-alpha.vercel.app/register"
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
     },
     {
       "type": "action",
-      "description": "Type a unique email in the format e2e-final- followed by random digits then @timeora.app into the email field"
+      "description": "Type demo@timeora.app into the email field"
     },
     {
       "type": "action",
-      "description": "Type 'TimeoraE2E123!' into the password field"
+      "description": "Type TimeoraDemo123! into the password field"
     },
     {
       "type": "action",
-      "description": "Type 'TimeoraE2E123!' into the confirm password field"
-    },
-    {
-      "type": "action",
-      "description": "Click the 'Sign Up' button"
-    },
-    {
-      "type": "action",
-      "description": "Wait for 5 seconds for the dashboard to load"
-    },
-    {
-      "type": "action",
-      "description": "Click the 'Logout' button in the dashboard header"
-    },
-    {
-      "type": "action",
-      "description": "Wait for 2 seconds for the login page to appear"
-    },
-    {
-      "type": "action",
-      "description": "Type the same email address used during registration into the email input field on the login page"
-    },
-    {
-      "type": "action",
-      "description": "Type 'TimeoraE2E123!' into the password input field on the login page"
-    },
-    {
-      "type": "action",
-      "description": "Click the 'Sign In' button"
+      "description": "Click the Sign In button"
     },
     {
       "type": "action",
@@ -54,11 +26,11 @@
     },
     {
       "type": "action",
-      "description": "Click on the input placeholder containing 'Jadwalkan sesuatu dengan AI'"
+      "description": "Press Control+K or Meta+K to open the Command Bar"
     },
     {
       "type": "action",
-      "description": "Type 'Team Standup E2E besok jam 10 pagi selama 45 menit' into the Command Bar input field"
+      "description": "Type Jadwalkan TestSprite Reusable Event besok jam 4:30 sore selama 45 menit into the Command Bar input"
     },
     {
       "type": "action",
@@ -66,7 +38,7 @@
     },
     {
       "type": "action",
-      "description": "Wait for 5 seconds for the AI to parse the request and the Event Dialog to appear"
+      "description": "Wait for the AI to parse the request and the Event Dialog to appear"
     },
     {
       "type": "action",
@@ -74,11 +46,23 @@
     },
     {
       "type": "action",
-      "description": "Wait for 3 seconds for the event to save"
+      "description": "Navigate the weekly calendar to the week containing tomorrow if needed"
     },
     {
       "type": "assertion",
-      "description": "Verify the weekly calendar grid shows an event block containing 'Team Standup E2E' in the calendar area"
+      "description": "Verify the weekly calendar shows an event block containing TestSprite Reusable Event"
+    },
+    {
+      "type": "action",
+      "description": "Click the TestSprite Reusable Event block to open its event dialog"
+    },
+    {
+      "type": "action",
+      "description": "Click the Hapus button and confirm the browser deletion prompt"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the deleted-event undo banner appears, confirming the reusable test event was cleaned up"
     }
   ]
 }

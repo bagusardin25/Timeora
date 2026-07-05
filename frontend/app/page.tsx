@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import {
   Calendar,
@@ -16,6 +17,7 @@ import {
   ChevronDown
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 function GithubIcon({ className }: { className?: string }) {
   return (
@@ -46,6 +48,7 @@ const FAQS = [
 
 export default function LandingPage() {
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
   const [scrollY, setScrollY] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
@@ -63,26 +66,35 @@ export default function LandingPage() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-[#fafbfc] text-slate-900 overflow-x-hidden selection:bg-violet-100 selection:text-violet-900">
+    <div className="min-h-screen overflow-x-hidden selection:bg-violet-100 selection:text-violet-900 dark:selection:bg-violet-900/50 dark:selection:text-violet-200">
       {/* ─── NAVBAR ─── */}
       <nav className="fixed top-0 w-full z-50 transition-all duration-300"
         style={{
-          backgroundColor: scrollY > 20 ? "rgba(255,255,255,0.7)" : "transparent",
+          backgroundColor: scrollY > 20 ? (resolvedTheme === "dark" ? "rgba(9,9,11,0.7)" : "rgba(255,255,255,0.7)") : "transparent",
           backdropFilter: scrollY > 20 ? "blur(20px)" : "none",
-          borderBottom: scrollY > 20 ? "1px solid rgba(0,0,0,0.05)" : "1px solid transparent",
+          borderBottom: scrollY > 20 ? `1px solid ${resolvedTheme === "dark" ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}` : "1px solid transparent",
         }}
       >
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all">
-              <span className="text-white font-bold text-lg leading-none tracking-tighter">T</span>
-            </div>
-            <span className="font-bold text-lg tracking-tight">Timeora</span>
+          <Link href="/" className="flex items-center group">
+            <img
+              src="/logomark_text_lightmode.png"
+              alt="Timeora Logo"
+              className="block dark:hidden object-contain transition-transform group-hover:scale-102"
+              style={{ height: "28px", width: "111px" }}
+            />
+            <img
+              src="/logomark_text.png"
+              alt="Timeora Logo"
+              className="hidden dark:block object-contain transition-transform group-hover:scale-102"
+              style={{ height: "28px", width: "99px" }}
+            />
           </Link>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <Link
               href="/login"
-              className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-4 py-2"
+              className="text-sm font-medium text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 transition-colors px-4 py-2"
             >
               Sign In
             </Link>
@@ -99,9 +111,9 @@ export default function LandingPage() {
       {/* ─── HERO ─── */}
       <section className="relative pt-32 pb-20 sm:pt-40 sm:pb-28 px-6">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-violet-200/50 via-fuchsia-100/30 to-transparent rounded-full blur-3xl" />
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-violet-200/50 dark:from-violet-900/20 via-fuchsia-100/30 dark:via-fuchsia-900/10 to-transparent rounded-full blur-3xl" />
           <div
-            className="absolute inset-0 opacity-[0.4]"
+            className="absolute inset-0 opacity-[0.4] dark:opacity-[0.07]"
             style={{
               backgroundImage:
                 "linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px)",
@@ -120,7 +132,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 backdrop-blur-sm border border-violet-100 shadow-sm text-sm text-violet-700 font-medium mb-8"
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm border border-violet-100 dark:border-violet-800 shadow-sm text-sm text-violet-700 dark:text-violet-300 font-medium mb-8"
           >
             <Sparkles className="w-4 h-4" />
             <span>AI-Powered Scheduling</span>
@@ -155,8 +167,8 @@ export default function LandingPage() {
             </span>
           </h1>
 
-          <p className="text-lg sm:text-xl text-slate-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Type <span className="font-medium text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-sm">&quot;Meeting dengan tim besok jam 10 pagi&quot;</span> and 
+          <p className="text-lg sm:text-xl text-slate-500 dark:text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+            Type <span className="font-medium text-slate-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md border border-slate-200 dark:border-zinc-700 shadow-sm">&quot;Meeting dengan tim besok jam 10 pagi&quot;</span> and 
             Timeora handles the rest — parsing, conflict checking, and smart suggestions.
           </p>
 
@@ -172,7 +184,7 @@ export default function LandingPage() {
               href="https://github.com/bagusardin25/Timeora"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-8 py-4 rounded-2xl text-base font-medium text-slate-700 hover:text-slate-900 border border-slate-200 bg-white/50 backdrop-blur-sm hover:bg-white transition-all hover:-translate-y-1 shadow-sm hover:shadow-md"
+              className="flex items-center gap-2 px-8 py-4 rounded-2xl text-base font-medium text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-zinc-100 border border-slate-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm hover:bg-white dark:hover:bg-zinc-900 transition-all hover:-translate-y-1 shadow-sm hover:shadow-md"
             >
               <GithubIcon className="w-5 h-5" />
               View on GitHub
@@ -190,16 +202,16 @@ export default function LandingPage() {
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="max-w-5xl mx-auto"
         >
-          <div className="relative rounded-3xl border border-slate-200/60 bg-white/60 backdrop-blur-xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.12)] overflow-hidden ring-1 ring-slate-100">
+          <div className="relative rounded-3xl border border-slate-200/60 dark:border-white/5 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.12)] dark:shadow-[0_30px_80px_-20px_rgba(0,0,0,0.5)] overflow-hidden ring-1 ring-slate-100 dark:ring-zinc-800">
             {/* Fake Browser Chrome */}
-            <div className="flex items-center gap-2 px-4 py-3.5 border-b border-slate-200/60 bg-slate-50/80">
+            <div className="flex items-center gap-2 px-4 py-3.5 border-b border-slate-200/60 dark:border-white/5 bg-slate-50/80 dark:bg-zinc-900/80">
               <div className="flex items-center gap-1.5 ml-2">
                 <div className="w-3 h-3 rounded-full bg-red-400 shadow-sm" />
                 <div className="w-3 h-3 rounded-full bg-amber-400 shadow-sm" />
                 <div className="w-3 h-3 rounded-full bg-green-400 shadow-sm" />
               </div>
               <div className="flex-1 flex justify-center">
-                <div className="flex items-center gap-2 px-6 py-1.5 rounded-full bg-white border border-slate-200 shadow-sm text-xs font-medium text-slate-500 w-80 justify-center">
+                <div className="flex items-center gap-2 px-6 py-1.5 rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-sm text-xs font-medium text-slate-500 dark:text-zinc-400 w-80 justify-center">
                   <svg className="w-3 h-3 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                   </svg>
@@ -208,32 +220,32 @@ export default function LandingPage() {
               </div>
             </div>
             {/* App Preview Content */}
-            <div className="p-6 sm:p-10 space-y-8 bg-gradient-to-b from-white to-slate-50/50">
+            <div className="p-6 sm:p-10 space-y-8 bg-gradient-to-b from-white to-slate-50/50 dark:from-zinc-900 dark:to-zinc-950/50">
               {/* Command Bar Preview */}
-              <div className="flex items-center gap-4 p-5 rounded-2xl bg-white border border-slate-200 shadow-sm transform hover:scale-[1.01] transition-transform duration-300">
+              <div className="flex items-center gap-4 p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-sm transform hover:scale-[1.01] transition-transform duration-300">
                 <div className="p-3 bg-gradient-to-br from-violet-100 to-indigo-100 rounded-xl shadow-inner">
                   <Sparkles className="w-6 h-6 text-violet-600" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-xs font-bold text-violet-500 uppercase tracking-wider mb-1">AI Assistant</div>
-                  <div className="font-medium text-slate-700 text-lg">
+                  <div className="text-xs font-bold text-violet-500 dark:text-violet-400 uppercase tracking-wider mb-1">AI Assistant</div>
+                  <div className="font-medium text-slate-700 dark:text-zinc-300 text-lg">
                     &quot;Meeting tim marketing besok jam 10 selama 45 menit&quot;
                   </div>
                 </div>
-                <kbd className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-sm font-semibold text-slate-500 shadow-sm">
+                <kbd className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-sm font-semibold text-slate-500 dark:text-zinc-400 shadow-sm">
                   ⌘ K
                 </kbd>
               </div>
               {/* Calendar Grid Preview */}
-              <div className="grid grid-cols-7 gap-px rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-slate-200/50">
+              <div className="grid grid-cols-7 gap-px rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-700 shadow-sm bg-slate-200/50 dark:bg-zinc-800/50">
                 {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-                  <div key={day} className="bg-slate-50/90 backdrop-blur-md px-3 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  <div key={day} className="bg-slate-50/90 dark:bg-zinc-800/90 backdrop-blur-md px-3 py-3 text-center text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
                     {day}
                   </div>
                 ))}
                 {Array.from({ length: 7 }, (_, i) => (
-                  <div key={i} className="bg-white h-28 p-2.5 relative group hover:bg-slate-50 transition-colors">
-                    <span className="text-sm font-medium text-slate-400 group-hover:text-slate-600 transition-colors">{i + 1}</span>
+                  <div key={i} className="bg-white dark:bg-zinc-900 h-28 p-2.5 relative group hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
+                    <span className="text-sm font-medium text-slate-400 dark:text-zinc-500 group-hover:text-slate-600 dark:group-hover:text-zinc-300 transition-colors">{i + 1}</span>
                     {i === 1 && (
                       <motion.div 
                         initial={{ opacity: 0, scale: 0.9 }}
@@ -283,7 +295,7 @@ export default function LandingPage() {
       </section>
 
       {/* ─── FEATURES ─── */}
-      <section className="px-6 py-20 sm:py-32 bg-white border-t border-slate-100">
+      <section className="px-6 py-20 sm:py-32 bg-white dark:bg-zinc-900 border-t border-slate-100 dark:border-zinc-800">
         <div className="max-w-6xl mx-auto">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -294,7 +306,7 @@ export default function LandingPage() {
             <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-6">
               Everything you need to <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">own your time</span>
             </h2>
-            <p className="text-slate-500 max-w-xl mx-auto text-lg sm:text-xl">
+            <p className="text-slate-500 dark:text-zinc-400 max-w-xl mx-auto text-lg sm:text-xl">
               Three powerful features seamlessly integrated into one premium experience.
             </p>
           </motion.div>
@@ -326,21 +338,21 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.1 }}
-                className="group relative p-8 rounded-3xl border border-slate-100 bg-white hover:border-violet-100 hover:shadow-2xl hover:shadow-violet-500/5 transition-all duration-300"
+                className="group relative p-8 rounded-3xl border border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-violet-100 dark:hover:border-violet-800 hover:shadow-2xl hover:shadow-violet-500/5 transition-all duration-300"
               >
                 <div
                   className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3 shadow-sm ${
                     feature.color === "violet"
-                      ? "bg-violet-100 text-violet-600"
+                      ? "bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400"
                       : feature.color === "indigo"
-                      ? "bg-indigo-100 text-indigo-600"
-                      : "bg-blue-100 text-blue-600"
+                      ? "bg-indigo-100 dark:bg-violet-900/30 text-indigo-600 dark:text-indigo-400"
+                      : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
                   }`}
                 >
                   <feature.icon className="w-7 h-7" />
                 </div>
                 <h3 className="text-2xl font-bold mb-3">{feature.title}</h3>
-                <p className="text-slate-500 leading-relaxed text-lg">{feature.desc}</p>
+                <p className="text-slate-500 dark:text-zinc-400 leading-relaxed text-lg">{feature.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -348,7 +360,7 @@ export default function LandingPage() {
       </section>
 
       {/* ─── HOW IT WORKS ─── */}
-      <section className="px-6 py-20 sm:py-32 border-t border-slate-100 bg-slate-50/50">
+      <section className="px-6 py-20 sm:py-32 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-950/50">
         <div className="max-w-4xl mx-auto">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -359,7 +371,7 @@ export default function LandingPage() {
             <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-6">
               How it works
             </h2>
-            <p className="text-slate-500 text-lg sm:text-xl">Three steps. Zero friction. Pure productivity.</p>
+            <p className="text-slate-500 dark:text-zinc-400 text-lg sm:text-xl">Three steps. Zero friction. Pure productivity.</p>
           </motion.div>
 
           <div className="space-y-16">
@@ -391,15 +403,15 @@ export default function LandingPage() {
                 transition={{ delay: i * 0.15 }}
                 className="flex items-start gap-8 group"
               >
-                <div className="flex-shrink-0 w-16 h-16 rounded-3xl bg-white border border-slate-200 shadow-sm flex items-center justify-center group-hover:bg-violet-600 group-hover:border-violet-600 group-hover:shadow-violet-200 transition-all duration-300">
-                  <item.icon className="w-7 h-7 text-slate-400 group-hover:text-white transition-colors duration-300" />
+                <div className="flex-shrink-0 w-16 h-16 rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-sm flex items-center justify-center group-hover:bg-violet-600 group-hover:border-violet-600 group-hover:shadow-violet-200 dark:group-hover:shadow-violet-900 transition-all duration-300">
+                  <item.icon className="w-7 h-7 text-slate-400 dark:text-zinc-500 group-hover:text-white transition-colors duration-300" />
                 </div>
                 <div className="pt-1">
                   <div className="text-sm font-black text-violet-500 tracking-widest uppercase mb-2">
                     Step {item.step}
                   </div>
                   <h3 className="text-2xl font-bold mb-3">{item.title}</h3>
-                  <p className="text-slate-500 leading-relaxed text-lg">{item.desc}</p>
+                  <p className="text-slate-500 dark:text-zinc-400 leading-relaxed text-lg">{item.desc}</p>
                 </div>
               </motion.div>
             ))}
@@ -408,7 +420,7 @@ export default function LandingPage() {
       </section>
 
       {/* ─── FAQ ─── */}
-      <section className="px-6 py-20 sm:py-32 bg-white border-t border-slate-100">
+      <section className="px-6 py-20 sm:py-32 bg-white dark:bg-zinc-900 border-t border-slate-100 dark:border-zinc-800">
         <div className="max-w-3xl mx-auto">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -416,13 +428,13 @@ export default function LandingPage() {
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <div className="w-12 h-12 bg-violet-100 text-violet-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <div className="w-12 h-12 bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 rounded-2xl flex items-center justify-center mx-auto mb-6">
               <MessageCircleQuestion className="w-6 h-6" />
             </div>
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4">
               Frequently Asked Questions
             </h2>
-            <p className="text-slate-500 text-lg">
+            <p className="text-slate-500 dark:text-zinc-400 text-lg">
               Everything you need to know about Timeora.
             </p>
           </motion.div>
@@ -435,14 +447,14 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
-                className="border border-slate-200 rounded-2xl overflow-hidden bg-white hover:border-violet-200 transition-colors"
+                className="border border-slate-200 dark:border-zinc-700 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 hover:border-violet-200 dark:hover:border-violet-800 transition-colors"
               >
                 <button
                   onClick={() => setOpenFaq(openFaq === index ? null : index)}
                   className="w-full flex items-center justify-between p-6 text-left"
                 >
-                  <span className="text-lg font-semibold text-slate-800">{faq.question}</span>
-                  <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${openFaq === index ? "rotate-180" : ""}`} />
+                  <span className="text-lg font-semibold text-slate-800 dark:text-zinc-200">{faq.question}</span>
+                  <ChevronDown className={`w-5 h-5 text-slate-400 dark:text-zinc-500 transition-transform duration-300 ${openFaq === index ? "rotate-180" : ""}`} />
                 </button>
                 <AnimatePresence>
                   {openFaq === index && (
@@ -452,7 +464,7 @@ export default function LandingPage() {
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="p-6 pt-0 text-slate-500 leading-relaxed">
+                      <div className="p-6 pt-0 text-slate-500 dark:text-zinc-400 leading-relaxed">
                         {faq.answer}
                       </div>
                     </motion.div>
@@ -465,7 +477,7 @@ export default function LandingPage() {
       </section>
 
       {/* ─── CTA ─── */}
-      <section className="px-6 py-20 sm:py-32 border-t border-slate-100 bg-white">
+      <section className="px-6 py-20 sm:py-32 border-t border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
@@ -498,23 +510,30 @@ export default function LandingPage() {
       </section>
 
       {/* ─── FOOTER ─── */}
-      <footer className="px-6 py-12 border-t border-slate-100 bg-slate-50">
+      <footer className="px-6 py-12 border-t border-slate-100 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-zinc-950 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm leading-none">T</span>
-            </div>
-            <span className="text-lg font-bold text-slate-800 tracking-tight">Timeora</span>
-            <span className="text-sm text-slate-400 ml-4 hidden sm:block">
+            <img
+              src="/logomark_lightmode.png"
+              alt="Timeora Logo"
+              className="block dark:hidden w-8 h-8 object-contain"
+            />
+            <img
+              src="/logomark.png"
+              alt="Timeora Logo"
+              className="hidden dark:block w-8 h-8 object-contain"
+            />
+            <span className="text-lg font-bold text-slate-800 dark:text-zinc-200 tracking-tight">Timeora</span>
+            <span className="text-sm text-slate-400 dark:text-zinc-500 ml-4 hidden sm:block">
               Built for TestSprite Hackathon S3
             </span>
           </div>
-          <div className="flex items-center gap-8 text-sm font-medium text-slate-500">
+          <div className="flex items-center gap-8 text-sm font-medium text-slate-500 dark:text-zinc-400">
             <a
               href="https://github.com/bagusardin25/Timeora"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-slate-900 transition-colors flex items-center gap-2"
+              className="hover:text-slate-900 dark:hover:text-zinc-100 transition-colors flex items-center gap-2"
             >
               <GithubIcon className="w-5 h-5" />
               GitHub
