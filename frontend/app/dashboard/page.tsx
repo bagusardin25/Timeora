@@ -24,6 +24,7 @@ import { callAssistant } from "@/lib/api";
 import { InsightsPanel } from "@/components/InsightsPanel";
 import { AvailabilityHeatmap } from "@/components/AvailabilityHeatmap";
 import { TodayAgenda } from "@/components/TodayAgenda";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { motion, AnimatePresence } from "framer-motion";
 import type {
   EventClickArg,
@@ -524,9 +525,16 @@ export default function DashboardPage() {
       <header className="sticky top-0 z-40 border-b border-slate-200/60 dark:border-white/5 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-2xl px-4 sm:px-6 py-3 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.03)] transition-all">
         {/* Left: Brand */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/30 flex-shrink-0">
-            <CalendarIcon className="w-4.5 h-4.5 text-white" />
-          </div>
+          <img
+            src="/logomark_lightmode.png"
+            alt="Timeora Logo"
+            className="block dark:hidden w-9 h-9 object-contain flex-shrink-0"
+          />
+          <img
+            src="/logomark.png"
+            alt="Timeora Logo"
+            className="hidden dark:block w-9 h-9 object-contain flex-shrink-0"
+          />
           <div className="flex flex-col">
             <h1 className="text-base font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-zinc-400 leading-none">Timeora</h1>
             <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-semibold mt-1">Your AI Companion</span>
@@ -576,6 +584,8 @@ export default function DashboardPage() {
             <kbd className="font-mono px-1 py-0.5 bg-white dark:bg-zinc-900 rounded text-[9px] border">drag</kbd>
             <span>calendar</span>
           </div>
+
+          <ThemeToggle />
 
           <Button
             variant="ghost"
