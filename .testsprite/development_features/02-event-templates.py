@@ -104,7 +104,10 @@ async def run_test():
         await expect(calendar_event).to_have_count(1, timeout=30000)
         await calendar_event.click()
         page.once("dialog", lambda dialog: asyncio.create_task(dialog.accept()))
-        await page.get_by_role("button", name="Hapus", exact=True).click(force=True)
+        # Hapus button is clipped by modal overflow; use JS click.
+        # Use evaluate_handle + setTimeout so confirm() doesn't block.
+        hapus_btn = page.get_by_role("button", name="Hapus", exact=True)
+        await hapus_btn.evaluate("el => setTimeout(() => el.click(), 0)")
         # Toast uses smart quotes; match a substring to be encoding-safe
         await expect(
             page.get_by_text("deleted").first
