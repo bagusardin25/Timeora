@@ -324,9 +324,7 @@ export function WeeklyCalendar({
                 type="button"
                 onClick={() => toggleCategory(cat.key)}
                 onDragOver={handleDragOver}
-                onDragOverCapture={handleDragOver}
                 onDrop={(e) => handleCategoryDrop(e, cat.key)}
-                onDropCapture={(e) => handleCategoryDrop(e, cat.key)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all cursor-pointer font-medium hover:scale-[1.03] ${
                   isActive
                     ? `${cat.bg} ${cat.text} ${cat.border}`
@@ -346,9 +344,7 @@ export function WeeklyCalendar({
             type="button"
             onClick={() => toggleCategory("uncategorized")}
             onDragOver={handleDragOver}
-            onDragOverCapture={handleDragOver}
             onDrop={(e) => handleCategoryDrop(e, "uncategorized")}
-            onDropCapture={(e) => handleCategoryDrop(e, "uncategorized")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all cursor-pointer font-medium hover:scale-[1.03] ${
               selectedCategories.includes("uncategorized")
                 ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800"
