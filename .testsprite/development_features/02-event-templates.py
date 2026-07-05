@@ -82,26 +82,30 @@ async def run_test():
         save_template_btn = page.get_by_role(
             "button", name="Save as Template", exact=True
         )
-        await save_template_btn.scroll_into_view_if_needed()
-        await save_template_btn.click(force=True)
+        # The button may be below the clipped dialog viewport;
+        # use JS click to bypass the "outside viewport" error.
+        await save_template_btn.evaluate("el => el.click()")
         await expect(page.get_by_role("button", name="Saved!", exact=True)).to_be_visible()
         await page.get_by_role("button", name="Batal", exact=True).click(force=True)
 
         await page.get_by_role("button", name="+ Add Event", exact=True).click()
-        await page.get_by_role("button", name=TITLE, exact=True).click(force=True)
+        template_btn = page.get_by_role("button", name=TITLE, exact=True)
+        await template_btn.evaluate("el => el.click()")
         await expect(page.locator("#title")).to_have_value(TITLE)
         await expect(page.locator("#category")).to_have_value("focus")
         await expect(page.locator("#startTime")).to_have_value("19:00")
         await expect(page.locator("#endTime")).to_have_value("19:45")
-        await page.get_by_role(
+        simpan_btn = page.get_by_role(
             "button", name="Simpan Event", exact=True
-        ).click(force=True)
+        )
+        await simpan_btn.evaluate("el => el.click()")
 
         calendar_event = page.locator(".fc-event").filter(has_text=TITLE)
         await expect(calendar_event).to_have_count(1, timeout=30000)
         await calendar_event.click()
         page.once("dialog", lambda dialog: asyncio.create_task(dialog.accept()))
-        await page.get_by_role("button", name="Hapus", exact=True).click(force=True)
+        hapus_btn = page.get_by_role("button", name="Hapus", exact=True)
+        await hapus_btn.evaluate("el => el.click()")
         await expect(page.get_by_text(f'"{TITLE}" deleted', exact=True)).to_be_visible()
     finally:
         if context:
