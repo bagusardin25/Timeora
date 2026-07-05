@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Sparkles, Command, Loader2 } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Sparkles, Command, Loader2, Mic, MicOff } from "lucide-react";
 import { parseEventNL, callAssistant, AssistantResult } from "@/lib/api";
 import { EventData } from "./calendar/EventDialog";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,6 +17,8 @@ export function CommandBar({ onParsed, onAssistant }: CommandBarProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [assistantMessage, setAssistantMessage] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<unknown>(null);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -39,6 +41,81 @@ export function CommandBar({ onParsed, onAssistant }: CommandBarProps) {
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
   }, [open]);
+
+  // Clean up recognition instance when unmounted
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        (recognitionRef.current as { stop: () => void }).stop();
+      }
+    };
+  }, []);
+
+  // Safeguard: Stop listening when modal is closed
+  useEffect(() => {
+    if (!open && isListening) {
+      (recognitionRef.current as { stop: () => void })?.stop();
+    }
+  }, [open, isListening]);
+
+  const startListening = () => {
+    const SpeechRecognition =
+      typeof window !== "undefined" &&
+      ((window as unknown as { SpeechRecognition?: new () => unknown }).SpeechRecognition ||
+       (window as unknown as { webkitSpeechRecognition?: new () => unknown }).webkitSpeechRecognition);
+
+    if (!SpeechRecognition) {
+      setError("Browser Anda tidak mendukung Web Speech API (Speech Recognition).");
+      return;
+    }
+
+    if (isListening) {
+      (recognitionRef.current as { stop: () => void })?.stop();
+      return;
+    }
+
+    const rec = new SpeechRecognition() as {
+      continuous: boolean;
+      interimResults: boolean;
+      lang: string;
+      onstart: () => void;
+      onresult: (event: unknown) => void;
+      onerror: (event: unknown) => void;
+      onend: () => void;
+      start: () => void;
+    };
+    
+    rec.continuous = false;
+    rec.interimResults = false;
+    rec.lang = "id-ID"; // Set default to Indonesian speech input
+
+    rec.onstart = () => {
+      setIsListening(true);
+      setError(null);
+    };
+
+    rec.onresult = (event: unknown) => {
+      const speechEvent = event as {
+        results: Array<Array<{ transcript: string }>>;
+      };
+      const transcript = speechEvent.results[0][0].transcript;
+      setQuery(transcript);
+    };
+
+    rec.onerror = (event: unknown) => {
+      const errorEvent = event as { error: string };
+      console.error("Speech recognition error", errorEvent.error);
+      setError(`Kesalahan Input Suara: ${errorEvent.error}`);
+      setIsListening(false);
+    };
+
+    rec.onend = () => {
+      setIsListening(false);
+    };
+
+    recognitionRef.current = rec;
+    rec.start();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,21 +182,34 @@ export function CommandBar({ onParsed, onAssistant }: CommandBarProps) {
               />
             )}
 
-            <form onSubmit={handleSubmit} className="flex items-center px-4 py-4 border-b border-zinc-200/50 dark:border-white/5">
+            <form onSubmit={handleSubmit} className="flex items-center gap-2 px-4 py-4 border-b border-zinc-200/50 dark:border-white/5">
               {isLoading ? (
-                <Loader2 className="mr-3 h-6 w-6 animate-spin text-primary" />
+                <Loader2 className="mr-1 h-6 w-6 animate-spin text-primary shrink-0" />
               ) : (
-                <Sparkles className="mr-3 h-6 w-6 text-primary" />
+                <Sparkles className="mr-1 h-6 w-6 text-primary shrink-0" />
               )}
               <input
                 autoFocus
-                className="flex h-12 w-full rounded-md bg-transparent text-lg outline-none placeholder:text-zinc-500 dark:placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-50 text-zinc-900 dark:text-zinc-100 font-medium"
+                className="flex h-12 w-full bg-transparent text-lg outline-none placeholder:text-zinc-500 dark:placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-50 text-zinc-900 dark:text-zinc-100 font-medium"
                 placeholder="Jadwalkan, tanya jadwal, atau cari waktu kosong..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 disabled={isLoading}
               />
-              <div className="ml-4 flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-200/50 dark:bg-zinc-800/50 px-2 py-1 rounded-md border border-zinc-300/50 dark:border-white/10">
+              <button
+                type="button"
+                onClick={startListening}
+                disabled={isLoading}
+                className={`p-2 rounded-xl transition-all cursor-pointer flex items-center justify-center shrink-0 ${
+                  isListening
+                    ? "bg-red-500 text-white animate-pulse shadow-md shadow-red-500/30"
+                    : "text-slate-400 dark:text-zinc-500 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-slate-100 dark:hover:bg-zinc-800"
+                }`}
+                title={isListening ? "Hentikan perekaman suara" : "Gunakan input suara"}
+              >
+                {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              </button>
+              <div className="ml-2 flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-200/50 dark:bg-zinc-800/50 px-2 py-1 rounded-md border border-zinc-300/50 dark:border-white/10 shrink-0">
                 <Command className="h-3 w-3" />
                 <span>Enter</span>
               </div>
@@ -145,12 +235,13 @@ export function CommandBar({ onParsed, onAssistant }: CommandBarProps) {
               </motion.div>
             )}
 
-            <div className="px-4 py-3 text-[13px] text-zinc-500 dark:text-zinc-400 flex justify-between bg-zinc-50/50 dark:bg-black/20">
+            <div className="px-4 py-3 text-[12px] text-zinc-500 dark:text-zinc-400 flex flex-wrap gap-x-4 gap-y-1 bg-zinc-50/50 dark:bg-black/20">
               <span className="flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-primary/70" />
-                Create, query, reschedule, or find free slots
+                <Sparkles className="w-3 h-3 text-primary/70" />
+                Natural language commands
               </span>
-              <span>Esc to cancel</span>
+              <span>⌘K open • Esc close • Enter submit</span>
+              <span>Examples: &ldquo;jadwalkan meeting besok&rdquo;, &ldquo;pindahkan standup&rdquo;, &ldquo;cari slot kosong&rdquo;</span>
             </div>
           </motion.div>
         </div>
@@ -158,3 +249,4 @@ export function CommandBar({ onParsed, onAssistant }: CommandBarProps) {
     </AnimatePresence>
   );
 }
+

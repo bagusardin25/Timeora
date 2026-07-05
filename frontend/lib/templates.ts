@@ -1,0 +1,107 @@
+import { EventData } from "@/components/calendar/EventDialog";
+
+export type EventTemplate = {
+  id: string;
+  name: string;
+  title: string;
+  duration_minutes: number;
+  start_time: string;
+  category: string | null;
+  participants: string;
+};
+
+const STORAGE_KEY = "timeora_templates";
+
+const DEFAULT_TEMPLATES: EventTemplate[] = [
+  {
+    id: "preset-standup",
+    name: "Daily Standup",
+    title: "Daily Standup",
+    duration_minutes: 15,
+    start_time: "09:00:00",
+    category: "meeting",
+    participants: "",
+  },
+  {
+    id: "preset-lunch",
+    name: "Lunch Break",
+    title: "Lunch Break",
+    duration_minutes: 60,
+    start_time: "12:00:00",
+    category: "personal",
+    participants: "",
+  },
+  {
+    id: "preset-focus",
+    name: "Focus Time",
+    title: "Deep Focus Work",
+    duration_minutes: 120,
+    start_time: "14:00:00",
+    category: "focus",
+    participants: "",
+  },
+  {
+    id: "preset-1on1",
+    name: "1-on-1 Meeting",
+    title: "1-on-1",
+    duration_minutes: 30,
+    start_time: "10:00:00",
+    category: "meeting",
+    participants: "",
+  },
+];
+
+export function getTemplates(): EventTemplate[] {
+  if (typeof window === "undefined") return DEFAULT_TEMPLATES;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return DEFAULT_TEMPLATES;
+    const parsed = JSON.parse(stored) as EventTemplate[];
+    return [...DEFAULT_TEMPLATES, ...parsed];
+  } catch {
+    return DEFAULT_TEMPLATES;
+  }
+}
+
+export function getCustomTemplates(): EventTemplate[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return [];
+    return JSON.parse(stored) as EventTemplate[];
+  } catch {
+    return [];
+  }
+}
+
+export function saveTemplate(template: Omit<EventTemplate, "id">): EventTemplate {
+  const custom = getCustomTemplates();
+  const newTemplate: EventTemplate = {
+    ...template,
+    id: `custom-${Date.now()}`,
+  };
+  custom.push(newTemplate);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(custom));
+  return newTemplate;
+}
+
+export function deleteTemplate(id: string): void {
+  // Only allow deleting custom templates
+  if (id.startsWith("preset-")) return;
+  const custom = getCustomTemplates().filter((t) => t.id !== id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(custom));
+}
+
+export function applyTemplate(
+  template: EventTemplate,
+  date?: string
+): Partial<EventData> {
+  return {
+    title: template.title,
+    date: date || new Date().toISOString().slice(0, 10),
+    start_time: template.start_time,
+    duration_minutes: template.duration_minutes,
+    participants: template.participants,
+    category: template.category,
+  };
+}

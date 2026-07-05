@@ -65,7 +65,10 @@ export async function fetchApi<T = unknown>(
   const token = localStorage.getItem('token');
 
   const headers = new Headers(options.headers);
-  if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+  if (!headers.has('Content-Type') && !isFormData) {
+    headers.set('Content-Type', 'application/json');
+  }
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -98,6 +101,7 @@ export type ParseResult = {
   duration_minutes: number;
   participants?: string;
   recurrence?: string | null;
+  category?: string | null;
   source?: 'ai' | 'fallback';
   warnings?: string[];
 };
@@ -227,6 +231,10 @@ export type ApiEvent = {
   duration_minutes: number;
   participants?: string;
   recurrence_rule?: string | null;
+  category?: string | null;
+  external_ids?: Record<string, string>;
+  sync_status?: string;
+  last_synced_at?: string | null;
 };
 
 export async function restoreEvent(eventId: string): Promise<ApiEvent> {
@@ -255,4 +263,80 @@ export async function exportIcs(): Promise<Blob> {
     throw new ApiError(response.status, errorData, 'Failed to export calendar');
   }
   return response.blob();
+}
+
+export type IcsImportResult = {
+  imported: number;
+  skipped: number;
+  errors: string[];
+  events: ApiEvent[];
+};
+
+export async function importIcs(file: File): Promise<IcsImportResult> {
+  const body = new FormData();
+  body.append('file', file);
+  return fetchApi<IcsImportResult>('/events/import-ics', {
+    method: 'POST',
+    body,
+  });
+}
+
+export type IntegrationStatus = {
+  provider: string;
+  connected: boolean;
+  enabled: boolean;
+  configured: boolean;
+  status: 'ready' | 'connected' | 'foundation_ready' | 'configuration_required' | string;
+  metadata: Record<string, unknown>;
+  updated_at?: string | null;
+};
+
+export type WebhookEventType =
+  | 'event.created'
+  | 'event.updated'
+  | 'event.deleted'
+  | 'event.restored';
+
+export type WebhookSubscription = {
+  id: string;
+  url: string;
+  event_types: WebhookEventType[];
+  description: string;
+  active: boolean;
+  created_at?: string | null;
+};
+
+export type WebhookSubscriptionCreated = WebhookSubscription & {
+  signing_secret: string;
+};
+
+export async function fetchIntegrations(): Promise<IntegrationStatus[]> {
+  return fetchApi<IntegrationStatus[]>('/integrations');
+}
+
+export async function fetchWebhooks(): Promise<WebhookSubscription[]> {
+  return fetchApi<WebhookSubscription[]>('/webhooks');
+}
+
+export async function createWebhook(input: {
+  url: string;
+  description?: string;
+  event_types?: WebhookEventType[];
+}): Promise<WebhookSubscriptionCreated> {
+  return fetchApi<WebhookSubscriptionCreated>('/webhooks', {
+    method: 'POST',
+    body: JSON.stringify({
+      url: input.url,
+      description: input.description || '',
+      event_types: input.event_types || [
+        'event.created',
+        'event.updated',
+        'event.deleted',
+      ],
+    }),
+  });
+}
+
+export async function deleteWebhook(subscriptionId: string): Promise<void> {
+  await fetchApi(`/webhooks/${subscriptionId}`, { method: 'DELETE' });
 }

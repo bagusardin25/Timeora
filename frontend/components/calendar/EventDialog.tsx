@@ -12,8 +12,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Clock, CalendarIcon, Users, Sparkles } from "lucide-react";
+import { AlertTriangle, Clock, CalendarIcon, Users, Sparkles, Bookmark, Tag } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { CATEGORY_OPTIONS, getCategoryConfig } from "@/lib/categories";
+import { getTemplates, saveTemplate, applyTemplate, type EventTemplate } from "@/lib/templates";
 
 export type ConflictData = {
   message: string;
@@ -29,6 +31,7 @@ export type EventData = {
   duration_minutes: number;
   participants: string;
   recurrence_rule?: string | null;
+  category?: string | null;
 };
 
 interface EventDialogProps {
@@ -49,6 +52,7 @@ function defaultEventData(initialData: Partial<EventData> | null): Partial<Event
     start_time: "09:00:00",
     duration_minutes: 60,
     participants: "",
+    category: null,
   };
 }
 
@@ -107,8 +111,32 @@ export function EventDialog({
       duration_minutes: formData.duration_minutes || 60,
       participants: formData.participants || "",
       recurrence_rule: formData.recurrence_rule || null,
+      category: formData.category || null,
     });
   };
+
+  const handleApplyTemplate = (template: EventTemplate) => {
+    const applied = applyTemplate(template, formData.date || undefined);
+    setFormData({ ...formData, ...applied });
+    setEndTime(calculateEndTime(applied));
+  };
+
+  const handleSaveAsTemplate = () => {
+    if (!formData.title) return;
+    saveTemplate({
+      name: formData.title,
+      title: formData.title,
+      duration_minutes: formData.duration_minutes || 60,
+      start_time: formData.start_time || "09:00:00",
+      category: formData.category || null,
+      participants: formData.participants || "",
+    });
+    setSavedTemplate(true);
+    setTimeout(() => setSavedTemplate(false), 2000);
+  };
+
+  const [savedTemplate, setSavedTemplate] = useState(false);
+  const templates = getTemplates();
 
   const applyAlternative = (alt: { start_time: string; duration_minutes: number }) => {
     const newStart = alt.start_time;
@@ -128,7 +156,7 @@ export function EventDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[460px] glass border border-zinc-200/50 dark:border-white/10 bg-white/90 dark:bg-zinc-950/90 shadow-2xl backdrop-blur-2xl rounded-2xl overflow-hidden p-0 gap-0">
+      <DialogContent className="sm:max-w-[460px] glass border border-zinc-200/50 dark:border-white/10 bg-white/90 dark:bg-zinc-950/90 shadow-2xl backdrop-blur-2xl rounded-t-3xl sm:rounded-2xl overflow-hidden p-0 gap-0 fixed sm:static bottom-0 left-0 right-0 w-full sm:w-auto max-h-[90vh] sm:max-h-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-bottom sm:data-[state=closed]:slide-out-to-bottom-0 data-[state=open]:slide-in-from-bottom sm:data-[state=open]:slide-in-from-bottom-0">
         <DialogHeader className="px-6 py-5 border-b border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-black/20">
           <DialogTitle className="text-xl font-semibold flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -138,7 +166,37 @@ export function EventDialog({
           </DialogTitle>
         </DialogHeader>
         
+        {/* Mobile bottom sheet drag handle */}
+        <div className="sm:hidden flex justify-center pt-2 pb-1">
+          <div className="w-10 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
+        </div>
+
         <div className="px-6 py-5 overflow-y-auto max-h-[70vh]">
+          {/* Template Selector */}
+          {!formData.id && (
+            <div className="mb-4">
+              <Label className="text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5 mb-2">
+                <Bookmark className="w-3.5 h-3.5" /> Quick Template
+              </Label>
+              <div className="flex flex-wrap gap-1.5">
+                {templates.map((tpl) => {
+                  const cat = getCategoryConfig(tpl.category);
+                  return (
+                    <button
+                      key={tpl.id}
+                      type="button"
+                      onClick={() => handleApplyTemplate(tpl)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-all hover:scale-105 hover:shadow-sm ${cat.bg} ${cat.text} ${cat.border}`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${cat.dot}`} />
+                      {tpl.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <AnimatePresence>
             {conflictData && (
               <motion.div 
@@ -256,6 +314,25 @@ export function EventDialog({
             </div>
             
             <div className="grid gap-2">
+              <Label htmlFor="category" className="text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5" /> Kategori
+              </Label>
+              <select
+                id="category"
+                value={formData.category || ""}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value || null })}
+                className="h-10 w-full rounded-md border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/20 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <option value="">— No category —</option>
+                {CATEGORY_OPTIONS.map((cat) => (
+                  <option key={cat.key} value={cat.key}>
+                    {cat.emoji} {cat.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid gap-2">
               <Label htmlFor="participants" className="text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5" /> Partisipan (Opsional)
               </Label>
@@ -271,7 +348,7 @@ export function EventDialog({
         </div>
         
         <DialogFooter className="m-0 rounded-b-2xl px-6 py-4 border-t border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-black/20 flex sm:justify-between w-full items-center">
-          <div>
+          <div className="flex items-center gap-2">
             {formData.id && (
               <Button 
                 type="button" 
@@ -281,6 +358,19 @@ export function EventDialog({
                 className="bg-red-500/10 text-red-600 hover:bg-red-500/20 hover:text-red-700 border-none shadow-none"
               >
                 Hapus
+              </Button>
+            )}
+            {!formData.id && formData.title && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleSaveAsTemplate}
+                disabled={savedTemplate}
+                className="text-xs text-slate-500 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/30"
+              >
+                <Bookmark className="w-3.5 h-3.5 mr-1" />
+                {savedTemplate ? "Saved!" : "Save as Template"}
               </Button>
             )}
           </div>

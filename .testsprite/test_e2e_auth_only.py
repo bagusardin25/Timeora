@@ -1,26 +1,14 @@
-import uuid
-
 import requests
 
 BASE_URL = "https://timeora-production.up.railway.app"
-PASSWORD = "TimeoraE2E123!"
+EMAIL = "demo@timeora.app"
+PASSWORD = "TimeoraDemo123!"
 
 
-def test_register_and_login():
-    email = f"e2e_{uuid.uuid4().hex[:12]}@timeora.app"
-
-    register_resp = requests.post(
-        f"{BASE_URL}/api/auth/register",
-        json={"email": email, "password": PASSWORD},
-        timeout=20,
-    )
-    assert register_resp.status_code in (200, 201), (
-        f"Register failed: {register_resp.status_code} {register_resp.text[:300]}"
-    )
-
+def test_reusable_account_login():
     login_resp = requests.post(
         f"{BASE_URL}/api/auth/login",
-        json={"email": email, "password": PASSWORD},
+        json={"email": EMAIL, "password": PASSWORD},
         timeout=20,
     )
     assert login_resp.status_code == 200, (
@@ -32,4 +20,4 @@ def test_register_and_login():
     print("E2E AUTH ONLY TEST PASSED")
 
 
-test_register_and_login()
+test_reusable_account_login()

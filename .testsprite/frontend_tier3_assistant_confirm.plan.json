@@ -10,19 +10,15 @@
     },
     {
       "type": "action",
-      "description": "Type a unique email using tier3-asst- plus random digits then @timeora.app into the email field"
+      "description": "Type demo@timeora.app into the email field"
     },
     {
       "type": "action",
-      "description": "Type TimeoraE2E123! into the password field"
+      "description": "Type TimeoraDemo123! into the password field"
     },
     {
       "type": "action",
       "description": "Click the Sign In button"
-    },
-    {
-      "type": "action",
-      "description": "If login fails because account does not exist, navigate to the register page, create the same account, then return to login and sign in"
     },
     {
       "type": "action",

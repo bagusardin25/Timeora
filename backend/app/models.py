@@ -1,4 +1,5 @@
-from datetime import date as Date, time as Time
+from datetime import date as Date, datetime as DateTime, time as Time
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -10,6 +11,8 @@ class EventCreate(BaseModel):
     duration_minutes: int = Field(..., ge=5, le=1440)
     participants: str = ""
     recurrence_rule: str | None = None
+    category: str | None = None
+    external_ids: dict[str, str] = Field(default_factory=dict)
 
 
 class EventUpdate(BaseModel):
@@ -19,6 +22,7 @@ class EventUpdate(BaseModel):
     duration_minutes: int | None = Field(None, ge=5, le=1440)
     participants: str | None = None
     recurrence_rule: str | None = None
+    category: str | None = None
 
 
 class EventResponse(BaseModel):
@@ -30,6 +34,10 @@ class EventResponse(BaseModel):
     duration_minutes: int
     participants: str
     recurrence_rule: str | None = None
+    category: str | None = None
+    external_ids: dict[str, str] = Field(default_factory=dict)
+    sync_status: str = "not_synced"
+    last_synced_at: DateTime | None = None
 
 
 class ParsedEvent(BaseModel):
@@ -168,3 +176,61 @@ class AvailabilityHeatmap(BaseModel):
     cells: list[AvailabilityCell]
     best_slots: list[AvailabilitySlot]
     availability_pct: float
+
+
+WebhookEventType = Literal[
+    "event.created",
+    "event.updated",
+    "event.deleted",
+    "event.restored",
+]
+
+
+class WebhookSubscriptionCreate(BaseModel):
+    url: str = Field(..., min_length=8, max_length=2048)
+    event_types: list[WebhookEventType] = Field(
+        default_factory=lambda: [
+            "event.created",
+            "event.updated",
+            "event.deleted",
+        ],
+        min_length=1,
+        max_length=4,
+    )
+    description: str = Field("", max_length=200)
+
+
+class WebhookSubscriptionResponse(BaseModel):
+    id: str
+    url: str
+    event_types: list[str]
+    description: str = ""
+    active: bool = True
+    created_at: DateTime | None = None
+
+
+class WebhookSubscriptionCreated(WebhookSubscriptionResponse):
+    signing_secret: str
+
+
+class IntegrationConnectRequest(BaseModel):
+    access_token: str = Field(..., min_length=8, max_length=10000)
+    refresh_token: str | None = Field(None, max_length=10000)
+    metadata: dict = Field(default_factory=dict)
+
+
+class IntegrationResponse(BaseModel):
+    provider: str
+    connected: bool
+    enabled: bool
+    configured: bool = False
+    status: str = "available"
+    metadata: dict = Field(default_factory=dict)
+    updated_at: DateTime | None = None
+
+
+class IcsImportResult(BaseModel):
+    imported: int
+    skipped: int
+    errors: list[str] = Field(default_factory=list)
+    events: list[EventResponse] = Field(default_factory=list)

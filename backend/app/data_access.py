@@ -1,3 +1,4 @@
+import json
 from datetime import date, datetime, time, timedelta
 
 from app.core import conflicts as conflicts_engine
@@ -34,6 +35,9 @@ async def upsert_user(user_id: str, email: str) -> None:
 
 
 def _row_to_event(row) -> EventResponse:
+    external_ids = row.get("external_ids") or {}
+    if isinstance(external_ids, str):
+        external_ids = json.loads(external_ids)
     return EventResponse(
         id=str(row["id"]),
         user_id=str(row["user_id"]),
@@ -43,6 +47,10 @@ def _row_to_event(row) -> EventResponse:
         duration_minutes=row["duration_minutes"],
         participants=row.get("participants", ""),
         recurrence_rule=row.get("recurrence_rule"),
+        category=row.get("category"),
+        external_ids=external_ids,
+        sync_status=row.get("sync_status") or "not_synced",
+        last_synced_at=row.get("last_synced_at"),
     )
 
 
@@ -148,6 +156,32 @@ async def list_events(user_id: str) -> list[EventResponse]:
     return await supabase_store.list_events(user_id)
 
 
+async def has_external_event_id(
+    user_id: str, provider: str, external_id: str
+) -> bool:
+    pool = await ensure_pool()
+    if pool is not None:
+        async with pool.acquire() as conn:
+            value = await conn.fetchval(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM events
+                    WHERE user_id = $1
+                      AND external_ids ->> $2 = $3
+                      AND deleted_at IS NULL
+                )
+                """,
+                user_id,
+                provider,
+                external_id,
+            )
+        return bool(value)
+    return await supabase_store.has_external_event_id(
+        user_id, provider, external_id
+    )
+
+
 async def get_event(event_id: str, user_id: str) -> EventResponse:
     pool = await ensure_pool()
     if pool is not None:
@@ -187,8 +221,11 @@ async def create_event(user_id: str, body: EventCreate) -> EventResponse:
         async with pool.acquire() as conn:
             row = await conn.fetchrow(
                 """
-                INSERT INTO events (user_id, title, date, start_time, duration_minutes, participants, recurrence_rule)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                INSERT INTO events (
+                    user_id, title, date, start_time, duration_minutes,
+                    participants, recurrence_rule, category, external_ids
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 RETURNING *
                 """,
                 user_id,
@@ -198,6 +235,8 @@ async def create_event(user_id: str, body: EventCreate) -> EventResponse:
                 body.duration_minutes,
                 body.participants,
                 body.recurrence_rule,
+                body.category,
+                json.dumps(body.external_ids),
             )
             return _row_to_event(row)
     return await supabase_store.create_event(user_id, body)
