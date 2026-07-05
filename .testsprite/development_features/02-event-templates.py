@@ -79,9 +79,11 @@ async def run_test():
         await page.locator("#startTime").fill("19:00")
         await page.locator("#endTime").fill("19:45")
         await page.locator("#category").select_option("focus")
-        await page.get_by_role(
+        save_template_btn = page.get_by_role(
             "button", name="Save as Template", exact=True
-        ).click(force=True)
+        )
+        await save_template_btn.scroll_into_view_if_needed()
+        await save_template_btn.click(force=True)
         await expect(page.get_by_role("button", name="Saved!", exact=True)).to_be_visible()
         await page.get_by_role("button", name="Batal", exact=True).click(force=True)
 
