@@ -139,9 +139,16 @@ export default function ProfilePage() {
             Back to Dashboard
           </Button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
-              <CalendarIcon className="w-4 h-4 text-white" />
-            </div>
+            <img
+              src="/logomark_lightmode.png"
+              alt="Timeora Logo"
+              className="block dark:hidden w-8 h-8 object-contain"
+            />
+            <img
+              src="/logomark.png"
+              alt="Timeora Logo"
+              className="hidden dark:block w-8 h-8 object-contain"
+            />
             <div>
               <div className="font-bold tracking-tight">Profile</div>
               <div className="text-[10px] text-slate-400 dark:text-zinc-500 -mt-0.5">Timeora</div>
@@ -190,7 +197,7 @@ export default function ProfilePage() {
                 <Input id="password" type="password" placeholder="New password" className="flex-1" />
                 <Button variant="outline" className="rounded-xl">Update</Button>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">Password change will be sent to your email (demo).</p>
+              <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">Password change will be sent to your email (demo).</p>
             </div>
           </div>
         </section>
@@ -217,7 +224,7 @@ export default function ProfilePage() {
                 className="mt-1.5"
                 placeholder="e.g. Asia/Jakarta"
               />
-              <p className="text-[11px] text-slate-400 mt-1">Leave empty to use your browser&apos;s timezone.</p>
+              <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">Leave empty to use your browser&apos;s timezone.</p>
             </div>
 
             {/* Default Duration */}
@@ -254,7 +261,7 @@ export default function ProfilePage() {
                 />
               </div>
             </div>
-            <p className="text-[11px] text-slate-400 -mt-3">These are used for availability analysis and recommendations.</p>
+            <p className="text-[11px] text-slate-400 dark:text-zinc-500 -mt-3">These are used for availability analysis and recommendations.</p>
           </div>
         </section>
 
@@ -274,7 +281,7 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between rounded-xl border p-4">
               <div>
                 <div className="font-medium">Export All Data</div>
-                <div className="text-sm text-slate-500">Download your events as .ics file</div>
+                <div className="text-sm text-slate-500 dark:text-zinc-400">Download your events as .ics file</div>
               </div>
               <Button variant="outline" onClick={handleExportData} className="rounded-xl">
                 <Download className="w-4 h-4 mr-2" />
@@ -285,7 +292,7 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between rounded-xl border border-rose-200 dark:border-rose-900 p-4">
               <div>
                 <div className="font-medium text-rose-600 dark:text-rose-400">Delete Account</div>
-                <div className="text-sm text-slate-500">Permanently delete your account and all data</div>
+                <div className="text-sm text-slate-500 dark:text-zinc-400">Permanently delete your account and all data</div>
               </div>
               <Button variant="destructive" onClick={handleDeleteAccount} className="rounded-xl">
                 <Trash2 className="w-4 h-4 mr-2" />
