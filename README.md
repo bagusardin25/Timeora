@@ -1,5 +1,9 @@
 # ⏰ Timeora — Your Intelligent Time Companion
 
+<div align="center">
+  <img src="./frontend/public/logomark_text.png" alt="Timeora Logo" width="400"/>
+</div>
+
 > AI-powered natural language scheduling app. Built for **TestSprite Hackathon Season 3** — *"Build the Loop"*.
 
 ## 🔗 Live URLs
