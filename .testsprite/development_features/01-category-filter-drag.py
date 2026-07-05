@@ -140,7 +140,34 @@ async def run_test():
         event_drag_handle = calendar_event.locator(
             f'[data-timeora-event-id="{created["id"]}"]'
         )
-        await event_drag_handle.drag_to(personal_chip)
+        # Playwright's drag_to uses pointer events which FullCalendar
+        # intercepts.  Fire native HTML5 DragEvents with a real DataTransfer
+        # so React's onDragStart / onDrop actually fire.
+        event_id = created["id"]
+        await page.evaluate(
+            """([srcSel, eventId]) => {
+                const src = document.querySelector(srcSel);
+                const dst = Array.from(document.querySelectorAll('button'))
+                    .find(b => b.textContent.includes('Personal'));
+                if (!src) throw new Error('drag source not found: ' + srcSel);
+                if (!dst) throw new Error('Personal chip button not found');
+                const dt = new DataTransfer();
+                dt.setData('text/plain', eventId);
+                dt.effectAllowed = 'move';
+                src.dispatchEvent(new DragEvent('dragstart', {
+                    bubbles: true, cancelable: true, dataTransfer: dt }));
+                dst.dispatchEvent(new DragEvent('dragover', {
+                    bubbles: true, cancelable: true, dataTransfer: dt }));
+                dst.dispatchEvent(new DragEvent('drop', {
+                    bubbles: true, cancelable: true, dataTransfer: dt }));
+                src.dispatchEvent(new DragEvent('dragend', {
+                    bubbles: true, cancelable: true, dataTransfer: dt }));
+            }""",
+            [
+                f'[data-timeora-event-id="{event_id}"]',
+                event_id,
+            ],
+        )
         headers = {"Authorization": f"Bearer {token}"}
         persisted = None
         for _ in range(10):
