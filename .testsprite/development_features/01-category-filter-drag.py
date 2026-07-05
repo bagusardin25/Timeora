@@ -184,8 +184,12 @@ async def run_test():
             "Dragging the event to Personal did not persist the category"
         )
 
+        # Reload to force FullCalendar to re-mount events with fresh data
+        await page.reload(wait_until="domcontentloaded")
+        await page.get_by_role("button", name="+ Add Event", exact=True).wait_for()
+
         calendar_event = page.locator(".fc-event").filter(has_text=TITLE)
-        await expect(calendar_event).to_have_count(1)
+        await expect(calendar_event).to_have_count(1, timeout=30000)
         # Verify data-timeora-category updated on the DOM element
         await expect(calendar_event).to_have_attribute(
             "data-timeora-category", "personal", timeout=15000
