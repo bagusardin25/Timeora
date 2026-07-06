@@ -123,9 +123,17 @@
   }
   body {
     @apply bg-background text-foreground;
+    position: relative;
+    min-width: 0;
+    overflow-x: hidden;
+    min-height: 100dvh;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
   html {
     @apply font-sans;
+    min-width: 0;
+    overflow-x: hidden;
   }
 }
 

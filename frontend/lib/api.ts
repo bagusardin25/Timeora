@@ -167,13 +167,26 @@ export type AssistantResult = {
   message: string;
   requires_confirmation?: boolean;
   executed?: boolean;
+  clarification?: {
+    type: string;
+    prompt: string;
+    choices: Array<{
+      id: string;
+      title: string;
+      date?: string | null;
+      start_time?: string | null;
+    }>;
+  } | null;
+  events?: ApiEvent[];
+  suggested_actions?: string[];
 };
 
 export type AssistantExecuteParams = {
-  event_id: string;
-  action: 'cancel' | 'reschedule';
+  event_id?: string;
+  action: 'cancel' | 'reschedule' | 'create' | 'update';
   new_date?: string;
   new_time?: string;
+  event_data?: Record<string, unknown>;
 };
 
 export async function parseEventNL(text: string): Promise<ParseResult> {
@@ -183,10 +196,13 @@ export async function parseEventNL(text: string): Promise<ParseResult> {
   });
 }
 
-export async function callAssistant(text: string): Promise<AssistantResult> {
+export async function callAssistant(
+  text: string,
+  options?: { selected_event_id?: string; context_event_id?: string },
+): Promise<AssistantResult> {
   return fetchApi<AssistantResult>('/assistant', {
     method: 'POST',
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, ...options }),
   });
 }
 
@@ -199,6 +215,7 @@ export async function executeAssistant(params: AssistantExecuteParams): Promise<
       action: params.action,
       new_date: params.new_date,
       new_time: params.new_time,
+      event_data: params.event_data,
     }),
   });
 }

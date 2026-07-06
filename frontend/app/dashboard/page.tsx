@@ -3,27 +3,28 @@
 import { useCallback, useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { LogOut, Calendar as CalendarIcon, Brain, Download, Settings, User } from "lucide-react";
+import { LogOut, Brain, Download, Settings, User } from "lucide-react";
 import { WeeklyCalendar } from "@/components/calendar/WeeklyCalendar";
 import { EventDialog, EventData, ConflictData } from "@/components/calendar/EventDialog";
 import {
   fetchApi,
   ApiError,
   type ApiEvent,
-  type AssistantResult,
   restoreEvent,
   fetchEventsExpanded,
   exportIcs,
-  executeAssistant,
   applyBlockFocusTime,
   applySpreadLoad,
 } from "@/lib/api";
 import { format } from "date-fns";
-import { CommandBar } from "@/components/CommandBar";
 import { callAssistant } from "@/lib/api";
+import { AssistantPanel } from "@/components/assistant/AssistantPanel";
+import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { InsightsPanel } from "@/components/InsightsPanel";
 import { AvailabilityHeatmap } from "@/components/AvailabilityHeatmap";
 import { TodayAgenda } from "@/components/TodayAgenda";
+import { NotificationCenter } from "@/components/NotificationCenter";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { motion, AnimatePresence } from "framer-motion";
 import type {
@@ -112,15 +113,8 @@ export default function DashboardPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [conflictData, setConflictData] = useState<ConflictData | null>(null);
   const [assistantToast, setAssistantToast] = useState<string | null>(null);
-  const [assistantConfirm, setAssistantConfirm] = useState<{
-    eventId: string;
-    action: "cancel" | "reschedule";
-    title: string;
-    newDate?: string;
-    newTime?: string;
-    message: string;
-  } | null>(null);
-  const [confirmingAssistant, setConfirmingAssistant] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantContext, setAssistantContext] = useState<EventData | null>(null);
   const [undoDelete, setUndoDelete] = useState<{ id: string; title: string } | null>(null);
   const [dateRange, setDateRange] = useState<DateRange>(INITIAL_DATE_RANGE);
   const [exporting, setExporting] = useState(false);
@@ -234,7 +228,7 @@ export default function DashboardPage() {
       URL.revokeObjectURL(url);
       setAssistantToast("Calendar exported — timeora.ics downloaded.");
     } catch (err: unknown) {
-      alert(errorMessage(err, "Failed to export calendar"));
+      toast.error(errorMessage(err, "Failed to export calendar"));
     } finally {
       setExporting(false);
     }
@@ -273,7 +267,7 @@ export default function DashboardPage() {
       setAssistantToast(result.message);
       refreshAll();
     } catch (err: unknown) {
-      alert(errorMessage(err, "Failed to block focus time"));
+      toast.error(errorMessage(err, "Failed to block focus time"));
     }
   };
 
@@ -283,7 +277,7 @@ export default function DashboardPage() {
       setAssistantToast(result.message);
       refreshAll();
     } catch (err: unknown) {
-      alert(errorMessage(err, "Failed to spread load"));
+      toast.error(errorMessage(err, "Failed to spread load"));
     }
   };
 
@@ -302,6 +296,16 @@ export default function DashboardPage() {
     }
   };
 
+  const openAssistant = useCallback((context?: EventData | null) => {
+    setAssistantContext(context ?? null);
+    setAssistantOpen(true);
+  }, []);
+
+  const handleAssistantOpenChange = useCallback((open: boolean) => {
+    setAssistantOpen(open);
+    if (!open) setAssistantContext(null);
+  }, []);
+
   const handleEventCategoryChange = async (eventId: string, category: string) => {
     try {
       const baseId = eventId.split("_")[0];
@@ -311,76 +315,7 @@ export default function DashboardPage() {
       });
       refreshAll();
     } catch (err: unknown) {
-      alert(errorMessage(err, "Failed to change category"));
-    }
-  };
-
-  const handleParsedNL = (
-    parsedData: Partial<EventData>,
-    meta?: { source?: string; warnings?: string[] }
-  ) => {
-    setSelectedEvent(parsedData);
-    setConflictData(null);
-    setAssistantToast(
-      meta?.source === "fallback"
-        ? "Parsed offline — please verify date and time before saving."
-        : null
-    );
-    setIsDialogOpen(true);
-  };
-
-  const handleAssistant = (result: AssistantResult) => {
-    if (result.requires_confirmation && result.result && typeof result.result === "object") {
-      const r = result.result as Record<string, unknown>;
-      const eventId = r.primary_event_id as string | undefined;
-      if (eventId) {
-        setAssistantConfirm({
-          eventId,
-          action: result.intent === "reschedule" ? "reschedule" : "cancel",
-          title: (r.primary_title as string) || "Event",
-          newDate: r.new_date as string | undefined,
-          newTime: r.new_time as string | undefined,
-          message: result.message,
-        });
-        setAssistantToast(null);
-        return;
-      }
-    }
-
-    setAssistantConfirm(null);
-    setAssistantToast(result.message);
-    if (result.intent === "find_slot" && Array.isArray(result.result) && result.result.length > 0) {
-      const first = result.result[0] as { start_time?: string; reason?: string };
-      if (first.start_time) {
-        setAssistantToast(
-          `${result.message} First slot: ${first.start_time}${first.reason ? ` — ${first.reason}` : ""}`
-        );
-      }
-    }
-  };
-
-  const handleConfirmAssistant = async () => {
-    if (!assistantConfirm) return;
-    setConfirmingAssistant(true);
-    try {
-      const result = await executeAssistant({
-        event_id: assistantConfirm.eventId,
-        action: assistantConfirm.action,
-        new_date: assistantConfirm.newDate,
-        new_time: assistantConfirm.newTime,
-      });
-      const { eventId, title, action } = assistantConfirm;
-      setAssistantConfirm(null);
-      setAssistantToast(result.message);
-      if (action === "cancel") {
-        setUndoDelete({ id: eventId, title });
-      }
-      refreshAll();
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to execute command";
-      alert(message);
-    } finally {
-      setConfirmingAssistant(false);
+      toast.error(errorMessage(err, "Failed to change category"));
     }
   };
 
@@ -389,7 +324,7 @@ export default function DashboardPage() {
     if (!event.start) return;
     const extendedProps = event.extendedProps as CalendarExtendedProps;
     setSelectedEvent({
-      id: event.id,
+      id: event.id.split("_")[0],
       title: event.title,
       date: format(event.start, "yyyy-MM-dd"),
       start_time: format(event.start, "HH:mm:ss"),
@@ -414,7 +349,7 @@ export default function DashboardPage() {
     const start = rawStart instanceof Date ? rawStart : new Date(rawStart as string | number);
     const ext = (calEvent.extendedProps || {}) as CalendarExtendedProps;
     setSelectedEvent({
-      id: calEvent.id as string,
+      id: String(calEvent.id).split("_")[0],
       title: calEvent.title as string,
       date: format(start, "yyyy-MM-dd"),
       start_time: format(start, "HH:mm:ss"),
@@ -422,6 +357,11 @@ export default function DashboardPage() {
       participants: ext.participants || "",
       recurrence_rule: ext.recurrence_rule || null,
       category: ext.category || null,
+      description: ext.description || "",
+      location_url: ext.location_url || null,
+      priority: ext.priority || "normal",
+      tags: ext.tags || [],
+      reminder_minutes: ext.reminder_minutes ?? null,
     });
     setConflictData(null);
     setIsDialogOpen(true);
@@ -437,7 +377,7 @@ export default function DashboardPage() {
     }
     const end = event.end || new Date(event.start.getTime() + 60 * 60_000);
     try {
-      await fetchApi(`/events/${event.id}`, {
+      await fetchApi(`/events/${event.id.split("_")[0]}`, {
         method: "PUT",
         body: JSON.stringify({
           date: format(event.start, "yyyy-MM-dd"),
@@ -448,7 +388,7 @@ export default function DashboardPage() {
       refreshAll();
     } catch (err: unknown) {
       console.error(err);
-      alert(errorMessage(err, "Failed to move event"));
+      toast.error(errorMessage(err, "Failed to move event"));
       arg.revert();
     }
   };
@@ -502,10 +442,10 @@ export default function DashboardPage() {
         if (isConflictData(detail)) {
           setConflictData(detail);
         } else {
-          alert("The selected time conflicts with another event");
+          toast.error("The selected time conflicts with another event");
         }
       } else {
-        alert(errorMessage(err, "Failed to save event"));
+        toast.error(errorMessage(err, "Failed to save event"));
       }
     } finally {
       setIsSaving(false);
@@ -516,14 +456,15 @@ export default function DashboardPage() {
     if (!confirm("Are you sure you want to delete this event?")) return;
     setIsSaving(true);
     try {
-      await fetchApi(`/events/${id}`, {
+      const baseId = id.split("_")[0];
+      await fetchApi(`/events/${baseId}`, {
         method: "DELETE",
       });
       setIsDialogOpen(false);
-      setUndoDelete({ id, title: title || "Event" });
+      setUndoDelete({ id: baseId, title: title || "Event" });
       refreshAll();
     } catch (err: unknown) {
-      alert(errorMessage(err, "Failed to delete event"));
+      toast.error(errorMessage(err, "Failed to delete event"));
     } finally {
       setIsSaving(false);
     }
@@ -536,7 +477,7 @@ export default function DashboardPage() {
       setUndoDelete(null);
       refreshAll();
     } catch (err: unknown) {
-      alert(errorMessage(err, "Failed to restore event"));
+      toast.error(errorMessage(err, "Failed to restore event"));
     }
   };
 
@@ -568,10 +509,10 @@ export default function DashboardPage() {
 
         {/* Center: Command Bar Trigger (Desktop) - More prominent */}
         <div 
-          onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+          onClick={() => openAssistant()}
           className="hidden md:flex items-center gap-3 bg-white dark:bg-zinc-900 border border-slate-200/70 dark:border-white/10 hover:border-violet-400/60 focus-within:border-violet-500 shadow-sm hover:shadow-md rounded-2xl px-4 py-2.5 w-full max-w-md cursor-pointer transition-all select-none group"
           role="button"
-          aria-label="Open AI Command Bar (⌘K)"
+          aria-label="Open AI calendar chat (⌘K)"
         >
           <div className="flex items-center gap-2.5 flex-1">
             <Brain className="w-4 h-4 text-violet-600 dark:text-violet-400 group-hover:scale-110 transition-transform" />
@@ -590,8 +531,9 @@ export default function DashboardPage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
-            className="md:hidden w-8 h-8 rounded-xl hover:bg-violet-50 hover:text-violet-600 dark:hover:bg-violet-500/10 dark:hover:text-violet-500 transition-colors"
+            onClick={() => openAssistant()}
+            className="md:hidden size-11 rounded-xl hover:bg-violet-50 hover:text-violet-600 dark:hover:bg-violet-500/10 dark:hover:text-violet-500 transition-colors"
+            aria-label="Open AI chat"
           >
             <Brain className="w-4 h-4 text-violet-500" />
           </Button>
@@ -684,38 +626,6 @@ export default function DashboardPage() {
       </header>
 
       <main className="flex-1 max-w-[1400px] w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-10 z-10">
-        {assistantConfirm && (
-          <motion.div
-            role="region"
-            aria-label="Assistant confirmation"
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-between gap-4 rounded-xl border border-amber-200/70 dark:border-amber-900/40 bg-amber-50/90 dark:bg-amber-950/30 px-4 py-3 text-sm shadow-sm"
-          >
-            <span className="text-amber-900 dark:text-amber-100">{assistantConfirm.message}</span>
-            <div className="flex items-center gap-2 shrink-0">
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={confirmingAssistant}
-                onClick={() => setAssistantConfirm(null)}
-                aria-label="Dismiss assistant confirmation"
-                className="font-medium text-slate-600 hover:text-slate-800 dark:text-slate-300"
-              >
-                Dismiss
-              </Button>
-              <Button
-                size="sm"
-                disabled={confirmingAssistant}
-                onClick={handleConfirmAssistant}
-                aria-label="Confirm assistant action"
-                className="font-semibold bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                {confirmingAssistant ? "Working…" : "Confirm"}
-              </Button>
-            </div>
-          </motion.div>
-        )}
         {assistantToast && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
@@ -797,11 +707,11 @@ export default function DashboardPage() {
                 </div>
                 <h3 className="font-semibold text-violet-700 dark:text-violet-300">No events yet</h3>
                 <p className="text-sm text-violet-600/80 dark:text-violet-400 mt-1 mb-3">
-                  Start by using the AI Command Bar (⌘K) or the buttons above.<br />
+                  Start by using the AI calendar chat (⌘K) or the buttons above.<br />
                   Try: “Jadwalkan meeting besok jam 10 selama 30 menit”
                 </p>
-                <Button size="sm" variant="outline" onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}>
-                  Open Command Bar
+                <Button size="sm" variant="outline" onClick={() => openAssistant()}>
+                  Open AI Chat
                 </Button>
               </div>
             )}
@@ -815,6 +725,11 @@ export default function DashboardPage() {
               onDatesChange={handleDatesChange}
               onAddEventClick={handleAddEventClick}
               onEventCategoryChange={handleEventCategoryChange}
+              onEventEdit={handleAgendaEventClick}
+              onEventDelete={(event) => {
+                if (event.id) void handleDeleteEvent(event.id, event.title);
+              }}
+              onEventAskAI={(event) => openAssistant(event)}
             />
           </motion.div>
           <div className="space-y-6">
@@ -837,6 +752,8 @@ export default function DashboardPage() {
                 Gunakan ⌘K untuk jadwalkan cepat atau klik event di kalender.
               </div>
             </div>
+
+            <NotificationCenter events={events} />
 
             {/* Sidebar Tab Control */}
             <div className="flex bg-slate-100 dark:bg-zinc-800 p-0.5 rounded-2xl border border-slate-200/50 dark:border-white/5 relative">
@@ -936,14 +853,20 @@ export default function DashboardPage() {
 
       {/* Mobile Floating Action Button - High visibility for Command Bar */}
       <button
-        onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
-        className="md:hidden fixed bottom-6 right-6 z-50 w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-xl shadow-violet-500/30 flex items-center justify-center active:scale-95 transition-all hover:brightness-110"
-        aria-label="Buka AI Command Bar"
+        onClick={() => openAssistant()}
+        className="md:hidden fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-[calc(1.5rem+env(safe-area-inset-right))] z-50 w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-xl shadow-violet-500/30 flex items-center justify-center active:scale-95 transition-all hover:brightness-110"
+        aria-label="Buka AI chat"
       >
         <Brain className="w-6 h-6" />
       </button>
 
-      <CommandBar onParsed={handleParsedNL} onAssistant={handleAssistant} />
+      <AssistantPanel
+        open={assistantOpen}
+        onOpenChange={handleAssistantOpenChange}
+        onEventsChanged={() => refreshAll()}
+        contextEvent={assistantContext}
+      />
+      <Toaster richColors closeButton />
     </div>
   );
 }

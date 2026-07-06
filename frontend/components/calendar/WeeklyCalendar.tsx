@@ -17,6 +17,10 @@ import type {
 import { CATEGORY_OPTIONS, getCategoryConfig } from "@/lib/categories";
 import { Plus, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { EventActions } from "./EventActions";
+import { EventPreview } from "./EventPreview";
+import type { EventData } from "./EventDialog";
 
 interface WeeklyCalendarProps {
   events: EventInput[];
@@ -27,6 +31,9 @@ interface WeeklyCalendarProps {
   onDatesChange?: (from: string, to: string) => void;
   onAddEventClick?: () => void;
   onEventCategoryChange?: (eventId: string, category: string) => void;
+  onEventEdit?: (eventId: string) => void;
+  onEventDelete?: (event: EventData) => void;
+  onEventAskAI?: (event: EventData) => void;
 }
 
 
@@ -40,6 +47,9 @@ export function WeeklyCalendar({
   onDatesChange,
   onAddEventClick,
   onEventCategoryChange,
+  onEventEdit,
+  onEventDelete,
+  onEventAskAI,
 }: WeeklyCalendarProps) {
   const calendarRef = useRef<FullCalendar>(null);
   const categoryDragEventIdRef = useRef<string | null>(null);
@@ -53,6 +63,21 @@ export function WeeklyCalendar({
     const isDayGrid = arg.view.type === "dayGridMonth";
     const eventId = arg.event.id as string;
     const categoryKey = (ext.category as string) || "uncategorized";
+    const eventData: EventData = {
+      id: eventId,
+      title: arg.event.title,
+      date: arg.event.startStr.slice(0, 10),
+      start_time: arg.event.start?.toTimeString().slice(0, 8) || "00:00:00",
+      duration_minutes: Number(ext.duration_minutes || 60),
+      participants: String(ext.participants || ""),
+      recurrence_rule: (ext.recurrence_rule as string | null) || null,
+      category: (ext.category as string | null) || null,
+      description: String(ext.description || ""),
+      location_url: (ext.location_url as string | null) || null,
+      priority: (ext.priority as EventData["priority"]) || "normal",
+      tags: Array.isArray(ext.tags) ? ext.tags as string[] : [],
+      reminder_minutes: typeof ext.reminder_minutes === "number" ? ext.reminder_minutes : null,
+    };
 
     const handleDragStart = (e: React.DragEvent) => {
       e.dataTransfer.setData("text/plain", eventId);
@@ -61,8 +86,7 @@ export function WeeklyCalendar({
       categoryDragEventIdRef.current = eventId;
     };
 
-    if (isDayGrid) {
-      return (
+    const content = isDayGrid ? (
         <div
           draggable
           onDragStart={handleDragStart}
@@ -81,10 +105,7 @@ export function WeeklyCalendar({
             {arg.event.title}
           </span>
         </div>
-      );
-    }
-
-    return (
+      ) : (
       <div
         draggable
         onDragStart={handleDragStart}
@@ -106,7 +127,25 @@ export function WeeklyCalendar({
         </div>
       </div>
     );
-  }, []);
+
+    return (
+      <HoverCard>
+        <HoverCardTrigger render={<div className="h-full" />}>
+          <EventActions
+            event={eventData}
+            onEdit={(event) => onEventEdit?.(event.id || "")}
+            onAskAI={(event) => onEventAskAI?.(event)}
+            onDelete={(event) => onEventDelete?.(event)}
+          >
+            {content}
+          </EventActions>
+        </HoverCardTrigger>
+        <HoverCardContent side="right" className="w-80">
+          <EventPreview event={eventData} />
+        </HoverCardContent>
+      </HoverCard>
+    );
+  }, [onEventAskAI, onEventDelete, onEventEdit]);
   const [isMobile, setIsMobile] = React.useState(false);
   const [currentView, setCurrentView] = React.useState("timeGridWeek");
   const [calendarTitle, setCalendarTitle] = React.useState("");
@@ -232,21 +271,23 @@ export function WeeklyCalendar({
             <button
               type="button"
               onClick={handlePrev}
-              className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-zinc-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg hover:bg-white dark:hover:bg-zinc-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer sm:min-h-8 sm:min-w-8"
+              aria-label="Previous calendar range"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               type="button"
               onClick={handleToday}
-              className="px-2.5 py-1 text-xs font-semibold rounded-lg hover:bg-white dark:hover:bg-zinc-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+              className="min-h-11 px-3 text-xs font-semibold rounded-lg hover:bg-white dark:hover:bg-zinc-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer sm:min-h-8"
             >
               Today
             </button>
             <button
               type="button"
               onClick={handleNext}
-              className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-zinc-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg hover:bg-white dark:hover:bg-zinc-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer sm:min-h-8 sm:min-w-8"
+              aria-label="Next calendar range"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -267,7 +308,7 @@ export function WeeklyCalendar({
                   key={v.id}
                   type="button"
                   onClick={() => handleViewChange(v.id)}
-                  className="relative px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer select-none"
+                  className="relative min-h-11 px-3.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer select-none sm:min-h-8"
                   style={{ color: isActive ? "var(--foreground)" : "var(--muted-foreground)" }}
                 >
                   {isActive && (
@@ -325,7 +366,7 @@ export function WeeklyCalendar({
                 onClick={() => toggleCategory(cat.key)}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleCategoryDrop(e, cat.key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all cursor-pointer font-medium hover:scale-[1.03] ${
+                className={`flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all cursor-pointer font-medium hover:scale-[1.03] sm:min-h-8 ${
                   isActive
                     ? `${cat.bg} ${cat.text} ${cat.border}`
                     : "bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-400 dark:text-zinc-500 opacity-60 hover:opacity-100"
@@ -345,7 +386,7 @@ export function WeeklyCalendar({
             onClick={() => toggleCategory("uncategorized")}
             onDragOver={handleDragOver}
             onDrop={(e) => handleCategoryDrop(e, "uncategorized")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all cursor-pointer font-medium hover:scale-[1.03] ${
+            className={`flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all cursor-pointer font-medium hover:scale-[1.03] sm:min-h-8 ${
               selectedCategories.includes("uncategorized")
                 ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800"
                 : "bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-400 dark:text-zinc-500 opacity-60 hover:opacity-100"
@@ -367,7 +408,7 @@ export function WeeklyCalendar({
                 setSelectedCategories(["meeting", "personal", "focus", "health", "social", "other", "uncategorized"]);
               }
             }}
-            className="text-[11px] text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-300 transition-colors ml-2 font-semibold cursor-pointer"
+            className="min-h-11 text-[11px] text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-300 transition-colors ml-2 font-semibold cursor-pointer sm:min-h-8"
           >
             {selectedCategories.length === 7 ? "Clear All" : "Select All"}
           </button>
@@ -377,7 +418,7 @@ export function WeeklyCalendar({
           <button
             type="button"
             onClick={onAddEventClick}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl text-xs font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer shrink-0 xl:ml-auto"
+            className="flex min-h-11 items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl text-xs font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer shrink-0 xl:ml-auto"
           >
             <Plus className="w-4 h-4" />
             Tambah Event
@@ -386,7 +427,7 @@ export function WeeklyCalendar({
       </div>
 
       {/* Calendar Area - Robust height (no brittle 100vh calc) */}
-      <div className="bg-transparent rounded-lg w-full flex flex-col min-h-[520px] h-[620px] lg:h-[min(680px,calc(100vh-240px))]">
+      <div className="bg-transparent rounded-lg w-full flex flex-col min-h-[520px] h-[620px] max-w-full overflow-x-auto lg:h-[min(680px,calc(100dvh-240px))]">
         <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
@@ -444,5 +485,3 @@ export function WeeklyCalendar({
     </div>
   );
 }
-
-
