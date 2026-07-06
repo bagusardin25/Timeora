@@ -75,11 +75,13 @@ async function refreshAccessToken(): Promise<boolean> {
     if (localStorage.getItem('token')) clearSession();
     return false;
   }
+  const timeout = requestSignal();
   try {
     const resp = await fetch(`${API_BASE_URL}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refreshToken }),
+      signal: timeout.signal,
     });
     if (!resp.ok) {
       clearSession();
@@ -95,6 +97,8 @@ async function refreshAccessToken(): Promise<boolean> {
   } catch {
     clearSession();
     return false;
+  } finally {
+    timeout.dispose();
   }
   return false;
 }
