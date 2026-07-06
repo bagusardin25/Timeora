@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date, time
 
 from fastapi import HTTPException, status
+from pydantic import ValidationError
 
 from app import data_access
 from app.models import AssistantRequest, EventCreate, EventUpdate
@@ -11,12 +12,32 @@ from app.models import AssistantRequest, EventCreate, EventUpdate
 def _time_value(value: str | None) -> time | None:
     if not value:
         return None
-    parts = value.split(":")
-    return time(
-        int(parts[0]),
-        int(parts[1]),
-        int(parts[2]) if len(parts) > 2 else 0,
-    )
+    try:
+        parts = value.split(":")
+        return time(
+            int(parts[0]),
+            int(parts[1]),
+            int(parts[2]) if len(parts) > 2 else 0,
+        )
+    except (TypeError, ValueError, IndexError):
+        return None
+
+
+def _date_value(value: str | None) -> date | None:
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(value[:10])
+    except (TypeError, ValueError):
+        return None
+
+
+def _validation_error(error: ValidationError) -> HTTPException:
+    first_error = error.errors()[0] if error.errors() else {}
+    field = ".".join(str(item) for item in first_error.get("loc", []))
+    message = first_error.get("msg", "Invalid value")
+    detail = f"Invalid event data: {field} {message}".strip()
+    return HTTPException(status_code=400, detail=detail)
 
 
 async def execute_calendar_tool(user_id: str, body: AssistantRequest):
@@ -30,9 +51,13 @@ async def execute_calendar_tool(user_id: str, body: AssistantRequest):
     if action == "create":
         if not body.event_data:
             raise HTTPException(status_code=400, detail="event_data is required for create")
+        try:
+            event_data = EventCreate.model_validate(body.event_data)
+        except ValidationError as exc:
+            raise _validation_error(exc) from exc
         return "create", await data_access.create_event(
             user_id,
-            EventCreate.model_validate(body.event_data),
+            event_data,
         )
 
     if not body.event_id:
@@ -45,7 +70,8 @@ async def execute_calendar_tool(user_id: str, body: AssistantRequest):
 
     if action == "reschedule":
         new_time = _time_value(body.new_time)
-        if not body.new_date or new_time is None:
+        new_date = _date_value(body.new_date)
+        if new_date is None or new_time is None:
             raise HTTPException(
                 status_code=400,
                 detail="new_date and new_time are required for reschedule",
@@ -53,17 +79,21 @@ async def execute_calendar_tool(user_id: str, body: AssistantRequest):
         updated = await data_access.update_event(
             event_id,
             user_id,
-            EventUpdate(date=date.fromisoformat(body.new_date[:10]), start_time=new_time),
+            EventUpdate(date=new_date, start_time=new_time),
         )
         return "reschedule", updated
 
     if action in {"edit", "update"}:
         if not body.event_data:
             raise HTTPException(status_code=400, detail="event_data is required for update")
+        try:
+            event_data = EventUpdate.model_validate(body.event_data)
+        except ValidationError as exc:
+            raise _validation_error(exc) from exc
         updated = await data_access.update_event(
             event_id,
             user_id,
-            EventUpdate.model_validate(body.event_data),
+            event_data,
         )
         return "update", updated
 
