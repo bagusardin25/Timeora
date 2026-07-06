@@ -143,6 +143,8 @@ class EventResponse(BaseModel):
     sync_status: str = "not_synced"
     last_synced_at: DateTime | None = None
 
+    _category = field_validator("category")(_normalize_category)
+
 
 class ParsedEvent(BaseModel):
     title: str

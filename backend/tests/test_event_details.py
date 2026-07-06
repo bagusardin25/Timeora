@@ -3,7 +3,7 @@ from datetime import date, time
 
 from pydantic import ValidationError
 
-from app.models import AssistantRequest, EventCreate, EventUpdate, ParseRequest
+from app.models import AssistantRequest, EventCreate, EventResponse, EventUpdate, ParseRequest
 
 
 class TestEventDetails(unittest.TestCase):
@@ -66,6 +66,20 @@ class TestEventDetails(unittest.TestCase):
 
         self.assertEqual(event.category, "other")
         self.assertEqual(update.category, "other")
+
+    def test_response_normalizes_unknown_category_to_other(self):
+        response = EventResponse(
+            id="evt_1",
+            user_id="user_1",
+            title="Imported event",
+            date=date(2026, 7, 6),
+            start_time=time(9, 0),
+            duration_minutes=30,
+            participants="",
+            category=" Work ",
+        )
+
+        self.assertEqual(response.category, "other")
 
     def test_rejects_excessive_reminder(self):
         with self.assertRaises(ValidationError):

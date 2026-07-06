@@ -46,6 +46,7 @@ const noop = vi.fn();
 
 describe("WeeklyCalendar", () => {
   afterEach(() => {
+    localStorage.clear();
     vi.restoreAllMocks();
   });
 
@@ -105,5 +106,27 @@ describe("WeeklyCalendar", () => {
     await waitFor(() => {
       expect(onDatesChange).toHaveBeenCalledWith("2026-07-06", "2026-07-13");
     });
+  });
+
+  it("keeps events with unknown categories visible by default", () => {
+    render(
+      <WeeklyCalendar
+        events={[
+          {
+            id: "evt_unknown",
+            title: "Imported client meeting",
+            start: "2026-07-06T09:00:00",
+            extendedProps: { category: "work" },
+          },
+        ]}
+        onDateClick={noop}
+        onEventClick={noop}
+        onEventDrop={noop}
+        onEventResize={noop}
+      />,
+    );
+
+    expect(screen.getByTestId("calendar")).toHaveTextContent("1");
+    expect(screen.getByRole("button", { name: /Other1/ })).toBeVisible();
   });
 });
