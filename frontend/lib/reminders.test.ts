@@ -82,6 +82,35 @@ describe("reminders", () => {
     expect(fallback).not.toHaveBeenCalled();
   });
 
+  it("chunks far future reminders instead of scheduling an overflowing browser timer", () => {
+    const maxBrowserDelayMs = 2_147_483_647;
+    let now = new Date("2026-07-06T00:00:00");
+    const callbacks: Array<() => void> = [];
+    const setTimer = vi.fn((callback: () => void) => {
+      callbacks.push(callback);
+      return callbacks.length;
+    });
+    const farFutureEvent: ReminderEvent = {
+      ...EVENT,
+      date: "2026-09-04",
+      start_time: "14:00:00",
+      reminder_minutes: 0,
+    };
+    const scheduler = createReminderScheduler({
+      now: () => now,
+      setTimer,
+    });
+
+    scheduler.schedule([farFutureEvent]);
+
+    expect(setTimer).toHaveBeenCalledWith(expect.any(Function), maxBrowserDelayMs);
+
+    now = new Date("2026-09-04T13:55:00");
+    callbacks[0]();
+
+    expect(setTimer).toHaveBeenLastCalledWith(expect.any(Function), 5 * 60_000);
+  });
+
   it("creates a safe encoded Gmail search URL", () => {
     expect(gmailSearchUrl({
       title: "Product Sync / Q3",
