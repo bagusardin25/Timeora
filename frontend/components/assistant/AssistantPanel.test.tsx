@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { callAssistant, executeAssistant } from "@/lib/api";
 import { AssistantPanel } from "./AssistantPanel";
@@ -23,6 +23,10 @@ describe("AssistantPanel", () => {
     executeAssistantMock.mockReset();
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("submits from a visible Send button and renders feedback", async () => {
     const user = userEvent.setup();
     callAssistantMock.mockResolvedValue({
@@ -39,6 +43,25 @@ describe("AssistantPanel", () => {
 
     expect(callAssistantMock).toHaveBeenCalledWith("Apa jadwal saya hari ini?", undefined);
     expect(await screen.findByText("I found 3 events today.")).toBeVisible();
+  });
+
+  it("still submits on browsers without crypto.randomUUID", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("crypto", {});
+    callAssistantMock.mockResolvedValue({
+      intent: "query",
+      result: [],
+      events: [],
+      suggested_actions: [],
+      message: "Fallback IDs still work.",
+    });
+    render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
+
+    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Apa jadwal saya?");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    expect(callAssistantMock).toHaveBeenCalledWith("Apa jadwal saya?", undefined);
+    expect(await screen.findByText("Fallback IDs still work.")).toBeVisible();
   });
 
   it("renders clarification choices and resubmits with the selected event", async () => {

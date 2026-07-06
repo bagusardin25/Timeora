@@ -30,6 +30,17 @@ type Message = {
   result?: AssistantResult;
 };
 
+let fallbackMessageCounter = 0;
+
+function createMessageId(): string {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+
+  fallbackMessageCounter += 1;
+  return `msg-${Date.now().toString(36)}-${fallbackMessageCounter.toString(36)}`;
+}
+
 function useMobile(): boolean {
   const [mobile, setMobile] = useState(false);
   useEffect(() => {
@@ -127,7 +138,7 @@ export function AssistantPanel({
     const normalized = text.trim();
     if (!normalized || pending) return;
     if (addUserMessage) {
-      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "user", text: normalized }]);
+      setMessages((current) => [...current, { id: createMessageId(), role: "user", text: normalized }]);
     }
     setPending(true);
     setRetryText(null);
@@ -136,7 +147,7 @@ export function AssistantPanel({
       setMessages((current) => [
         ...current,
         {
-          id: crypto.randomUUID(),
+          id: createMessageId(),
           role: "assistant",
           text: result.message,
           requestText: normalized,
@@ -146,7 +157,7 @@ export function AssistantPanel({
       setQuery("");
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Timeora could not process that request.";
-      setMessages((current) => [...current, { id: crypto.randomUUID(), role: "assistant", text: message }]);
+      setMessages((current) => [...current, { id: createMessageId(), role: "assistant", text: message }]);
       setRetryText(normalized);
     } finally {
       setPending(false);
@@ -169,14 +180,14 @@ export function AssistantPanel({
       const executed = await executeAssistant(params);
       setMessages((current) => [
         ...current,
-        { id: crypto.randomUUID(), role: "assistant", text: executed.message, result: executed },
+        { id: createMessageId(), role: "assistant", text: executed.message, result: executed },
       ]);
       onEventsChanged();
     } catch (error: unknown) {
       setMessages((current) => [
         ...current,
         {
-          id: crypto.randomUUID(),
+          id: createMessageId(),
           role: "assistant",
           text: error instanceof Error ? error.message : "The calendar action failed.",
         },
