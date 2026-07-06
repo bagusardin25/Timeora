@@ -59,6 +59,11 @@ def _row_to_event(row: dict) -> EventResponse:
         participants=row.get("participants") or "",
         recurrence_rule=row.get("recurrence_rule"),
         category=row.get("category"),
+        description=row.get("description") or "",
+        location_url=row.get("location_url"),
+        priority=row.get("priority") or "normal",
+        tags=list(row.get("tags") or []),
+        reminder_minutes=row.get("reminder_minutes"),
         external_ids=row.get("external_ids") or {},
         sync_status=row.get("sync_status") or "not_synced",
         last_synced_at=row.get("last_synced_at"),
@@ -212,6 +217,11 @@ async def create_event(user_id: str, body: EventCreate) -> EventResponse:
             "participants": body.participants,
             "recurrence_rule": body.recurrence_rule,
             "category": body.category,
+            "description": body.description,
+            "location_url": body.location_url,
+            "priority": body.priority,
+            "tags": body.tags,
+            "reminder_minutes": body.reminder_minutes,
             "external_ids": body.external_ids,
         }
     )

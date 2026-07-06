@@ -287,6 +287,11 @@ export type ApiEvent = {
   participants?: string;
   recurrence_rule?: string | null;
   category?: string | null;
+  description: string;
+  location_url?: string | null;
+  priority: 'low' | 'normal' | 'important';
+  tags: string[];
+  reminder_minutes?: number | null;
   external_ids?: Record<string, string>;
   sync_status?: string;
   last_synced_at?: string | null;

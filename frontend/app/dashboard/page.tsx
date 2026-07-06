@@ -43,6 +43,11 @@ type CalendarExtendedProps = {
   participants?: string;
   recurrence_rule?: string | null;
   category?: string | null;
+  description?: string;
+  location_url?: string | null;
+  priority?: "low" | "normal" | "important";
+  tags?: string[];
+  reminder_minutes?: number | null;
 };
 
 function initialDateRange(): DateRange {
@@ -75,6 +80,11 @@ function toCalendarEvents(events: ApiEvent[]): EventInput[] {
         participants: event.participants || "",
         recurrence_rule: event.recurrence_rule || null,
         category: event.category || null,
+        description: event.description || "",
+        location_url: event.location_url || null,
+        priority: event.priority || "normal",
+        tags: event.tags || [],
+        reminder_minutes: event.reminder_minutes ?? null,
       },
     };
   });
@@ -387,6 +397,11 @@ export default function DashboardPage() {
       participants: extendedProps.participants || "",
       recurrence_rule: extendedProps.recurrence_rule || null,
       category: extendedProps.category || null,
+      description: extendedProps.description || "",
+      location_url: extendedProps.location_url || null,
+      priority: extendedProps.priority || "normal",
+      tags: extendedProps.tags || [],
+      reminder_minutes: extendedProps.reminder_minutes ?? null,
     });
     setConflictData(null);
     setIsDialogOpen(true);
@@ -452,6 +467,11 @@ export default function DashboardPage() {
              participants: data.participants,
              recurrence_rule: data.recurrence_rule || null,
              category: data.category || null,
+             description: data.description,
+             location_url: data.location_url || null,
+             priority: data.priority,
+             tags: data.tags,
+             reminder_minutes: data.reminder_minutes ?? null,
           }),
         });
       } else {
@@ -465,6 +485,11 @@ export default function DashboardPage() {
             participants: data.participants,
             recurrence_rule: data.recurrence_rule || null,
             category: data.category || null,
+            description: data.description,
+            location_url: data.location_url || null,
+            priority: data.priority,
+            tags: data.tags,
+            reminder_minutes: data.reminder_minutes ?? null,
           }),
         });
       }
