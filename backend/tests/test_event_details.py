@@ -32,6 +32,19 @@ class TestEventDetails(unittest.TestCase):
         self.assertEqual(event.tags, ["Work", "planning"])
         self.assertEqual(event.reminder_minutes, 15)
 
+    def test_trims_event_title(self):
+        event = self._event(title="  Product Sync  ")
+        update = EventUpdate(title="  Updated Sync  ")
+
+        self.assertEqual(event.title, "Product Sync")
+        self.assertEqual(update.title, "Updated Sync")
+
+    def test_rejects_blank_event_title(self):
+        with self.assertRaises(ValidationError):
+            self._event(title="   ")
+        with self.assertRaises(ValidationError):
+            EventUpdate(title="   ")
+
     def test_rejects_unsafe_location_url(self):
         with self.assertRaises(ValidationError):
             self._event(location_url="javascript:alert(1)")

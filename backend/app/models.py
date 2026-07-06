@@ -21,6 +21,15 @@ def _normalize_tags(value: list[str] | None) -> list[str] | None:
     return normalized
 
 
+def _normalize_title(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError("title cannot be blank")
+    return normalized
+
+
 def _validate_location_url(value: str | None) -> str | None:
     if value is None:
         return None
@@ -60,6 +69,7 @@ class EventCreate(BaseModel):
     reminder_minutes: int | None = Field(None, ge=0, le=10080)
     external_ids: dict[str, str] = Field(default_factory=dict)
 
+    _title = field_validator("title")(_normalize_title)
     _location_url = field_validator("location_url")(_validate_location_url)
     _tags = field_validator("tags")(_normalize_tags)
 
@@ -78,6 +88,7 @@ class EventUpdate(BaseModel):
     tags: list[str] | None = Field(None, max_length=20)
     reminder_minutes: int | None = Field(None, ge=0, le=10080)
 
+    _title = field_validator("title")(_normalize_title)
     _location_url = field_validator("location_url")(_validate_location_url)
     _tags = field_validator("tags")(_normalize_tags)
 

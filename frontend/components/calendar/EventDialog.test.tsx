@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { EventDialog } from "./EventDialog";
@@ -23,5 +24,23 @@ describe("EventDialog", () => {
     expect(screen.getByLabelText("Priority")).toBeVisible();
     expect(screen.getByLabelText("Reminder")).toBeVisible();
     expect(screen.getByLabelText("Tags")).toBeVisible();
+  });
+
+  it("does not save blank-looking titles", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(
+      <EventDialog
+        open
+        onOpenChange={vi.fn()}
+        initialData={null}
+        onSave={onSave}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Judul Event"), "   ");
+    await user.click(screen.getByRole("button", { name: "Simpan Event" }));
+
+    expect(onSave).not.toHaveBeenCalled();
   });
 });
