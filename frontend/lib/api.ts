@@ -1,3 +1,5 @@
+import { persistAuthTokens } from './session';
+
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/+$/, '');
 const DEFAULT_TIMEOUT_MS = 15_000;
 
@@ -93,8 +95,7 @@ async function refreshAccessToken(): Promise<boolean> {
     }
     const data = await resp.json() as AuthTokenResponse;
     if (data.access_token) {
-      localStorage.setItem('token', data.access_token);
-      if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
+      persistAuthTokens(data, { preserveRefreshToken: true });
       return true;
     }
     clearSession();
