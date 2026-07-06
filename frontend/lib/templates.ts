@@ -117,6 +117,16 @@ function readCustomTemplates(): EventTemplate[] {
   }
 }
 
+function writeCustomTemplates(templates: EventTemplate[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
+  } catch {
+    // Storage can fail in private mode or when quota is exceeded.
+    // Template save/delete should not break the event creation flow.
+  }
+}
+
 export function getTemplates(): EventTemplate[] {
   if (typeof window === "undefined") return DEFAULT_TEMPLATES;
   return [...DEFAULT_TEMPLATES, ...readCustomTemplates()];
@@ -133,7 +143,7 @@ export function saveTemplate(template: Omit<EventTemplate, "id">): EventTemplate
     id: `custom-${Date.now()}`,
   };
   custom.push(newTemplate);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(custom));
+  writeCustomTemplates(custom);
   return newTemplate;
 }
 
@@ -141,7 +151,7 @@ export function deleteTemplate(id: string): void {
   // Only allow deleting custom templates
   if (id.startsWith("preset-")) return;
   const custom = getCustomTemplates().filter((t) => t.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(custom));
+  writeCustomTemplates(custom);
 }
 
 export function applyTemplate(

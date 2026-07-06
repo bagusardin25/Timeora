@@ -1,10 +1,14 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getCustomTemplates, saveTemplate } from "./templates";
 
 describe("templates", () => {
   beforeEach(() => {
     localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("recovers when stored custom templates are not an array", () => {
@@ -72,5 +76,20 @@ describe("templates", () => {
       category: null,
     }));
     expect(getCustomTemplates()[0]).toEqual(saved);
+  });
+
+  it("does not crash when browser storage rejects custom templates", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("Quota exceeded", "QuotaExceededError");
+    });
+
+    expect(() => saveTemplate({
+      name: "Planning",
+      title: "Planning",
+      duration_minutes: 30,
+      start_time: "10:00:00",
+      category: "meeting",
+      participants: "",
+    })).not.toThrow();
   });
 });
