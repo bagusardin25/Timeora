@@ -117,4 +117,19 @@ describe("fetchApi", () => {
       Authorization: "Bearer fresh-access",
     });
   });
+
+  it("attaches an abort signal to calendar export requests", async () => {
+    localStorage.setItem("token", "valid-access");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response("BEGIN:VCALENDAR", {
+        status: 200,
+        headers: { "Content-Type": "text/calendar" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await exportIcs();
+
+    expect(fetchMock.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
+  });
 });

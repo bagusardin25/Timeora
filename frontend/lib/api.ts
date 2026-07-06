@@ -339,9 +339,25 @@ export async function fetchEventsExpanded(
 
 export async function exportIcs(retry = true): Promise<Blob> {
   const token = localStorage.getItem('token');
-  const response = await fetch(`${API_BASE_URL}/export/ics`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const timeout = requestSignal();
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/export/ics`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      signal: timeout.signal,
+    });
+  } catch (error: unknown) {
+    if (timeout.signal.aborted) {
+      throw new ApiError(408, { detail: 'The export took too long. Please try again.' }, 'Export timed out');
+    }
+    throw new ApiError(
+      0,
+      { detail: error instanceof Error ? error.message : 'Calendar export failed' },
+      'Calendar export failed',
+    );
+  } finally {
+    timeout.dispose();
+  }
   if (response.status === 401 && retry) {
     const refreshed = await refreshAccessToken();
     if (refreshed) return exportIcs(false);

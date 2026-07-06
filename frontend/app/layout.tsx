@@ -1,13 +1,6 @@
 import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-
-const poppins = Poppins({
-  variable: "--font-sans",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800"],
-});
 
 export const metadata: Metadata = {
   title: "Timeora — Your Intelligent Time Companion",
@@ -32,7 +25,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${poppins.variable} font-sans h-full antialiased`}
+      className="font-sans h-full antialiased"
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-sans">
