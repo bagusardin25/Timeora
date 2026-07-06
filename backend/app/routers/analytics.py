@@ -35,7 +35,13 @@ def _events_as_dicts(events) -> list[dict]:
 
 def _reference_date(ref_date: str | None) -> date:
     if ref_date:
-        return date.fromisoformat(ref_date)
+        try:
+            return date.fromisoformat(ref_date)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="date must be a valid YYYY-MM-DD date",
+            ) from exc
     return datetime.now().date()
 
 
