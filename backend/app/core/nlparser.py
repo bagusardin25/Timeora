@@ -133,6 +133,22 @@ def _parse_date(text: str, today: date) -> tuple[date | None, str]:
     """Try to extract a date from *text*.  Returns (date, cleaned_text)."""
     low = text.lower()
 
+    def resolve_month_day(day_num: int, month_num: int, explicit_year: str | None) -> date | None:
+        if explicit_year:
+            try:
+                return date(int(explicit_year), month_num, day_num)
+            except ValueError:
+                return None
+
+        for candidate_year in range(today.year, today.year + 5):
+            try:
+                result_date = date(candidate_year, month_num, day_num)
+            except ValueError:
+                continue
+            if result_date >= today:
+                return result_date
+        return None
+
     # Relative dates — ID
     if re.search(r"\bhari\s+ini\b", low):
         return today, re.sub(r"\bhari\s+ini\b", "", text, flags=re.I).strip()
@@ -180,28 +196,22 @@ def _parse_date(text: str, today: date) -> tuple[date | None, str]:
     if m:
         day_num = int(m.group(1))
         month_name = m.group(2)
-        year = int(m.group(3)) if m.group(3) else today.year
         if month_name in _MONTHS:
-            try:
-                result_date = date(year, _MONTHS[month_name], day_num)
+            result_date = resolve_month_day(day_num, _MONTHS[month_name], m.group(3))
+            if result_date is not None:
                 cleaned = text[:m.start()] + text[m.end():]
                 return result_date, cleaned.strip()
-            except ValueError:
-                pass
 
     # Month DD [, YYYY]
     m = re.search(r"\b([a-zA-Z]+)\s+(\d{1,2})(?:\s*,?\s*(\d{4}))?\b", low)
     if m:
         month_name = m.group(1)
         day_num = int(m.group(2))
-        year = int(m.group(3)) if m.group(3) else today.year
         if month_name in _MONTHS:
-            try:
-                result_date = date(year, _MONTHS[month_name], day_num)
+            result_date = resolve_month_day(day_num, _MONTHS[month_name], m.group(3))
+            if result_date is not None:
                 cleaned = text[:m.start()] + text[m.end():]
                 return result_date, cleaned.strip()
-            except ValueError:
-                pass
 
     # ISO: YYYY-MM-DD
     m = re.search(r"\b(\d{4})-(\d{2})-(\d{2})\b", text)
@@ -216,6 +226,14 @@ def _parse_date(text: str, today: date) -> tuple[date | None, str]:
     return None, text
 
 
+def _safe_time(hour: int, minute: int) -> time | None:
+    if not 0 <= hour <= 23:
+        return None
+    if not 0 <= minute <= 59:
+        return None
+    return time(hour, minute)
+
+
 def _parse_time(text: str) -> tuple[time | None, str]:
     """Try to extract a time from *text*."""
     low = text.lower()
@@ -226,15 +244,16 @@ def _parse_time(text: str) -> tuple[time | None, str]:
         h = int(m.group(1))
         mins = int(m.group(2)) if m.group(2) else 0
         period = m.group(3)
-        if period == "siang" and 1 <= h <= 5:
+        if period == "malam" and h == 12:
+            h = 0
+        elif period == "siang" and 1 <= h <= 5:
             h += 12
         elif period in ("sore", "malam") and h < 12:
             h += 12
         elif period == "pagi" and h == 12:
             h = 0
-        h = min(h, 23)
         cleaned = text[:m.start()] + text[m.end():]
-        return time(h, mins), cleaned.strip()
+        return _safe_time(h, mins), cleaned.strip()
 
     # "at 3pm", "at 10:30am", "at 14:00"
     m = re.search(r"\bat\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b", low)
@@ -246,9 +265,8 @@ def _parse_time(text: str) -> tuple[time | None, str]:
             h += 12
         elif period == "am" and h == 12:
             h = 0
-        h = min(h, 23)
         cleaned = text[:m.start()] + text[m.end():]
-        return time(h, mins), cleaned.strip()
+        return _safe_time(h, mins), cleaned.strip()
 
     # Bare "3pm", "10am", "3:30pm"
     m = re.search(r"\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b", low)
@@ -260,17 +278,16 @@ def _parse_time(text: str) -> tuple[time | None, str]:
             h += 12
         elif period == "am" and h == 12:
             h = 0
-        h = min(h, 23)
         cleaned = text[:m.start()] + text[m.end():]
-        return time(h, mins), cleaned.strip()
+        return _safe_time(h, mins), cleaned.strip()
 
     # "pukul 10:00", "pukul 14.30"
     m = re.search(r"\bpukul\s+(\d{1,2})[\.:]\s*(\d{2})\b", low)
     if m:
-        h = min(int(m.group(1)), 23)
+        h = int(m.group(1))
         mins = int(m.group(2))
         cleaned = text[:m.start()] + text[m.end():]
-        return time(h, mins), cleaned.strip()
+        return _safe_time(h, mins), cleaned.strip()
 
     return None, text
 
