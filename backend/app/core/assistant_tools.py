@@ -40,6 +40,13 @@ def _validation_error(error: ValidationError) -> HTTPException:
     return HTTPException(status_code=400, detail=detail)
 
 
+def _event_create_payload(payload: dict) -> dict:
+    normalized = dict(payload)
+    if "recurrence_rule" not in normalized and "recurrence" in normalized:
+        normalized["recurrence_rule"] = normalized["recurrence"]
+    return normalized
+
+
 async def execute_calendar_tool(user_id: str, body: AssistantRequest):
     action = body.action
     if not action:
@@ -52,7 +59,7 @@ async def execute_calendar_tool(user_id: str, body: AssistantRequest):
         if not body.event_data:
             raise HTTPException(status_code=400, detail="event_data is required for create")
         try:
-            event_data = EventCreate.model_validate(body.event_data)
+            event_data = EventCreate.model_validate(_event_create_payload(body.event_data))
         except ValidationError as exc:
             raise _validation_error(exc) from exc
         return "create", await data_access.create_event(

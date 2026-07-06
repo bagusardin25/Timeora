@@ -1,9 +1,10 @@
 import unittest
+import os
 from unittest.mock import patch
 
 from fastapi import HTTPException
 
-from app.config import settings
+from app.config import Settings, settings
 from app.core.ics_import import parse_ics
 from app.integrations.crypto import (
     decrypt_token,
@@ -13,6 +14,20 @@ from app.integrations.crypto import (
 )
 from app.integrations.email import participant_emails
 from app.integrations.webhooks import validate_webhook_target
+
+
+class TestProviderConfig(unittest.TestCase):
+    def test_documented_openrouter_env_var_is_used(self):
+        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "documented-key"}, clear=True):
+            config = Settings(_env_file=None)
+
+        self.assertEqual(config.openrouter_api_key, "documented-key")
+
+    def test_legacy_openroute_env_var_still_works(self):
+        with patch.dict(os.environ, {"OPENROUTE_API_KEY": "legacy-key"}, clear=True):
+            config = Settings(_env_file=None)
+
+        self.assertEqual(config.openrouter_api_key, "legacy-key")
 
 
 class TestIcsImport(unittest.TestCase):

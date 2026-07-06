@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     SUPABASE_JWT_SECRET: str = ""
     SUPABASE_SERVICE_ROLE_KEY: str = ""
 
+    OPENROUTER_API_KEY: str = ""
     OPENROUTE_API_KEY: str = ""
     OPENROUTER_MODEL: str = "google/gemma-4-31b-it:free"
     OPENAI_API_KEY: str = ""
@@ -28,6 +29,10 @@ class Settings(BaseSettings):
     INTEGRATION_EMAIL_NOTIFICATIONS_ENABLED: bool = False
 
     CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
+
+    @property
+    def openrouter_api_key(self) -> str:
+        return self.OPENROUTER_API_KEY or self.OPENROUTE_API_KEY
 
 
 settings = Settings()

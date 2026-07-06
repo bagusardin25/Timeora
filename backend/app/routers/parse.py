@@ -106,7 +106,7 @@ async def _call_openrouter(text: str, today_iso: str) -> dict:
     """Call OpenRouter API with configurable model and proper headers."""
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
-        "Authorization": f"Bearer {settings.OPENROUTE_API_KEY}",
+        "Authorization": f"Bearer {settings.openrouter_api_key}",
         "Content-Type": "application/json",
         "HTTP-Referer": "https://timeora.app",
         "X-Title": "Timeora",
@@ -194,7 +194,7 @@ async def parse_natural_language(
     providers: list[tuple[str, object]] = []
     if settings.OPENAI_API_KEY:
         providers.append(("OpenAI", _call_openai))
-    if settings.OPENROUTE_API_KEY:
+    if settings.openrouter_api_key:
         providers.append(("OpenRouter", _call_openrouter))
 
     errors: list[str] = []

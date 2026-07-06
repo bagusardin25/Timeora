@@ -244,6 +244,29 @@ class TestAssistantNativeTools(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.intent, "create")
         self.assertEqual(create_event.await_args.args[0], "user-1")
 
+    async def test_confirmed_create_maps_parser_recurrence_to_event_field(self):
+        created = event("new", "Weekly Standup", 9)
+        body = AssistantRequest(
+            confirm=True,
+            action="create",
+            event_data={
+                "title": "Weekly Standup",
+                "date": "2026-07-07",
+                "start_time": "09:00",
+                "duration_minutes": 30,
+                "recurrence": "weekly:senin",
+            },
+        )
+        with patch.object(
+            assistant.data_access,
+            "create_event",
+            AsyncMock(return_value=created),
+        ) as create_event:
+            await assistant._execute_confirmed({"id": "user-1"}, body)
+
+        created_body = create_event.await_args.args[1]
+        self.assertEqual(created_body.recurrence_rule, "weekly:senin")
+
     async def test_reschedule_rejects_invalid_time_as_bad_request(self):
         body = AssistantRequest(
             confirm=True,
