@@ -1,5 +1,6 @@
 import { CATEGORIES } from "@/lib/categories";
 import type { EventData } from "@/components/calendar/EventDialog";
+import { format } from "date-fns";
 
 export type EventTemplate = {
   id: string;
@@ -160,7 +161,7 @@ export function applyTemplate(
 ): Partial<EventData> {
   return {
     title: template.title,
-    date: date || new Date().toISOString().slice(0, 10),
+    date: date || format(new Date(), "yyyy-MM-dd"),
     start_time: template.start_time,
     duration_minutes: template.duration_minutes,
     participants: template.participants,
