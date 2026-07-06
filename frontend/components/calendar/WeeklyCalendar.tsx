@@ -36,6 +36,37 @@ interface WeeklyCalendarProps {
   onEventAskAI?: (event: EventData) => void;
 }
 
+const DEFAULT_CATEGORY_PRESETS: Record<string, string[]> = {
+  "All": ["meeting", "personal", "focus", "health", "social", "other", "uncategorized"],
+  "Work": ["meeting", "focus"],
+  "Focus": ["focus"],
+  "Life": ["personal", "health", "social"],
+};
+
+function readCategoryPresets(): Record<string, string[]> {
+  if (typeof window === "undefined") return DEFAULT_CATEGORY_PRESETS;
+
+  try {
+    const saved = localStorage.getItem("timeora_category_presets");
+    if (!saved) return DEFAULT_CATEGORY_PRESETS;
+
+    const parsed = JSON.parse(saved) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return DEFAULT_CATEGORY_PRESETS;
+    }
+
+    const validEntries = Object.entries(parsed).filter(
+      (entry): entry is [string, string[]] =>
+        typeof entry[0] === "string" &&
+        Array.isArray(entry[1]) &&
+        entry[1].every((category) => typeof category === "string"),
+    );
+
+    return validEntries.length ? Object.fromEntries(validEntries) : DEFAULT_CATEGORY_PRESETS;
+  } catch {
+    return DEFAULT_CATEGORY_PRESETS;
+  }
+}
 
 
 export function WeeklyCalendar({
@@ -154,18 +185,7 @@ export function WeeklyCalendar({
   ]);
 
   // Saved views / filter presets (localStorage)
-  const [presets, setPresets] = React.useState<Record<string, string[]>>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('timeora_category_presets');
-      if (saved) return JSON.parse(saved);
-    }
-    return {
-      "All": ["meeting", "personal", "focus", "health", "social", "other", "uncategorized"],
-      "Work": ["meeting", "focus"],
-      "Focus": ["focus"],
-      "Life": ["personal", "health", "social"],
-    };
-  });
+  const [presets, setPresets] = React.useState<Record<string, string[]>>(readCategoryPresets);
 
   const saveCurrentAsPreset = (name: string) => {
     const newPresets = { ...presets, [name]: [...selectedCategories] };

@@ -51,27 +51,41 @@ const DEFAULT_TEMPLATES: EventTemplate[] = [
   },
 ];
 
-export function getTemplates(): EventTemplate[] {
-  if (typeof window === "undefined") return DEFAULT_TEMPLATES;
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return DEFAULT_TEMPLATES;
-    const parsed = JSON.parse(stored) as EventTemplate[];
-    return [...DEFAULT_TEMPLATES, ...parsed];
-  } catch {
-    return DEFAULT_TEMPLATES;
-  }
+function isEventTemplate(value: unknown): value is EventTemplate {
+  if (!value || typeof value !== "object") return false;
+  const template = value as Partial<EventTemplate>;
+  return (
+    typeof template.id === "string" &&
+    typeof template.name === "string" &&
+    typeof template.title === "string" &&
+    typeof template.duration_minutes === "number" &&
+    Number.isFinite(template.duration_minutes) &&
+    typeof template.start_time === "string" &&
+    (typeof template.category === "string" || template.category === null) &&
+    typeof template.participants === "string"
+  );
 }
 
-export function getCustomTemplates(): EventTemplate[] {
+function readCustomTemplates(): EventTemplate[] {
   if (typeof window === "undefined") return [];
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return [];
-    return JSON.parse(stored) as EventTemplate[];
+    const parsed = JSON.parse(stored) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isEventTemplate);
   } catch {
     return [];
   }
+}
+
+export function getTemplates(): EventTemplate[] {
+  if (typeof window === "undefined") return DEFAULT_TEMPLATES;
+  return [...DEFAULT_TEMPLATES, ...readCustomTemplates()];
+}
+
+export function getCustomTemplates(): EventTemplate[] {
+  return readCustomTemplates();
 }
 
 export function saveTemplate(template: Omit<EventTemplate, "id">): EventTemplate {
