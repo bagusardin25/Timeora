@@ -74,4 +74,36 @@ describe("AssistantPanel", () => {
     });
     expect(await screen.findByRole("button", { name: "Confirm action" })).toBeVisible();
   });
+
+  it("confirms native update tool results with event data", async () => {
+    const user = userEvent.setup();
+    const onEventsChanged = vi.fn();
+    callAssistantMock.mockResolvedValueOnce({
+      intent: "update",
+      result: {
+        primary_event_id: "event-1",
+        event_data: { description: "Updated prep notes", priority: "important" },
+      },
+      message: "Update Product Sync?",
+      requires_confirmation: true,
+    });
+    executeAssistantMock.mockResolvedValueOnce({
+      intent: "update",
+      result: { id: "event-1", title: "Product Sync" },
+      message: "Event updated.",
+      executed: true,
+    });
+    render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={onEventsChanged} />);
+
+    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Make Product Sync important");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await user.click(await screen.findByRole("button", { name: "Confirm action" }));
+
+    expect(executeAssistantMock).toHaveBeenCalledWith({
+      action: "update",
+      event_id: "event-1",
+      event_data: { description: "Updated prep notes", priority: "important" },
+    });
+    expect(onEventsChanged).toHaveBeenCalled();
+  });
 });

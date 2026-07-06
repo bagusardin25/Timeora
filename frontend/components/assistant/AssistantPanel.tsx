@@ -65,6 +65,22 @@ function executionParams(result: AssistantResult): AssistantExecuteParams | null
       new_time: data.new_time as string,
     };
   }
+  if (result.intent === "update" || result.intent === "edit") {
+    const eventId = typeof data.primary_event_id === "string"
+      ? data.primary_event_id
+      : typeof data.event_id === "string"
+        ? data.event_id
+        : null;
+    const eventData = data.event_data;
+    if (!eventId || !eventData || typeof eventData !== "object" || Array.isArray(eventData)) {
+      return null;
+    }
+    return {
+      action: "update",
+      event_id: eventId,
+      event_data: eventData as Record<string, unknown>,
+    };
+  }
   return null;
 }
 

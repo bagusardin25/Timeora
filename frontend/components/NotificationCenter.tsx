@@ -41,13 +41,19 @@ function toReminderEvent(event: EventInput): ReminderEvent | null {
   const start = event.start instanceof Date ? event.start : new Date(event.start as string | number);
   if (Number.isNaN(start.getTime())) return null;
 
+  const reminderMinutes =
+    typeof ext.reminder_minutes === "number" ? ext.reminder_minutes : Number(ext.reminder_minutes);
+  if (!Number.isFinite(reminderMinutes) || reminderMinutes < 0) {
+    return null;
+  }
+
   return {
     id: String(event.id),
     title: String(event.title),
     date: toLocalDate(start),
     start_time: toLocalTime(start),
     participants: typeof ext.participants === "string" ? ext.participants : "",
-    reminder_minutes: Number(ext.reminder_minutes),
+    reminder_minutes: reminderMinutes,
   };
 }
 

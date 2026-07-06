@@ -35,6 +35,9 @@ export function getReminderFireTime(event: ReminderEvent): Date | null {
   if (event.reminder_minutes === null || event.reminder_minutes === undefined) {
     return null;
   }
+  if (!Number.isFinite(event.reminder_minutes) || event.reminder_minutes < 0) {
+    return null;
+  }
   const start = parseLocalEventStart(event);
   if (Number.isNaN(start.getTime())) return null;
   return new Date(start.getTime() - event.reminder_minutes * 60_000);
