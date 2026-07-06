@@ -63,6 +63,8 @@ def generate_ics(
         uid = ev.get("id", str(uuid4()))
         title = _escape(ev.get("title", "Untitled"))
         participants = ev.get("participants", "")
+        description = ev.get("description", "")
+        location_url = ev.get("location_url")
 
         lines.append("BEGIN:VEVENT")
         lines.append(f"UID:{uid}")
@@ -70,8 +72,13 @@ def generate_ics(
         lines.append(f"DTSTART:{_format_dt(ev_date, ev_time)}")
         lines.append(f"DTEND:{_format_dt(end_dt.date(), end_dt.time())}")
         lines.append(f"SUMMARY:{title}")
+        description_parts = [description] if description else []
         if participants:
-            lines.append(f"DESCRIPTION:Participants: {_escape(participants)}")
+            description_parts.append(f"Participants: {participants}")
+        if description_parts:
+            lines.append(f"DESCRIPTION:{_escape(chr(10).join(description_parts))}")
+        if location_url:
+            lines.append(f"URL:{location_url}")
         lines.append("END:VEVENT")
 
     lines.append("END:VCALENDAR")

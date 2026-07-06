@@ -1,7 +1,36 @@
 from datetime import date as Date, datetime as DateTime, time as Time
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from urllib.parse import urlparse
+
+from pydantic import BaseModel, Field, field_validator
+
+
+def _normalize_tags(value: list[str] | None) -> list[str] | None:
+    if value is None:
+        return None
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw_tag in value:
+        tag = raw_tag.strip()
+        key = tag.casefold()
+        if not tag or key in seen:
+            continue
+        seen.add(key)
+        normalized.append(tag)
+    return normalized
+
+
+def _validate_location_url(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if not normalized:
+        return None
+    parsed = urlparse(normalized)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("location_url must use http or https")
+    return normalized
 
 
 class EventCreate(BaseModel):
@@ -12,7 +41,15 @@ class EventCreate(BaseModel):
     participants: str = ""
     recurrence_rule: str | None = None
     category: str | None = None
+    description: str = Field("", max_length=5000)
+    location_url: str | None = Field(None, max_length=2048)
+    priority: Literal["low", "normal", "important"] = "normal"
+    tags: list[str] = Field(default_factory=list, max_length=20)
+    reminder_minutes: int | None = Field(None, ge=0, le=10080)
     external_ids: dict[str, str] = Field(default_factory=dict)
+
+    _location_url = field_validator("location_url")(_validate_location_url)
+    _tags = field_validator("tags")(_normalize_tags)
 
 
 class EventUpdate(BaseModel):
@@ -23,6 +60,14 @@ class EventUpdate(BaseModel):
     participants: str | None = None
     recurrence_rule: str | None = None
     category: str | None = None
+    description: str | None = Field(None, max_length=5000)
+    location_url: str | None = Field(None, max_length=2048)
+    priority: Literal["low", "normal", "important"] | None = None
+    tags: list[str] | None = Field(None, max_length=20)
+    reminder_minutes: int | None = Field(None, ge=0, le=10080)
+
+    _location_url = field_validator("location_url")(_validate_location_url)
+    _tags = field_validator("tags")(_normalize_tags)
 
 
 class EventResponse(BaseModel):
@@ -35,6 +80,11 @@ class EventResponse(BaseModel):
     participants: str
     recurrence_rule: str | None = None
     category: str | None = None
+    description: str = ""
+    location_url: str | None = None
+    priority: Literal["low", "normal", "important"] = "normal"
+    tags: list[str] = Field(default_factory=list)
+    reminder_minutes: int | None = None
     external_ids: dict[str, str] = Field(default_factory=dict)
     sync_status: str = "not_synced"
     last_synced_at: DateTime | None = None

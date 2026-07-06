@@ -48,6 +48,11 @@ def _row_to_event(row) -> EventResponse:
         participants=row.get("participants", ""),
         recurrence_rule=row.get("recurrence_rule"),
         category=row.get("category"),
+        description=row.get("description") or "",
+        location_url=row.get("location_url"),
+        priority=row.get("priority") or "normal",
+        tags=list(row.get("tags") or []),
+        reminder_minutes=row.get("reminder_minutes"),
         external_ids=external_ids,
         sync_status=row.get("sync_status") or "not_synced",
         last_synced_at=row.get("last_synced_at"),
@@ -223,9 +228,10 @@ async def create_event(user_id: str, body: EventCreate) -> EventResponse:
                 """
                 INSERT INTO events (
                     user_id, title, date, start_time, duration_minutes,
-                    participants, recurrence_rule, category, external_ids
+                    participants, recurrence_rule, category, description,
+                    location_url, priority, tags, reminder_minutes, external_ids
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                 RETURNING *
                 """,
                 user_id,
@@ -236,6 +242,11 @@ async def create_event(user_id: str, body: EventCreate) -> EventResponse:
                 body.participants,
                 body.recurrence_rule,
                 body.category,
+                body.description,
+                body.location_url,
+                body.priority,
+                body.tags,
+                body.reminder_minutes,
                 json.dumps(body.external_ids),
             )
             return _row_to_event(row)

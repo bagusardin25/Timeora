@@ -32,6 +32,11 @@ export type EventData = {
   participants: string;
   recurrence_rule?: string | null;
   category?: string | null;
+  description: string;
+  location_url?: string | null;
+  priority: "low" | "normal" | "important";
+  tags: string[];
+  reminder_minutes?: number | null;
 };
 
 interface EventDialogProps {
@@ -53,6 +58,11 @@ function defaultEventData(initialData: Partial<EventData> | null): Partial<Event
     duration_minutes: 60,
     participants: "",
     category: null,
+    description: "",
+    location_url: null,
+    priority: "normal",
+    tags: [],
+    reminder_minutes: null,
   };
 }
 
@@ -112,6 +122,11 @@ export function EventDialog({
       participants: formData.participants || "",
       recurrence_rule: formData.recurrence_rule || null,
       category: formData.category || null,
+      description: formData.description || "",
+      location_url: formData.location_url || null,
+      priority: formData.priority || "normal",
+      tags: formData.tags || [],
+      reminder_minutes: formData.reminder_minutes ?? null,
     });
   };
 
