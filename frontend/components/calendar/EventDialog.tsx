@@ -328,11 +328,16 @@ export function EventDialog({
                     value={(formData.start_time || "").substring(0, 5)}
                     onChange={(e) => {
                       const newStart = e.target.value;
+                      const duration = formData.duration_minutes || 60;
                       setFormData({ 
                         ...formData, 
                         start_time: newStart,
-                        duration_minutes: calculateDuration(newStart, endTime)
+                        duration_minutes: duration,
                       });
+                      setEndTime(calculateEndTime({
+                        start_time: newStart,
+                        duration_minutes: duration,
+                      }));
                     }}
                     className="bg-zinc-50 dark:bg-black/20 border-zinc-200 dark:border-white/10 focus-visible:ring-primary shadow-sm"
                   />

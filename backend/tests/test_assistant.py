@@ -64,6 +64,21 @@ class TestAssistantClarification(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(response.requires_confirmation)
         self.assertEqual(response.result["primary_event_id"], "two")
 
+    async def test_selected_recurring_instance_preserves_underscored_base_id(self):
+        events = [
+            event("team_sync", "Team Sync", 10),
+            event("team_review", "Team Sync", 14),
+        ]
+        with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=events)):
+            response = await assistant._handle_cancel(
+                {"id": "user-1"},
+                {"title": "Team Sync", "date": None},
+                selected_event_id="team_sync_2026-07-06",
+            )
+
+        self.assertTrue(response.requires_confirmation)
+        self.assertEqual(response.result["primary_event_id"], "team_sync")
+
     async def test_context_event_can_be_cancelled_without_title_match(self):
         events = [event("one", "Product Sync", 14)]
         with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=events)):
@@ -282,6 +297,19 @@ class TestAssistantNativeTools(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(raised.exception.status_code, 400)
         self.assertIn("new_date and new_time", raised.exception.detail)
         update_event.assert_not_awaited()
+
+    async def test_confirmed_cancel_preserves_underscored_recurring_base_id(self):
+        body = AssistantRequest(
+            confirm=True,
+            action="cancel",
+            event_id="team_sync_2026-07-06",
+        )
+        with patch.object(assistant_tools.data_access, "delete_event", AsyncMock()) as delete_event:
+            intent, result = await assistant_tools.execute_calendar_tool("user-1", body)
+
+        self.assertEqual(intent, "cancel")
+        self.assertEqual(result["event_id"], "team_sync")
+        delete_event.assert_awaited_once_with("team_sync", "user-1")
 
     async def test_reschedule_rejects_invalid_date_as_bad_request(self):
         body = AssistantRequest(

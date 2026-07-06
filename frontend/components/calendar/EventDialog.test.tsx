@@ -93,4 +93,28 @@ describe("EventDialog", () => {
       duration_minutes: 90,
     }));
   });
+
+  it("keeps the existing duration when only the start time changes", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(
+      <EventDialog
+        open
+        onOpenChange={vi.fn()}
+        initialData={null}
+        onSave={onSave}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Judul Event"), "Moved planning");
+    await user.clear(screen.getByLabelText("Mulai"));
+    await user.type(screen.getByLabelText("Mulai"), "11:00");
+    await user.click(screen.getByRole("button", { name: "Simpan Event" }));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      start_time: "11:00:00",
+      duration_minutes: 60,
+    }));
+    expect(screen.getByLabelText("Selesai")).toHaveValue("12:00");
+  });
 });
