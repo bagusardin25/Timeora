@@ -71,7 +71,10 @@ function requestSignal(external?: AbortSignal | null): {
 
 async function refreshAccessToken(): Promise<boolean> {
   const refreshToken = localStorage.getItem('refresh_token');
-  if (!refreshToken) return false;
+  if (!refreshToken) {
+    if (localStorage.getItem('token')) clearSession();
+    return false;
+  }
   try {
     const resp = await fetch(`${API_BASE_URL}/auth/refresh`, {
       method: 'POST',
