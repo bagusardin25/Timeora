@@ -154,6 +154,61 @@ class TestConflictEngine(unittest.TestCase):
 
         self.assertFalse(alternatives[0]["start_time"].startswith("12:"))
 
+    def test_detects_previous_day_event_crossing_midnight(self):
+        hits = check_conflicts(
+            [
+                {
+                    "id": "overnight",
+                    "title": "Late deployment",
+                    "date": "2026-07-05",
+                    "start_time": "23:30",
+                    "duration_minutes": 90,
+                }
+            ],
+            self.event_date,
+            time(0, 30),
+            30,
+        )
+
+        self.assertEqual([item["id"] for item in hits], ["overnight"])
+
+    def test_detects_next_day_event_when_new_slot_crosses_midnight(self):
+        hits = check_conflicts(
+            [
+                {
+                    "id": "early-call",
+                    "title": "Early call",
+                    "date": "2026-07-07",
+                    "start_time": "00:30",
+                    "duration_minutes": 30,
+                }
+            ],
+            self.event_date,
+            time(23, 30),
+            90,
+        )
+
+        self.assertEqual([item["id"] for item in hits], ["early-call"])
+
+    def test_alternatives_avoid_previous_day_overnight_events(self):
+        alternatives = find_alternatives(
+            [
+                {
+                    "id": "overnight",
+                    "title": "Overnight maintenance",
+                    "date": "2026-07-05",
+                    "start_time": "23:30",
+                    "duration_minutes": 600,
+                }
+            ],
+            self.event_date,
+            time(8, 0),
+            60,
+            count=1,
+        )
+
+        self.assertGreaterEqual(alternatives[0]["start_time"], "09:45")
+
 
 class TestRecurrenceEngine(unittest.TestCase):
     def _event(self, rule, anchor="2026-07-01"):

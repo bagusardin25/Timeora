@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { format, isToday, differenceInMinutes } from "date-fns";
+import { format, differenceInMinutes } from "date-fns";
 import {
   Sun,
   Sunrise,
@@ -51,6 +51,19 @@ function formatCountdown(minutes: number): string {
   return `${hours}j ${mins}m lagi`;
 }
 
+function dayBounds(day: Date): { start: Date; end: Date } {
+  const start = new Date(day);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start, end };
+}
+
+function overlapsDay(start: Date, end: Date, day: Date): boolean {
+  const bounds = dayBounds(day);
+  return start < bounds.end && end > bounds.start;
+}
+
 export function TodayAgenda({ events, onEventClick }: TodayAgendaProps) {
   const [now, setNow] = useState(new Date());
 
@@ -66,25 +79,42 @@ export function TodayAgenda({ events, onEventClick }: TodayAgendaProps) {
         if (!e.start) return false;
         const raw = e.start;
         const start = raw instanceof Date ? raw : new Date(raw as string | number);
-        return isToday(start);
+        if (Number.isNaN(start.getTime())) return false;
+        const rawEnd = e.end;
+        const ext = (e.extendedProps || {}) as Record<string, unknown>;
+        const durationMinutes =
+          typeof ext.duration_minutes === "number" && Number.isFinite(ext.duration_minutes)
+            ? ext.duration_minutes
+            : 60;
+        const end = rawEnd
+          ? rawEnd instanceof Date ? rawEnd : new Date(rawEnd as string | number)
+          : new Date(start.getTime() + durationMinutes * 60_000);
+        if (Number.isNaN(end.getTime())) return false;
+        return overlapsDay(start, end, now);
       })
       .map((e) => {
         const rawS = e.start!;
-        const rawE = e.end!;
         const start = rawS instanceof Date ? rawS : new Date(rawS as string | number);
-        const end = rawE instanceof Date ? rawE : new Date(rawE as string | number);
         const ext = (e.extendedProps || {}) as Record<string, unknown>;
+        const configuredDuration =
+          typeof ext.duration_minutes === "number" && Number.isFinite(ext.duration_minutes)
+            ? ext.duration_minutes
+            : null;
+        const rawE = e.end;
+        const end = rawE
+          ? rawE instanceof Date ? rawE : new Date(rawE as string | number)
+          : new Date(start.getTime() + (configuredDuration ?? 60) * 60_000);
         return {
           id: e.id as string,
           title: e.title as string,
           start,
           end,
           category: ext.category as string | null | undefined,
-          duration_minutes: (ext.duration_minutes as number) || differenceInMinutes(end, start),
+          duration_minutes: configuredDuration ?? differenceInMinutes(end, start),
         };
       })
       .sort((a, b) => a.start.getTime() - b.start.getTime());
-  }, [events]);
+  }, [events, now]);
 
   const nextEvent = useMemo(() => {
     return todayEvents.find((e) => e.end > now);
