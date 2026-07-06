@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AuthSessionWatcher } from "@/components/AuthSessionWatcher";
 
 export const metadata: Metadata = {
   title: "Timeora — Your Intelligent Time Companion",
@@ -35,6 +36,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <AuthSessionWatcher />
           {children}
         </ThemeProvider>
       </body>

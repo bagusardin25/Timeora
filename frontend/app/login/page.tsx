@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { persistAuthTokens } from '@/lib/session';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -45,10 +46,7 @@ export default function LoginPage() {
         throw new Error('Login response did not include an access token');
       }
 
-      localStorage.setItem('token', data.access_token);
-      if (data.refresh_token) {
-        localStorage.setItem('refresh_token', data.refresh_token);
-      }
+      persistAuthTokens(data);
       router.push('/dashboard');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');
