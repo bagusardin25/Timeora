@@ -19,6 +19,18 @@ from app.models import (
 router = APIRouter()
 
 
+def _parse_query_date(value: str | None, field_name: str) -> DateType | None:
+    if value is None:
+        return None
+    try:
+        return DateType.fromisoformat(value)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{field_name} must be a valid YYYY-MM-DD date",
+        ) from exc
+
+
 def _expand_events(
     events: list[EventResponse],
     range_start: DateType,
@@ -70,22 +82,21 @@ async def list_events(
     expand: bool = Query(False, description="Expand recurring events into instances"),
     user: dict = Depends(get_current_user),
 ):
+    fd = _parse_query_date(from_date, "from")
+    td = _parse_query_date(to_date, "to")
+
     events = await data_access.list_events(user["id"])
 
     if q:
         q_lower = q.lower()
         events = [e for e in events if q_lower in e.title.lower()]
 
-    if expand and from_date and to_date:
-        fd = DateType.fromisoformat(from_date)
-        td = DateType.fromisoformat(to_date)
+    if expand and fd and td:
         return _expand_events(events, fd, td)
 
-    if from_date:
-        fd = DateType.fromisoformat(from_date)
+    if fd:
         events = [e for e in events if e.date >= fd]
-    if to_date:
-        td = DateType.fromisoformat(to_date)
+    if td:
         events = [e for e in events if e.date <= td]
 
     return events
