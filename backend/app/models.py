@@ -5,6 +5,15 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, field_validator
 
+_KNOWN_CATEGORIES = {
+    "meeting",
+    "personal",
+    "focus",
+    "health",
+    "social",
+    "other",
+}
+
 
 def _normalize_tags(value: list[str] | None) -> list[str] | None:
     if value is None:
@@ -19,6 +28,17 @@ def _normalize_tags(value: list[str] | None) -> list[str] | None:
         seen.add(key)
         normalized.append(tag)
     return normalized
+
+
+def _normalize_category(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip().lower()
+    if not normalized:
+        return None
+    if normalized in _KNOWN_CATEGORIES:
+        return normalized
+    return "other"
 
 
 def _normalize_title(value: str | None) -> str | None:
@@ -81,6 +101,7 @@ class EventCreate(BaseModel):
     _title = field_validator("title")(_normalize_title)
     _location_url = field_validator("location_url")(_validate_location_url)
     _tags = field_validator("tags")(_normalize_tags)
+    _category = field_validator("category")(_normalize_category)
 
 
 class EventUpdate(BaseModel):
@@ -100,6 +121,7 @@ class EventUpdate(BaseModel):
     _title = field_validator("title")(_normalize_title)
     _location_url = field_validator("location_url")(_validate_location_url)
     _tags = field_validator("tags")(_normalize_tags)
+    _category = field_validator("category")(_normalize_category)
 
 
 class EventResponse(BaseModel):

@@ -117,6 +117,8 @@ def _recurrence_rule(value: str | None) -> str | None:
             "WE": "wednesday",
             "TH": "thursday",
             "FR": "friday",
+            "SA": "saturday",
+            "SU": "sunday",
         }
         if days == ["MO", "TU", "WE", "TH", "FR"]:
             return "weekdays"

@@ -462,6 +462,31 @@ class TestIcsExport(unittest.TestCase):
         self.assertIn("DTSTART:20260706T233000", output)
         self.assertIn("DTEND:20260707T010000", output)
 
+    def test_exports_recurrence_rules(self):
+        output = generate_ics(
+            [
+                {
+                    "id": "event-1",
+                    "title": "Weekly standup",
+                    "date": "2026-07-06",
+                    "start_time": "09:00",
+                    "duration_minutes": 30,
+                    "recurrence_rule": "weekly:senin",
+                },
+                {
+                    "id": "event-2",
+                    "title": "Weekday focus",
+                    "date": "2026-07-06",
+                    "start_time": "10:00",
+                    "duration_minutes": 60,
+                    "recurrence_rule": "weekdays",
+                },
+            ]
+        )
+
+        self.assertIn("RRULE:FREQ=WEEKLY;BYDAY=MO", output)
+        self.assertIn("RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", output)
+
 
 class TestEventUpdateConflicts(unittest.IsolatedAsyncioTestCase):
     existing = EventResponse(

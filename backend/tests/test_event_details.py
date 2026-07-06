@@ -60,6 +60,13 @@ class TestEventDetails(unittest.TestCase):
         update = EventUpdate(tags=["Important", " important ", "Client"])
         self.assertEqual(update.tags, ["Important", "Client"])
 
+    def test_normalizes_unknown_category_to_other(self):
+        event = self._event(category=" Work ")
+        update = EventUpdate(category="Client")
+
+        self.assertEqual(event.category, "other")
+        self.assertEqual(update.category, "other")
+
     def test_rejects_excessive_reminder(self):
         with self.assertRaises(ValidationError):
             self._event(reminder_minutes=10081)
