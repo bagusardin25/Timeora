@@ -1,4 +1,5 @@
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/+$/, '');
+const DEFAULT_TIMEOUT_MS = 15_000;
 
 type JsonRecord = Record<string, unknown>;
 
@@ -35,6 +36,39 @@ type AuthTokenResponse = {
   refresh_token?: string;
 };
 
+function clearSession(): void {
+  localStorage.removeItem('token');
+  localStorage.removeItem('refresh_token');
+  window.dispatchEvent(new CustomEvent('timeora:auth-expired'));
+}
+
+async function responseData(response: Response): Promise<unknown> {
+  if (response.status === 204) return null;
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    return response.json().catch(() => ({}));
+  }
+  const text = await response.text().catch(() => '');
+  return text ? { detail: text } : {};
+}
+
+function requestSignal(external?: AbortSignal | null): {
+  signal: AbortSignal;
+  dispose: () => void;
+} {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+  const abortFromExternal = () => controller.abort(external?.reason);
+  external?.addEventListener('abort', abortFromExternal, { once: true });
+  return {
+    signal: controller.signal,
+    dispose: () => {
+      window.clearTimeout(timeout);
+      external?.removeEventListener('abort', abortFromExternal);
+    },
+  };
+}
+
 async function refreshAccessToken(): Promise<boolean> {
   const refreshToken = localStorage.getItem('refresh_token');
   if (!refreshToken) return false;
@@ -44,14 +78,19 @@ async function refreshAccessToken(): Promise<boolean> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refreshToken }),
     });
-    if (!resp.ok) return false;
+    if (!resp.ok) {
+      clearSession();
+      return false;
+    }
     const data = await resp.json() as AuthTokenResponse;
     if (data.access_token) {
       localStorage.setItem('token', data.access_token);
       if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
       return true;
     }
+    clearSession();
   } catch {
+    clearSession();
     return false;
   }
   return false;
@@ -71,10 +110,26 @@ export async function fetchApi<T = unknown>(
   }
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  const timeout = requestSignal(options.signal);
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+      signal: timeout.signal,
+    });
+  } catch (error: unknown) {
+    if (timeout.signal.aborted) {
+      throw new ApiError(408, { detail: 'The request took too long. Please try again.' }, 'Request timed out');
+    }
+    throw new ApiError(
+      0,
+      { detail: error instanceof Error ? error.message : 'Network request failed' },
+      'Network request failed',
+    );
+  } finally {
+    timeout.dispose();
+  }
 
   if (response.status === 401 && retry && !endpoint.includes('/auth/')) {
     const refreshed = await refreshAccessToken();
@@ -82,7 +137,7 @@ export async function fetchApi<T = unknown>(
   }
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
+    const errorData = await responseData(response);
     throw new ApiError(response.status, errorData, 'An error occurred while fetching data');
   }
 
@@ -90,7 +145,7 @@ export async function fetchApi<T = unknown>(
     return null as T;
   }
 
-  return response.json() as Promise<T>;
+  return responseData(response) as Promise<T>;
 }
 
 export type ParseResult = {

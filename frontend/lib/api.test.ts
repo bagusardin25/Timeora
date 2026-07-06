@@ -1,0 +1,68 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { ApiError, fetchApi } from "./api";
+
+function jsonResponse(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+describe("fetchApi", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("attaches an abort signal so stalled production requests can time out", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchApi("/health");
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("clears stale credentials when refresh is rejected", async () => {
+    localStorage.setItem("token", "expired-access");
+    localStorage.setItem("refresh_token", "expired-refresh");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(401, { detail: "expired" }))
+      .mockResolvedValueOnce(jsonResponse(401, { detail: "invalid refresh" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchApi("/events")).rejects.toBeInstanceOf(ApiError);
+
+    expect(localStorage.getItem("token")).toBeNull();
+    expect(localStorage.getItem("refresh_token")).toBeNull();
+  });
+
+  it("uses a plain-text server error instead of a generic message", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response("Service is warming up", {
+          status: 503,
+          headers: { "Content-Type": "text/plain" },
+        }),
+      ),
+    );
+
+    await expect(fetchApi("/events")).rejects.toMatchObject({
+      status: 503,
+      message: "Service is warming up",
+    });
+  });
+
+  it("returns null for successful empty responses", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
+
+    await expect(fetchApi("/events/one", { method: "DELETE" })).resolves.toBeNull();
+  });
+});
