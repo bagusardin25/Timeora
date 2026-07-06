@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getCustomTemplates, saveTemplate } from "./templates";
+import { applyTemplate, getCustomTemplates, saveTemplate } from "./templates";
 
 describe("templates", () => {
   beforeEach(() => {
@@ -9,6 +9,7 @@ describe("templates", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it("recovers when stored custom templates are not an array", () => {
@@ -91,5 +92,22 @@ describe("templates", () => {
       category: "meeting",
       participants: "",
     })).not.toThrow();
+  });
+
+  it("uses the local calendar date when applying a template without an explicit date", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 6, 7, 0, 30));
+
+    const applied = applyTemplate({
+      id: "custom-planning",
+      name: "Planning",
+      title: "Planning",
+      duration_minutes: 30,
+      start_time: "10:00:00",
+      category: "meeting",
+      participants: "",
+    });
+
+    expect(applied.date).toBe("2026-07-07");
   });
 });

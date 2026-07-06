@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date as DateType
+from datetime import date as DateType, datetime, time, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 
@@ -17,6 +17,7 @@ from app.models import (
 )
 
 router = APIRouter()
+MAX_EVENT_LOOKBACK_DAYS = 1
 
 
 def _parse_query_date(value: str | None, field_name: str) -> DateType | None:
@@ -31,6 +32,27 @@ def _parse_query_date(value: str | None, field_name: str) -> DateType | None:
         ) from exc
 
 
+def _event_overlaps_range(
+    event: EventResponse,
+    range_start: DateType | None,
+    range_end: DateType | None,
+) -> bool:
+    event_start = datetime.combine(event.date, event.start_time)
+    event_end = event_start + timedelta(minutes=event.duration_minutes)
+
+    if range_start is not None:
+        start_boundary = datetime.combine(range_start, time.min)
+        if event_end <= start_boundary:
+            return False
+
+    if range_end is not None:
+        end_boundary = datetime.combine(range_end + timedelta(days=1), time.min)
+        if event_start >= end_boundary:
+            return False
+
+    return True
+
+
 def _expand_events(
     events: list[EventResponse],
     range_start: DateType,
@@ -38,38 +60,39 @@ def _expand_events(
 ) -> list[EventResponse]:
     """Expand recurring events into concrete instances within the date range."""
     expanded: list[EventResponse] = []
+    expansion_start = range_start - timedelta(days=MAX_EVENT_LOOKBACK_DAYS)
     for event in events:
         if not event.recurrence_rule:
-            if range_start <= event.date <= range_end:
+            if _event_overlaps_range(event, range_start, range_end):
                 expanded.append(event)
             continue
 
         event_dict = event.model_dump(mode="json")
-        instances = expand_recurrence(event_dict, range_start, range_end)
+        instances = expand_recurrence(event_dict, expansion_start, range_end)
         for inst in instances:
             inst_date = DateType.fromisoformat(inst["date"])
             inst_id = f"{event.id}_{inst_date.isoformat()}"
-            expanded.append(
-                EventResponse(
-                    id=inst_id,
-                    user_id=event.user_id,
-                    title=event.title,
-                    date=inst_date,
-                    start_time=event.start_time,
-                    duration_minutes=event.duration_minutes,
-                    participants=event.participants,
-                    recurrence_rule=event.recurrence_rule,
-                    category=event.category,
-                    description=event.description,
-                    location_url=event.location_url,
-                    priority=event.priority,
-                    tags=event.tags,
-                    reminder_minutes=event.reminder_minutes,
-                    external_ids=event.external_ids,
-                    sync_status=event.sync_status,
-                    last_synced_at=event.last_synced_at,
-                )
+            instance = EventResponse(
+                id=inst_id,
+                user_id=event.user_id,
+                title=event.title,
+                date=inst_date,
+                start_time=event.start_time,
+                duration_minutes=event.duration_minutes,
+                participants=event.participants,
+                recurrence_rule=event.recurrence_rule,
+                category=event.category,
+                description=event.description,
+                location_url=event.location_url,
+                priority=event.priority,
+                tags=event.tags,
+                reminder_minutes=event.reminder_minutes,
+                external_ids=event.external_ids,
+                sync_status=event.sync_status,
+                last_synced_at=event.last_synced_at,
             )
+            if _event_overlaps_range(instance, range_start, range_end):
+                expanded.append(instance)
     expanded.sort(key=lambda e: (e.date, e.start_time))
     return expanded
 
@@ -84,6 +107,11 @@ async def list_events(
 ):
     fd = _parse_query_date(from_date, "from")
     td = _parse_query_date(to_date, "to")
+    if fd and td and fd > td:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="from must be on or before to",
+        )
 
     events = await data_access.list_events(user["id"])
 
@@ -94,10 +122,8 @@ async def list_events(
     if expand and fd and td:
         return _expand_events(events, fd, td)
 
-    if fd:
-        events = [e for e in events if e.date >= fd]
-    if td:
-        events = [e for e in events if e.date <= td]
+    if fd or td:
+        events = [e for e in events if _event_overlaps_range(e, fd, td)]
 
     return events
 
