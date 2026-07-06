@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, fetchApi } from "./api";
+import { ApiError, exportIcs, fetchApi } from "./api";
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -74,5 +74,33 @@ describe("fetchApi", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
 
     await expect(fetchApi("/events/one", { method: "DELETE" })).resolves.toBeNull();
+  });
+
+  it("refreshes stale credentials before retrying calendar export", async () => {
+    localStorage.setItem("token", "expired-access");
+    localStorage.setItem("refresh_token", "valid-refresh");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(401, { detail: "expired" }))
+      .mockResolvedValueOnce(jsonResponse(200, { access_token: "fresh-access" }))
+      .mockResolvedValueOnce(
+        new Response("BEGIN:VCALENDAR", {
+          status: 200,
+          headers: { "Content-Type": "text/calendar" },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const blob = await exportIcs();
+
+    expect(await blob.text()).toBe("BEGIN:VCALENDAR");
+    expect(localStorage.getItem("token")).toBe("fresh-access");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[0][1]?.headers).toEqual({
+      Authorization: "Bearer expired-access",
+    });
+    expect(fetchMock.mock.calls[2][1]?.headers).toEqual({
+      Authorization: "Bearer fresh-access",
+    });
   });
 });
