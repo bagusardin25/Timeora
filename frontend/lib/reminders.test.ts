@@ -58,6 +58,25 @@ describe("reminders", () => {
     expect(fallback).toHaveBeenCalledTimes(1);
   });
 
+  it("ignores non-finite reminder values instead of scheduling invalid timers", () => {
+    const setTimer = vi.fn();
+    const fallback = vi.fn();
+    const invalidEvent: ReminderEvent = {
+      ...EVENT,
+      reminder_minutes: Number.NaN,
+    };
+    const scheduler = createReminderScheduler({
+      setTimer,
+      fallback,
+    });
+
+    scheduler.schedule([invalidEvent]);
+
+    expect(getReminderFireTime(invalidEvent)).toBeNull();
+    expect(setTimer).not.toHaveBeenCalled();
+    expect(fallback).not.toHaveBeenCalled();
+  });
+
   it("creates a safe encoded Gmail search URL", () => {
     expect(gmailSearchUrl({
       title: "Product Sync / Q3",
