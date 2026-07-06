@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Save, User, Clock, Shield, Trash2, Download, Calendar as CalendarIcon } from "lucide-react";
+import { ArrowLeft, Save, User, Clock, Shield, Trash2, Download } from "lucide-react";
 
 interface UserPreferences {
   timezone: string;
@@ -139,14 +140,18 @@ export default function ProfilePage() {
             Back to Dashboard
           </Button>
           <div className="flex items-center gap-2">
-            <img
+            <Image
               src="/logomark_lightmode.png"
               alt="Timeora Logo"
+              width={474}
+              height={403}
               className="block dark:hidden w-8 h-8 object-contain"
             />
-            <img
+            <Image
               src="/logomark.png"
               alt="Timeora Logo"
+              width={627}
+              height={502}
               className="hidden dark:block w-8 h-8 object-contain"
             />
             <div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -89,17 +90,19 @@ export default function RegisterPage() {
         {/* Brand Logo Header */}
         <div className="flex justify-center mb-8">
           <Link href="/">
-            <img
+            <Image
               src="/logomark_text_lightmode.png"
               alt="Timeora Logo"
-              className="block dark:hidden object-contain"
-              style={{ height: "40px", width: "auto" }}
+              width={585}
+              height={148}
+              className="block h-10 w-auto object-contain dark:hidden"
             />
-            <img
+            <Image
               src="/logomark_text.png"
               alt="Timeora Logo"
-              className="hidden dark:block object-contain"
-              style={{ height: "40px", width: "auto" }}
+              width={588}
+              height={166}
+              className="hidden h-10 w-auto object-contain dark:block"
             />
           </Link>
         </div>
