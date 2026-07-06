@@ -43,4 +43,29 @@ describe("EventDialog", () => {
 
     expect(onSave).not.toHaveBeenCalled();
   });
+
+  it("disables save until the event title is present", async () => {
+    const user = userEvent.setup();
+    render(
+      <EventDialog
+        open
+        onOpenChange={vi.fn()}
+        initialData={null}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const titleInput = screen.getByLabelText("Judul Event");
+    const saveButton = screen.getByRole("button", { name: "Simpan Event" });
+
+    expect(saveButton).toBeDisabled();
+
+    await user.type(titleInput, "Planning");
+
+    expect(saveButton).toBeEnabled();
+
+    await user.clear(titleInput);
+
+    expect(saveButton).toBeDisabled();
+  });
 });

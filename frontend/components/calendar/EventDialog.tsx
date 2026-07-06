@@ -93,6 +93,7 @@ export function EventDialog({
   const [formData, setFormData] =
     useState<Partial<EventData>>(initialFormData);
   const [endTime, setEndTime] = useState(() => calculateEndTime(initialFormData));
+  const canSave = Boolean(formData.title?.trim() && formData.date && formData.start_time);
 
   const calculateDuration = (start: string, end: string) => {
     const [h1, m1] = start.split(":").map(Number);
@@ -485,7 +486,7 @@ export function EventDialog({
             </Button>
             <Button 
               onClick={handleSave} 
-              disabled={isSaving}
+              disabled={isSaving || !canSave}
               className="min-h-11 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all font-semibold rounded-xl px-6"
             >
               {isSaving ? (
