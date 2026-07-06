@@ -333,13 +333,17 @@ export async function fetchEventsExpanded(
   return fetchApi<ApiEvent[]>(`/events?${qs.toString()}`);
 }
 
-export async function exportIcs(): Promise<Blob> {
+export async function exportIcs(retry = true): Promise<Blob> {
   const token = localStorage.getItem('token');
   const response = await fetch(`${API_BASE_URL}/export/ics`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
+  if (response.status === 401 && retry) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) return exportIcs(false);
+  }
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
+    const errorData = await responseData(response);
     throw new ApiError(response.status, errorData, 'Failed to export calendar');
   }
   return response.blob();
