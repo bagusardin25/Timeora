@@ -20,7 +20,7 @@
 
 ### Natural-language scheduling and assistant
 
-The Command Bar understands Indonesian and English. It can create, query,
+The AI calendar chat understands Indonesian and English. It can create, query,
 reschedule, cancel, and find free slots from commands such as:
 
 - *"Jadwalkan meeting tim marketing besok jam 2 siang selama 45 menit"*
@@ -32,14 +32,27 @@ OpenAI/OpenRouter is used when available. A deterministic bilingual parser
 takes over during provider outages and clearly marks the result as an offline
 parse.
 
+The chat keeps session history, shows typing/confirmation feedback, returns
+structured event cards for calendar questions, and asks a clarification question
+when a cancel/reschedule command matches more than one event. Calendar mutations
+run through native backend tools and still require explicit confirmation.
+
 ### Calendar and scheduling intelligence
 
 - Weekly/day calendar with create, read, update, delete, drag, and resize
+- Rich event details: description, meeting URL, priority, tags, and reminders
+- Hover/tap event previews with safe meeting links and Gmail search links
+- Right-click event actions plus Android-visible overflow actions for edit,
+  delete, and Ask AI
 - Conflict detection on create and update, including explained alternative slots
 - Daily, weekday, weekly, and monthly recurring events
 - Soft delete with one-click Undo
 - `.ics` export for Google Calendar, Apple Calendar, and Outlook
 - `.ics` import with duplicate UID and conflict protection
+- Foreground browser notifications with in-app fallback reminders. Gmail support
+  is intentionally limited to a pre-filled Gmail search link; automatic Gmail
+  meeting-link extraction needs a connected Gmail OAuth scope and is not enabled
+  in the standalone web app.
 
 ### Integration foundation
 
@@ -87,7 +100,8 @@ This project was built with a strict **write → verify → fail → fix → ver
 
 | Layer | Coverage | Current local result |
 |---|---|---|
-| Backend unit | JWT security, bilingual parsing, conflict ranking, recurrence, analytics, availability, ICS, integration security | **46/46 passed** |
+| Backend unit | JWT security, bilingual parsing, conflict ranking, recurrence, analytics, availability, ICS, integration security, event details, native assistant tools | **54/54 passed** |
+| Frontend unit | API hardening, calendar action menus, assistant chat, reminder scheduler, notification fallback, event dialog positioning | **14/14 passed** |
 | Frontend static | ESLint + strict TypeScript | **Passed** |
 | Frontend build | Next.js production bundle | **Passed** |
 | TestSprite backend | Health, DB, signed JWT, forged-JWT rejection, parse, availability | Final gate |
@@ -194,6 +208,7 @@ python -m unittest discover -s tests -v
 
 # Frontend
 cd frontend
+npm test
 npm run lint
 npx tsc --noEmit
 npm run build
