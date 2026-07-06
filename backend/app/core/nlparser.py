@@ -60,6 +60,14 @@ _INTENT_PATTERNS: list[tuple[str, list[str]]] = [
         r"\bbatalkan\b", r"\bcancel\b", r"\bhapus\b", r"\bdelete\b",
         r"\bremove\b",
     ]),
+    ("update", [
+        r"\bupdate\b", r"\bedit\b",
+        r"\bmake\b.+\b(?:important|normal|low priority|not important)\b",
+        r"\bmark\b.+\b(?:important|normal|low priority|not important)\b",
+        r"\bset\b.+\bpriority\b",
+        r"\bjadikan\b", r"\btandai\b",
+        r"\bubah\s+(?!jadwal\b)",
+    ]),
     ("query", [
         r"\bapa jadwal\b", r"\bwhat do i have\b", r"\bjadwal hari\b",
         r"\bshow schedule\b", r"\bshow my\b", r"\blihat jadwal\b",
@@ -326,6 +334,37 @@ def _parse_recurrence(text: str) -> tuple[str | None, str]:
     return None, text
 
 
+def _parse_update_data(text: str) -> tuple[dict[str, Any], str]:
+    """Extract event update fields and return cleaned text for title matching."""
+    event_data: dict[str, Any] = {}
+    remaining = text
+
+    priority_patterns = [
+        (r"\b(?:not important|not urgent|tidak penting|gak penting|ga penting|nggak penting|low priority|rendah)\b", "low"),
+        (r"\b(?:important|urgent|penting|prioritas tinggi)\b", "important"),
+        (r"\b(?:normal|biasa)\b", "normal"),
+    ]
+    for pattern, priority in priority_patterns:
+        m = re.search(pattern, remaining, flags=re.I)
+        if m:
+            event_data["priority"] = priority
+            remaining = f"{remaining[:m.start()]} {remaining[m.end():]}"
+            break
+
+    if event_data:
+        cleanup_patterns = [
+            r"\bmake\b", r"\bmark\b", r"\bset\b", r"\bjadikan\b",
+            r"\btandai\b", r"\bubah\b", r"\bedit\b", r"\bupdate\b",
+            r"\bpriority\b", r"\bprioritas(?:nya)?\b", r"\bas\b",
+            r"\bto\b", r"\bjadi\b", r"\bmenjadi\b",
+        ]
+        for pattern in cleanup_patterns:
+            remaining = re.sub(pattern, " ", remaining, flags=re.I)
+
+    remaining = re.sub(r"\s+", " ", remaining).strip()
+    return event_data, remaining
+
+
 def _extract_title(text: str) -> str:
     """Clean up remaining text to use as event title."""
     # Remove common prefixes
@@ -334,6 +373,7 @@ def _extract_title(text: str) -> str:
         r"\badd\b", r"\btambah\b", r"\bset\b", r"\bbook\b",
         r"\bpindahkan\b", r"\breschedule\b", r"\bmove\b",
         r"\bbatalkan\b", r"\bcancel\b", r"\bhapus\b",
+        r"\bupdate\b", r"\bedit\b", r"\bjadikan\b", r"\btandai\b",
     ]
     result = text
     for p in prefixes:
@@ -396,10 +436,15 @@ def parse(text: str, today: date | None = None) -> dict[str, Any]:
         if intent == "create":
             warnings.append("No duration found — defaulting to 60 minutes")
 
-    # 6. Title from remaining text
+    # 6. Update data
+    event_data: dict[str, Any] = {}
+    if intent == "update":
+        event_data, remaining = _parse_update_data(remaining)
+
+    # 7. Title from remaining text
     title = _extract_title(remaining)
 
-    # 7. Compute ISO datetimes for convenience
+    # 8. Compute ISO datetimes for convenience
     if parsed_date is not None:
         start_dt = datetime.combine(parsed_date, parsed_time)
         end_dt = start_dt + timedelta(minutes=duration)
@@ -411,7 +456,7 @@ def parse(text: str, today: date | None = None) -> dict[str, Any]:
         end_at = None
         date_value = None
 
-    return {
+    result = {
         "intent": intent,
         "title": title,
         "date": date_value,
@@ -424,3 +469,6 @@ def parse(text: str, today: date | None = None) -> dict[str, Any]:
         "start_at": start_at,
         "end_at": end_at,
     }
+    if event_data:
+        result["event_data"] = event_data
+    return result
