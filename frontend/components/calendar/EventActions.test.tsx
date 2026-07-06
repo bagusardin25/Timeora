@@ -47,7 +47,12 @@ describe("EventActions", () => {
 
   it("rejects executable and malformed meeting links", () => {
     expect(safeMeetingUrl("javascript:alert(1)")).toBeNull();
-    expect(safeMeetingUrl("zoom.us/j/123")).toBeNull();
+    expect(safeMeetingUrl("not a link")).toBeNull();
     expect(safeMeetingUrl("https://zoom.us/j/123")).toBe("https://zoom.us/j/123");
+  });
+
+  it("normalizes common meeting links that omit https", () => {
+    expect(safeMeetingUrl("zoom.us/j/123")).toBe("https://zoom.us/j/123");
+    expect(safeMeetingUrl(" meet.google.com/abc-defg-hij ")).toBe("https://meet.google.com/abc-defg-hij");
   });
 });

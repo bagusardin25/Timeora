@@ -36,6 +36,13 @@ class TestEventDetails(unittest.TestCase):
         with self.assertRaises(ValidationError):
             self._event(location_url="javascript:alert(1)")
 
+    def test_normalizes_scheme_less_location_url(self):
+        event = self._event(location_url=" zoom.us/j/123 ")
+        update = EventUpdate(location_url="meet.google.com/abc-defg-hij")
+
+        self.assertEqual(event.location_url, "https://zoom.us/j/123")
+        self.assertEqual(update.location_url, "https://meet.google.com/abc-defg-hij")
+
     def test_update_normalizes_tags(self):
         update = EventUpdate(tags=["Important", " important ", "Client"])
         self.assertEqual(update.tags, ["Important", "Client"])

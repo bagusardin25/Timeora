@@ -27,8 +27,20 @@ def _validate_location_url(value: str | None) -> str | None:
     normalized = value.strip()
     if not normalized:
         return None
+    if any(char.isspace() for char in normalized):
+        raise ValueError("location_url must use http or https")
+    if "://" not in normalized:
+        if normalized.startswith("//"):
+            normalized = f"https:{normalized}"
+        else:
+            host = normalized.split("/", 1)[0]
+            if "." not in host:
+                raise ValueError("location_url must use http or https")
+            normalized = f"https://{normalized}"
     parsed = urlparse(normalized)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("location_url must use http or https")
+    if parsed.username or parsed.password:
         raise ValueError("location_url must use http or https")
     return normalized
 
