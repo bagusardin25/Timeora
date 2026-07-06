@@ -12,7 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Clock, CalendarIcon, Users, Sparkles, Bookmark, Tag } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { AlertTriangle, Bell, Clock, CalendarIcon, Flag, Link, Users, Sparkles, Bookmark, Tag } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CATEGORY_OPTIONS, getCategoryConfig } from "@/lib/categories";
 import { getTemplates, saveTemplate, applyTemplate, type EventTemplate } from "@/lib/templates";
@@ -171,7 +172,7 @@ export function EventDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[460px] glass border border-zinc-200/50 dark:border-white/10 bg-white/90 dark:bg-zinc-950/90 shadow-2xl backdrop-blur-2xl rounded-t-3xl sm:rounded-2xl overflow-hidden p-0 gap-0 fixed sm:static bottom-0 left-0 right-0 w-full sm:w-auto max-h-[90vh] sm:max-h-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-bottom sm:data-[state=closed]:slide-out-to-bottom-0 data-[state=open]:slide-in-from-bottom sm:data-[state=open]:slide-in-from-bottom-0">
+      <DialogContent className="sm:max-w-[560px] glass border border-zinc-200/50 dark:border-white/10 bg-white/90 dark:bg-zinc-950/90 shadow-2xl backdrop-blur-2xl rounded-t-3xl sm:rounded-2xl overflow-hidden p-0 gap-0 fixed sm:static bottom-0 left-0 right-0 w-full sm:w-auto max-h-[calc(100dvh-1rem)] sm:max-h-[90dvh] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-bottom sm:data-[state=closed]:slide-out-to-bottom-0 data-[state=open]:slide-in-from-bottom sm:data-[state=open]:slide-in-from-bottom-0">
         <DialogHeader className="px-6 py-5 border-b border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-black/20">
           <DialogTitle className="text-xl font-semibold flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -186,7 +187,7 @@ export function EventDialog({
           <div className="w-10 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full" />
         </div>
 
-        <div className="px-6 py-5 overflow-y-auto max-h-[70vh]">
+        <div className="px-6 py-5 overflow-y-auto max-h-[70dvh] overscroll-contain">
           {/* Template Selector */}
           {!formData.id && (
             <div className="mb-4">
@@ -276,6 +277,30 @@ export function EventDialog({
                 className="bg-zinc-50 dark:bg-black/20 border-zinc-200 dark:border-white/10 focus-visible:ring-primary shadow-sm"
               />
             </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="description">Deskripsi</Label>
+              <Textarea
+                id="description"
+                value={formData.description || ""}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Agenda, context, or preparation notes"
+                rows={3}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="locationUrl" className="flex items-center gap-1.5">
+                <Link className="size-4" /> Meeting link
+              </Label>
+              <Input
+                id="locationUrl"
+                type="url"
+                value={formData.location_url || ""}
+                onChange={(e) => setFormData({ ...formData, location_url: e.target.value || null })}
+                placeholder="https://zoom.us/j/..."
+              />
+            </div>
             
             <div className="grid gap-2">
               <Label htmlFor="date" className="text-zinc-600 dark:text-zinc-400">Tanggal</Label>
@@ -336,7 +361,7 @@ export function EventDialog({
                 id="category"
                 value={formData.category || ""}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value || null })}
-                className="h-10 w-full rounded-md border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/20 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="min-h-11 w-full rounded-md border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/20 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:min-h-10"
               >
                 <option value="">— No category —</option>
                 {CATEGORY_OPTIONS.map((cat) => (
@@ -345,6 +370,64 @@ export function EventDialog({
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="priority" className="flex items-center gap-1.5">
+                  <Flag className="size-4" /> Priority
+                </Label>
+                <select
+                  id="priority"
+                  value={formData.priority || "normal"}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    priority: e.target.value as EventData["priority"],
+                  })}
+                  className="min-h-11 rounded-md border border-input bg-background px-3 text-sm sm:min-h-10"
+                >
+                  <option value="low">Low</option>
+                  <option value="normal">Normal</option>
+                  <option value="important">Important</option>
+                </select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="reminder" className="flex items-center gap-1.5">
+                  <Bell className="size-4" /> Reminder
+                </Label>
+                <select
+                  id="reminder"
+                  value={formData.reminder_minutes ?? ""}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    reminder_minutes: e.target.value ? Number(e.target.value) : null,
+                  })}
+                  className="min-h-11 rounded-md border border-input bg-background px-3 text-sm sm:min-h-10"
+                >
+                  <option value="">None</option>
+                  <option value="0">At start time</option>
+                  <option value="5">5 minutes before</option>
+                  <option value="15">15 minutes before</option>
+                  <option value="30">30 minutes before</option>
+                  <option value="60">1 hour before</option>
+                  <option value="1440">1 day before</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="tags" className="flex items-center gap-1.5">
+                <Tag className="size-4" /> Tags
+              </Label>
+              <Input
+                id="tags"
+                value={(formData.tags || []).join(", ")}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  tags: e.target.value.split(",").map((tag) => tag.trim()).filter(Boolean),
+                })}
+                placeholder="planning, client, deep-work"
+              />
             </div>
 
             <div className="grid gap-2">
@@ -362,7 +445,7 @@ export function EventDialog({
           </div>
         </div>
         
-        <DialogFooter className="m-0 rounded-b-2xl px-6 py-4 border-t border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-black/20 flex sm:justify-between w-full items-center">
+        <DialogFooter className="sticky bottom-0 m-0 w-full items-center rounded-b-2xl border-t border-border bg-background/95 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur sm:justify-between sm:px-6">
           <div className="flex items-center gap-2">
             {formData.id && (
               <Button 
@@ -370,7 +453,7 @@ export function EventDialog({
                 variant="destructive" 
                 onClick={() => onDelete?.(formData.id as string, formData.title)}
                 disabled={isSaving}
-                className="bg-red-500/10 text-red-600 hover:bg-red-500/20 hover:text-red-700 border-none shadow-none"
+                className="min-h-11 bg-red-500/10 text-red-600 hover:bg-red-500/20 hover:text-red-700 border-none shadow-none"
               >
                 Hapus
               </Button>
@@ -394,14 +477,14 @@ export function EventDialog({
               variant="outline" 
               onClick={() => onOpenChange(false)} 
               disabled={isSaving} 
-              className="bg-slate-100 hover:bg-slate-200 text-slate-700 border-transparent dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300 shadow-sm transition-all font-medium rounded-xl px-5"
+              className="min-h-11 bg-slate-100 hover:bg-slate-200 text-slate-700 border-transparent dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300 shadow-sm transition-all font-medium rounded-xl px-5"
             >
               Batal
             </Button>
             <Button 
               onClick={handleSave} 
               disabled={isSaving}
-              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all font-semibold rounded-xl px-6"
+              className="min-h-11 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all font-semibold rounded-xl px-6"
             >
               {isSaving ? (
                 <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
