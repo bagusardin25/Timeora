@@ -13,8 +13,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.auth import get_current_user
 from app import data_access
-from app.core import nlparser, conflicts as conflicts_engine
-from app.models import AssistantRequest, AssistantResponse, EventUpdate
+from app.core import assistant_tools, nlparser, conflicts as conflicts_engine
+from app.models import AssistantRequest, AssistantResponse
 
 router = APIRouter()
 
@@ -82,8 +82,10 @@ async def assistant(body: AssistantRequest, user: dict = Depends(get_current_use
     if intent == "create":
         return AssistantResponse(
             intent="create",
-            result=parsed,
-            message="Use the parse endpoint to create events.",
+            result={"tool": "create", "event_data": parsed},
+            message=f"Create \"{parsed.get('title', 'Event')}\"? Confirm to add it to your calendar.",
+            requires_confirmation=True,
+            suggested_actions=["confirm", "edit"],
         )
 
     if intent == "query":
@@ -93,10 +95,10 @@ async def assistant(body: AssistantRequest, user: dict = Depends(get_current_use
         return await _handle_find_slot(user, parsed)
 
     if intent == "cancel":
-        return await _handle_cancel(user, parsed)
+        return await _handle_cancel(user, parsed, body.selected_event_id or body.context_event_id)
 
     if intent == "reschedule":
-        return await _handle_reschedule(user, parsed)
+        return await _handle_reschedule(user, parsed, body.selected_event_id or body.context_event_id)
 
     return AssistantResponse(
         intent=intent,
@@ -106,48 +108,22 @@ async def assistant(body: AssistantRequest, user: dict = Depends(get_current_use
 
 
 async def _execute_confirmed(user: dict, body: AssistantRequest) -> AssistantResponse:
-    if not body.event_id or not body.action:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="event_id and action are required when confirm=true",
-        )
-
-    base_id = body.event_id.split("_")[0]
-
-    if body.action == "cancel":
-        await data_access.delete_event(base_id, user["id"])
-        return AssistantResponse(
-            intent="cancel",
-            result={"event_id": base_id, "deleted": True},
-            message="Event cancelled.",
-            executed=True,
-        )
-
-    if body.action == "reschedule":
-        if not body.new_date or not body.new_time:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="new_date and new_time are required for reschedule",
-            )
-        new_time = _parse_time_value(body.new_time)
-        if new_time is None:
-            raise HTTPException(status_code=400, detail="Invalid new_time")
-        updated = await data_access.update_event(
-            base_id,
-            user["id"],
-            EventUpdate(
-                date=date.fromisoformat(body.new_date[:10]),
-                start_time=new_time,
-            ),
-        )
-        return AssistantResponse(
-            intent="reschedule",
-            result=_event_to_dict(updated),
-            message=f"Rescheduled to {body.new_date} {body.new_time}.",
-            executed=True,
-        )
-
-    raise HTTPException(status_code=400, detail=f"Unknown action: {body.action}")
+    intent, result = await assistant_tools.execute_calendar_tool(user["id"], body)
+    serialized = _event_to_dict(result)
+    messages = {
+        "create": "Event added to your calendar.",
+        "cancel": "Event cancelled.",
+        "reschedule": f"Event rescheduled to {body.new_date} {body.new_time}.",
+        "update": "Event updated.",
+    }
+    return AssistantResponse(
+        intent=intent,
+        result=serialized,
+        message=messages[intent],
+        executed=True,
+        events=[serialized] if isinstance(serialized, dict) and not serialized.get("deleted") else [],
+        suggested_actions=["open_event"] if intent != "cancel" else [],
+    )
 
 
 async def _handle_query(user: dict, parsed: dict) -> AssistantResponse:
@@ -175,6 +151,8 @@ async def _handle_query(user: dict, parsed: dict) -> AssistantResponse:
         intent="query",
         result=matching,
         message=f"Found {len(matching)} event(s) on {target_date.isoformat()}.",
+        events=matching,
+        suggested_actions=["open_event", "find_free_slot"],
     )
 
 
@@ -209,9 +187,45 @@ async def _handle_find_slot(user: dict, parsed: dict) -> AssistantResponse:
     )
 
 
-async def _handle_cancel(user: dict, parsed: dict) -> AssistantResponse:
+def _clarification(matches: list[dict], action: str) -> AssistantResponse:
+    choices = [
+        {
+            "id": item["id"],
+            "title": item.get("title", "Event"),
+            "date": item.get("date"),
+            "start_time": item.get("start_time"),
+        }
+        for item in matches
+    ]
+    return AssistantResponse(
+        intent=action,
+        result={"events": matches},
+        message="I found more than one matching event. Which one did you mean?",
+        clarification={
+            "type": "event_selection",
+            "prompt": "Which event did you mean?",
+            "choices": choices,
+        },
+        events=matches,
+        suggested_actions=["select_event"],
+    )
+
+
+def _selected_match(matches: list[dict], selected_event_id: str | None) -> list[dict]:
+    if not selected_event_id:
+        return matches
+    base_id = selected_event_id.split("_")[0]
+    return [item for item in matches if str(item.get("id", "")).split("_")[0] == base_id]
+
+
+async def _handle_cancel(
+    user: dict,
+    parsed: dict,
+    selected_event_id: str | None = None,
+) -> AssistantResponse:
     all_events = await data_access.list_events(user["id"])
     matches = _find_matches(all_events, parsed)
+    matches = _selected_match(matches, selected_event_id)
 
     if not matches:
         return AssistantResponse(
@@ -219,6 +233,9 @@ async def _handle_cancel(user: dict, parsed: dict) -> AssistantResponse:
             result=[],
             message=f"No event matching '{parsed.get('title', '')}' found to cancel.",
         )
+
+    if len(matches) > 1:
+        return _clarification(matches, "cancel")
 
     primary = matches[0]
     return AssistantResponse(
@@ -230,12 +247,19 @@ async def _handle_cancel(user: dict, parsed: dict) -> AssistantResponse:
         },
         message=f"Cancel \"{primary.get('title', 'Event')}\"? Confirm to proceed.",
         requires_confirmation=True,
+        events=matches,
+        suggested_actions=["confirm", "cancel"],
     )
 
 
-async def _handle_reschedule(user: dict, parsed: dict) -> AssistantResponse:
+async def _handle_reschedule(
+    user: dict,
+    parsed: dict,
+    selected_event_id: str | None = None,
+) -> AssistantResponse:
     all_events = await data_access.list_events(user["id"])
     matches = _find_matches(all_events, parsed)
+    matches = _selected_match(matches, selected_event_id)
 
     if not matches:
         return AssistantResponse(
@@ -243,6 +267,9 @@ async def _handle_reschedule(user: dict, parsed: dict) -> AssistantResponse:
             result=[],
             message=f"No event matching '{parsed.get('title', '')}' found to reschedule.",
         )
+
+    if len(matches) > 1:
+        return _clarification(matches, "reschedule")
 
     primary = matches[0]
     new_date = parsed.get("date")
@@ -261,4 +288,6 @@ async def _handle_reschedule(user: dict, parsed: dict) -> AssistantResponse:
             f"{new_date} {new_time}? Confirm to proceed."
         ),
         requires_confirmation=True,
+        events=matches,
+        suggested_actions=["confirm", "cancel"],
     )

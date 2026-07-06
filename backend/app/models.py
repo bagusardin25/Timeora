@@ -174,6 +174,9 @@ class AssistantRequest(BaseModel):
     action: str | None = None
     new_date: str | None = None
     new_time: str | None = None
+    selected_event_id: str | None = None
+    context_event_id: str | None = None
+    event_data: dict | None = None
 
 
 class AssistantResponse(BaseModel):
@@ -182,6 +185,9 @@ class AssistantResponse(BaseModel):
     message: str
     requires_confirmation: bool = False
     executed: bool = False
+    clarification: dict | None = None
+    events: list[dict] = Field(default_factory=list)
+    suggested_actions: list[str] = Field(default_factory=list)
 
 
 class InsightAction(BaseModel):
