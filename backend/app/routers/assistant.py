@@ -100,6 +100,9 @@ async def assistant(body: AssistantRequest, user: dict = Depends(get_current_use
     if intent == "reschedule":
         return await _handle_reschedule(user, parsed, body.selected_event_id or body.context_event_id)
 
+    if intent == "update":
+        return await _handle_update(user, parsed, body.selected_event_id or body.context_event_id)
+
     return AssistantResponse(
         intent=intent,
         result=None,
@@ -290,4 +293,49 @@ async def _handle_reschedule(
         requires_confirmation=True,
         events=matches,
         suggested_actions=["confirm", "cancel"],
+    )
+
+
+async def _handle_update(
+    user: dict,
+    parsed: dict,
+    selected_event_id: str | None = None,
+) -> AssistantResponse:
+    all_events = await data_access.list_events(user["id"])
+    matches = _find_matches(all_events, parsed)
+    matches = _selected_match(matches, selected_event_id)
+
+    if not matches:
+        return AssistantResponse(
+            intent="update",
+            result=[],
+            message=f"No event matching '{parsed.get('title', '')}' found to update.",
+        )
+
+    if len(matches) > 1:
+        return _clarification(matches, "update")
+
+    event_data = parsed.get("event_data") or {}
+    if not isinstance(event_data, dict) or not event_data:
+        return AssistantResponse(
+            intent="update",
+            result={"events": matches},
+            message="I found the event, but I need more detail about what to update.",
+            events=matches,
+            suggested_actions=["edit"],
+        )
+
+    primary = matches[0]
+    return AssistantResponse(
+        intent="update",
+        result={
+            "events": matches,
+            "primary_event_id": primary["id"],
+            "primary_title": primary.get("title", "Event"),
+            "event_data": event_data,
+        },
+        message=f"Update \"{primary.get('title', 'Event')}\"? Confirm to proceed.",
+        requires_confirmation=True,
+        events=matches,
+        suggested_actions=["confirm", "edit"],
     )

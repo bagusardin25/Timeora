@@ -53,6 +53,23 @@ class TestAssistantClarification(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.events[0]["title"], "Product Sync")
         self.assertIn("open_event", response.suggested_actions)
 
+    async def test_update_preview_returns_confirmation_with_event_data(self):
+        events = [event("one", "Product Sync", 14)]
+        with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=events)):
+            response = await assistant._handle_update(
+                {"id": "user-1"},
+                {
+                    "title": "Product Sync",
+                    "date": None,
+                    "event_data": {"priority": "important"},
+                },
+            )
+
+        self.assertTrue(response.requires_confirmation)
+        self.assertEqual(response.intent, "update")
+        self.assertEqual(response.result["primary_event_id"], "one")
+        self.assertEqual(response.result["event_data"], {"priority": "important"})
+
 
 class TestAssistantNativeTools(unittest.IsolatedAsyncioTestCase):
     async def test_confirmed_create_uses_calendar_data_access(self):

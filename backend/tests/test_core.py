@@ -67,6 +67,13 @@ class TestNaturalLanguageParser(unittest.TestCase):
         self.assertEqual(result["duration_minutes"], 60)
         self.assertEqual(len(result["warnings"]), 3)
 
+    def test_detects_priority_update_intent(self):
+        result = parse("make Product Sync important", self.today)
+
+        self.assertEqual(result["intent"], "update")
+        self.assertEqual(result["title"], "Product Sync")
+        self.assertEqual(result["event_data"], {"priority": "important"})
+
 
 class TestConflictEngine(unittest.TestCase):
     event_date = date(2026, 7, 6)
