@@ -294,6 +294,22 @@ async def _handle_reschedule(
             suggested_actions=["edit"],
         )
 
+    new_date_value = _parse_date_value(new_date)
+    new_time_value = _parse_time_value(new_time)
+    if new_date_value is None or new_time_value is None:
+        return AssistantResponse(
+            intent="reschedule",
+            result={"events": matches, "primary_event_id": primary["id"]},
+            message=(
+                f"I found \"{primary.get('title', 'Event')}\", but I need a valid new date and time "
+                "before I can reschedule it."
+            ),
+            events=matches,
+            suggested_actions=["edit"],
+        )
+
+    new_date = new_date_value.isoformat()
+    new_time = new_time_value.strftime("%H:%M:%S")
     return AssistantResponse(
         intent="reschedule",
         result={

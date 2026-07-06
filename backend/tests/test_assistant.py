@@ -86,6 +86,23 @@ class TestAssistantClarification(unittest.IsolatedAsyncioTestCase):
         self.assertIn("new date and time", response.message)
         self.assertIn("edit", response.suggested_actions)
 
+    async def test_reschedule_preview_requires_valid_new_date_and_time(self):
+        events = [event("one", "Product Sync", 14)]
+        with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=events)):
+            response = await assistant._handle_reschedule(
+                {"id": "user-1"},
+                {
+                    "title": "Product Sync",
+                    "date": "not-a-date",
+                    "start_time": "not-a-time",
+                },
+            )
+
+        self.assertFalse(response.requires_confirmation)
+        self.assertEqual(response.intent, "reschedule")
+        self.assertIn("valid new date and time", response.message)
+        self.assertIn("edit", response.suggested_actions)
+
     async def test_find_slot_ignores_invalid_requested_time(self):
         with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=[])):
             response = await assistant._handle_find_slot(
