@@ -13,6 +13,7 @@ import {
   savePreferences,
   type UserPreferences,
 } from "@/lib/preferences";
+import { exportIcs } from "@/lib/api";
 
 function getTokenEmail(): string | null {
   try {
@@ -75,14 +76,7 @@ export default function ProfilePage() {
 
   const handleExportData = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api").replace(/\/$/, "");
-      const res = await fetch(`${baseUrl}/export/ics`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) throw new Error("Export failed");
-
-      const blob = await res.blob();
+      const blob = await exportIcs();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
