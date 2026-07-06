@@ -27,6 +27,7 @@ import { AvailabilityHeatmap } from "@/components/AvailabilityHeatmap";
 import { TodayAgenda } from "@/components/TodayAgenda";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { readStoredPreferences } from "@/lib/preferences";
 import { motion, AnimatePresence } from "framer-motion";
 import type {
   EventClickArg,
@@ -144,18 +145,12 @@ export default function DashboardPage() {
 
   // Load user preferences from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("timeora_preferences");
-    if (saved) {
-      try {
-        const prefs = JSON.parse(saved);
-        if (prefs.defaultDuration) {
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setDefaultDuration(prefs.defaultDuration);
-        }
-        if (prefs.timezone) {
-          setTimezone(prefs.timezone);
-        }
-      } catch {}
+    const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const preferences = readStoredPreferences(detectedTimezone);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDefaultDuration(preferences.defaultDuration);
+    if (preferences.timezone) {
+      setTimezone(preferences.timezone);
     }
   }, []);
 
