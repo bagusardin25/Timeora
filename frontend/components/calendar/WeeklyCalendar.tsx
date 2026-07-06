@@ -44,6 +44,15 @@ const DEFAULT_CATEGORY_PRESETS: Record<string, string[]> = {
   "Life": ["personal", "health", "social"],
 };
 
+const CATEGORY_KEYS = new Set(CATEGORY_OPTIONS.map((category) => category.key));
+
+function normalizeCalendarCategory(category: unknown): string {
+  if (typeof category !== "string") return "uncategorized";
+  const normalized = category.trim().toLowerCase();
+  if (!normalized) return "uncategorized";
+  return CATEGORY_KEYS.has(normalized) ? normalized : "other";
+}
+
 function formatCalendarDate(date: Date): string {
   return format(date, "yyyy-MM-dd");
 }
@@ -105,10 +114,10 @@ export function WeeklyCalendar({
   // interactionPlugin swallows the native HTML5 dataTransfer.
   const renderEventContent = React.useCallback((arg: EventContentArg) => {
     const ext = arg.event.extendedProps as Record<string, unknown>;
-    const cat = getCategoryConfig(ext.category as string | null | undefined);
+    const categoryKey = normalizeCalendarCategory(ext.category);
+    const cat = getCategoryConfig(categoryKey);
     const isDayGrid = arg.view.type === "dayGridMonth";
     const eventId = arg.event.id as string;
-    const categoryKey = (ext.category as string) || "uncategorized";
     const eventData: EventData = {
       id: eventId,
       title: arg.event.title,
@@ -117,7 +126,7 @@ export function WeeklyCalendar({
       duration_minutes: Number(ext.duration_minutes || 60),
       participants: String(ext.participants || ""),
       recurrence_rule: (ext.recurrence_rule as string | null) || null,
-      category: (ext.category as string | null) || null,
+      category: categoryKey === "uncategorized" ? null : categoryKey,
       description: String(ext.description || ""),
       location_url: (ext.location_url as string | null) || null,
       priority: (ext.priority as EventData["priority"]) || "normal",
@@ -267,7 +276,7 @@ export function WeeklyCalendar({
   const filteredEvents = React.useMemo(() => {
     return events.filter(event => {
       const ext = (event.extendedProps || {}) as Record<string, unknown>;
-      const category = (ext.category as string) || "uncategorized";
+      const category = normalizeCalendarCategory(ext.category);
       return selectedCategories.includes(category);
     });
   }, [events, selectedCategories]);
@@ -277,7 +286,7 @@ export function WeeklyCalendar({
     const counts: Record<string, number> = {};
     events.forEach(event => {
       const ext = (event.extendedProps || {}) as Record<string, unknown>;
-      const category = (ext.category as string) || "uncategorized";
+      const category = normalizeCalendarCategory(ext.category);
       counts[category] = (counts[category] || 0) + 1;
     });
     return counts;
@@ -501,7 +510,8 @@ export function WeeklyCalendar({
           eventBorderColor="#4f46e5"
           eventDidMount={(info) => {
             const ext = info.event.extendedProps as Record<string, unknown>;
-            const cat = getCategoryConfig(ext.category as string | null | undefined);
+            const categoryKey = normalizeCalendarCategory(ext.category);
+            const cat = getCategoryConfig(categoryKey);
             info.el.style.backgroundColor = cat.calendarBg;
             info.el.style.borderColor = cat.calendarBorder;
             info.el.style.borderLeftColor = cat.calendarBorder;
@@ -509,7 +519,7 @@ export function WeeklyCalendar({
             info.el.setAttribute("data-timeora-event-id", info.event.id);
             info.el.setAttribute(
               "data-timeora-category",
-              (ext.category as string) || "uncategorized"
+              categoryKey
             );
           }}
           titleFormat={

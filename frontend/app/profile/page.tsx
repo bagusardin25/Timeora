@@ -15,14 +15,29 @@ import {
 } from "@/lib/preferences";
 import { exportIcs } from "@/lib/api";
 
+function decodeBase64Url(value: string): string {
+  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
 function getTokenEmail(): string | null {
   try {
     const token = localStorage.getItem("token");
     if (!token) return null;
+    const payloadSegment = token.split(".")[1];
+    if (!payloadSegment) return null;
 
     // Simple JWT payload decode (no validation)
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.email || payload.user_metadata?.email || null;
+    const payload = JSON.parse(decodeBase64Url(payloadSegment)) as {
+      email?: unknown;
+      user_metadata?: { email?: unknown };
+    };
+    if (typeof payload.email === "string") return payload.email;
+    if (typeof payload.user_metadata?.email === "string") return payload.user_metadata.email;
+    return null;
   } catch {
     return null;
   }
@@ -79,10 +94,16 @@ export default function ProfilePage() {
       const blob = await exportIcs();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
-      a.download = "timeora-full-export.ics";
-      a.click();
-      URL.revokeObjectURL(url);
+      try {
+        a.href = url;
+        a.download = "timeora-full-export.ics";
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+      } finally {
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
       setMessage("Data exported successfully!");
     } catch {
       setMessage("Export failed. Please try again.");
