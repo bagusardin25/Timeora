@@ -62,6 +62,11 @@ _INTENT_PATTERNS: list[tuple[str, list[str]]] = [
     ]),
     ("update", [
         r"\bupdate\b", r"\bedit\b",
+        r"\b(?:add|set|change|ubah|tambahkan?|kasih)\b.+\b(?:description|deskripsi|details?|notes?|catatan)\b",
+        r"\b(?:tag|tags|label|labeli)\b",
+        r"\b(?:set|change|ubah|tambahkan?|kasih)\b.+\b(?:tags?|labels?|tagar)\b",
+        r"\b(?:remind me|ingatkan(?:\s+saya)?|beri pengingat)\b",
+        r"\b(?:set|change|ubah|tambahkan?|kasih)\b.+\b(?:reminder|pengingat)\b",
         r"\bmake\b.+\b(?:important|normal|low priority|not important)\b",
         r"\bmark\b.+\b(?:important|normal|low priority|not important)\b",
         r"\bset\b.+\bpriority\b",
@@ -339,24 +344,122 @@ def _parse_update_data(text: str) -> tuple[dict[str, Any], str]:
     event_data: dict[str, Any] = {}
     remaining = text
 
+    def parse_minutes(raw_number: str, raw_unit: str) -> int:
+        value = int(raw_number)
+        return value * 60 if raw_unit.lower() in {"hour", "hours", "jam"} else value
+
+    def split_tags(raw_tags: str) -> list[str]:
+        tags: list[str] = []
+        seen: set[str] = set()
+        for raw_tag in re.split(r"[,;]|\band\b|\bdan\b", raw_tags, flags=re.I):
+            tag = raw_tag.strip().strip("#.,;:-–— ")
+            key = tag.casefold()
+            if not tag or key in seen:
+                continue
+            seen.add(key)
+            tags.append(tag)
+        return tags
+
+    field_first_description = re.search(
+        r"^\s*(?:add|set|update|edit|change|ubah|tambahkan?|kasih)?\s*"
+        r"(?:description|deskripsi|details?|notes?|catatan)\s+"
+        r"(?P<description>.+?)\s+(?:to|for|ke|untuk)\s+(?P<title>.+)$",
+        remaining,
+        flags=re.I,
+    )
+    if field_first_description:
+        event_data["description"] = field_first_description.group("description").strip(" .,:;")
+        remaining = field_first_description.group("title").strip()
+
+    if not event_data:
+        title_first_description = re.search(
+            r"\b(?:description|deskripsi|details?|notes?|catatan)\b\s*"
+            r"(?:to|as|jadi|menjadi|dengan|:)?\s*(?P<description>.+)$",
+            remaining,
+            flags=re.I,
+        )
+        if title_first_description:
+            event_data["description"] = title_first_description.group("description").strip(" .,:;")
+            remaining = remaining[:title_first_description.start()].strip()
+
+    if not event_data:
+        tag_command = re.search(
+            r"^\s*(?:tag|tags|label|labeli|tandai)\s+(?P<title>.+?)\s+"
+            r"(?:with|as|dengan|sebagai|:)\s+(?P<tags>.+)$",
+            remaining,
+            flags=re.I,
+        )
+        if tag_command:
+            tags = split_tags(tag_command.group("tags"))
+            if tags:
+                event_data["tags"] = tags
+                remaining = tag_command.group("title").strip()
+
+    if not event_data:
+        title_first_tags = re.search(
+            r"\b(?:tags?|labels?|tagar)\b\s*(?:to|as|with|dengan|:)?\s*(?P<tags>.+)$",
+            remaining,
+            flags=re.I,
+        )
+        if title_first_tags:
+            tags = split_tags(title_first_tags.group("tags"))
+            if tags:
+                event_data["tags"] = tags
+                remaining = remaining[:title_first_tags.start()].strip()
+
+    if not event_data:
+        reminder_before = re.search(
+            r"^\s*(?:remind me|ingatkan(?:\s+saya)?|beri pengingat)\s+"
+            r"(?P<number>\d+)\s*(?P<unit>minutes?|mins?|menit|hours?|jam)\s+"
+            r"(?:before|sebelum)\s+(?P<title>.+)$",
+            remaining,
+            flags=re.I,
+        )
+        if reminder_before:
+            event_data["reminder_minutes"] = parse_minutes(
+                reminder_before.group("number"),
+                reminder_before.group("unit"),
+            )
+            remaining = reminder_before.group("title").strip()
+
+    if not event_data:
+        title_first_reminder = re.search(
+            r"\b(?:reminder|pengingat|ingatkan)\b\s*"
+            r"(?:to|for|at|before|sebelum|:)?\s*"
+            r"(?P<number>\d+)\s*(?P<unit>minutes?|mins?|menit|hours?|jam)\b",
+            remaining,
+            flags=re.I,
+        )
+        if title_first_reminder:
+            event_data["reminder_minutes"] = parse_minutes(
+                title_first_reminder.group("number"),
+                title_first_reminder.group("unit"),
+            )
+            remaining = f"{remaining[:title_first_reminder.start()]} {remaining[title_first_reminder.end():]}"
+
     priority_patterns = [
         (r"\b(?:not important|not urgent|tidak penting|gak penting|ga penting|nggak penting|low priority|rendah)\b", "low"),
         (r"\b(?:important|urgent|penting|prioritas tinggi)\b", "important"),
         (r"\b(?:normal|biasa)\b", "normal"),
     ]
-    for pattern, priority in priority_patterns:
-        m = re.search(pattern, remaining, flags=re.I)
-        if m:
-            event_data["priority"] = priority
-            remaining = f"{remaining[:m.start()]} {remaining[m.end():]}"
-            break
+    if not event_data:
+        for pattern, priority in priority_patterns:
+            m = re.search(pattern, remaining, flags=re.I)
+            if m:
+                event_data["priority"] = priority
+                remaining = f"{remaining[:m.start()]} {remaining[m.end():]}"
+                break
 
     if event_data:
         cleanup_patterns = [
             r"\bmake\b", r"\bmark\b", r"\bset\b", r"\bjadikan\b",
             r"\btandai\b", r"\bubah\b", r"\bedit\b", r"\bupdate\b",
             r"\bpriority\b", r"\bprioritas(?:nya)?\b", r"\bas\b",
-            r"\bto\b", r"\bjadi\b", r"\bmenjadi\b",
+            r"\bdescription\b", r"\bdeskripsi\b", r"\bdetails?\b",
+            r"\bnotes?\b", r"\bcatatan\b", r"\btags?\b", r"\blabels?\b",
+            r"\btagar\b", r"\breminder\b", r"\bpengingat\b",
+            r"\bto\b", r"\bfor\b", r"\bwith\b", r"\bdengan\b",
+            r"\bjadi\b", r"\bmenjadi\b",
         ]
         for pattern in cleanup_patterns:
             remaining = re.sub(pattern, " ", remaining, flags=re.I)
@@ -429,17 +532,17 @@ def parse(text: str, today: date | None = None) -> dict[str, Any]:
         if intent == "create":
             warnings.append("No time found — defaulting to 09:00")
 
-    # 5. Duration
+    # 5. Update data
+    event_data: dict[str, Any] = {}
+    if intent == "update":
+        event_data, remaining = _parse_update_data(remaining)
+
+    # 6. Duration
     duration, remaining = _parse_duration(remaining)
     if duration is None:
         duration = 60
         if intent == "create":
             warnings.append("No duration found — defaulting to 60 minutes")
-
-    # 6. Update data
-    event_data: dict[str, Any] = {}
-    if intent == "update":
-        event_data, remaining = _parse_update_data(remaining)
 
     # 7. Title from remaining text
     title = _extract_title(remaining)

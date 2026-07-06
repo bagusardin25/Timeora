@@ -74,6 +74,27 @@ class TestNaturalLanguageParser(unittest.TestCase):
         self.assertEqual(result["title"], "Product Sync")
         self.assertEqual(result["event_data"], {"priority": "important"})
 
+    def test_detects_description_update_intent(self):
+        result = parse("set Product Sync description to Bring Q3 notes", self.today)
+
+        self.assertEqual(result["intent"], "update")
+        self.assertEqual(result["title"], "Product Sync")
+        self.assertEqual(result["event_data"], {"description": "Bring Q3 notes"})
+
+    def test_detects_tag_update_intent(self):
+        result = parse("tag Product Sync with client, roadmap", self.today)
+
+        self.assertEqual(result["intent"], "update")
+        self.assertEqual(result["title"], "Product Sync")
+        self.assertEqual(result["event_data"], {"tags": ["client", "roadmap"]})
+
+    def test_detects_reminder_update_intent(self):
+        result = parse("set Product Sync reminder to 30 minutes", self.today)
+
+        self.assertEqual(result["intent"], "update")
+        self.assertEqual(result["title"], "Product Sync")
+        self.assertEqual(result["event_data"], {"reminder_minutes": 30})
+
 
 class TestConflictEngine(unittest.TestCase):
     event_date = date(2026, 7, 6)
