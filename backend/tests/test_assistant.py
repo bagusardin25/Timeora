@@ -1,4 +1,5 @@
 import unittest
+from datetime import date, time
 from unittest.mock import AsyncMock, patch
 
 from fastapi import HTTPException
@@ -16,6 +17,24 @@ def event(event_id: str, title: str, hour: int) -> EventResponse:
         date="2026-07-06",
         start_time=f"{hour:02d}:00:00",
         duration_minutes=60,
+        participants="",
+    )
+
+
+def event_on(
+    event_id: str,
+    title: str,
+    event_date: date,
+    start_time: time,
+    duration_minutes: int,
+) -> EventResponse:
+    return EventResponse(
+        id=event_id,
+        user_id="user-1",
+        title=title,
+        date=event_date,
+        start_time=start_time,
+        duration_minutes=duration_minutes,
         participants="",
     )
 
@@ -45,6 +64,18 @@ class TestAssistantClarification(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(response.requires_confirmation)
         self.assertEqual(response.result["primary_event_id"], "two")
 
+    async def test_context_event_can_be_cancelled_without_title_match(self):
+        events = [event("one", "Product Sync", 14)]
+        with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=events)):
+            response = await assistant._handle_cancel(
+                {"id": "user-1"},
+                {"title": "this", "date": None},
+                selected_event_id="one",
+            )
+
+        self.assertTrue(response.requires_confirmation)
+        self.assertEqual(response.result["primary_event_id"], "one")
+
     async def test_query_exposes_structured_events(self):
         events = [event("one", "Product Sync", 14)]
         with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=events)):
@@ -55,6 +86,25 @@ class TestAssistantClarification(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(response.events[0]["title"], "Product Sync")
         self.assertIn("open_event", response.suggested_actions)
+
+    async def test_query_includes_events_overlapping_target_day(self):
+        events = [
+            event_on(
+                "overnight",
+                "Late deployment",
+                date(2026, 7, 5),
+                time(23, 30),
+                90,
+            )
+        ]
+        with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=events)):
+            response = await assistant._handle_query(
+                {"id": "user-1"},
+                {"date": "2026-07-06"},
+            )
+
+        self.assertEqual(response.message, "Found 1 event(s) on 2026-07-06.")
+        self.assertEqual(response.events[0]["id"], "overnight")
 
     async def test_update_preview_returns_confirmation_with_event_data(self):
         events = [event("one", "Product Sync", 14)]
@@ -70,6 +120,23 @@ class TestAssistantClarification(unittest.IsolatedAsyncioTestCase):
 
         self.assertTrue(response.requires_confirmation)
         self.assertEqual(response.intent, "update")
+        self.assertEqual(response.result["primary_event_id"], "one")
+        self.assertEqual(response.result["event_data"], {"priority": "important"})
+
+    async def test_context_event_can_be_updated_without_title_match(self):
+        events = [event("one", "Product Sync", 14)]
+        with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=events)):
+            response = await assistant._handle_update(
+                {"id": "user-1"},
+                {
+                    "title": "this",
+                    "date": None,
+                    "event_data": {"priority": "important"},
+                },
+                selected_event_id="one",
+            )
+
+        self.assertTrue(response.requires_confirmation)
         self.assertEqual(response.result["primary_event_id"], "one")
         self.assertEqual(response.result["event_data"], {"priority": "important"})
 
@@ -102,6 +169,41 @@ class TestAssistantClarification(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.intent, "reschedule")
         self.assertIn("valid new date and time", response.message)
         self.assertIn("edit", response.suggested_actions)
+
+    async def test_reschedule_matches_event_by_title_not_new_target_date(self):
+        events = [event("one", "Product Sync", 14)]
+        with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=events)):
+            response = await assistant._handle_reschedule(
+                {"id": "user-1"},
+                {
+                    "title": "Product Sync",
+                    "date": "2026-07-07",
+                    "start_time": "15:00",
+                },
+            )
+
+        self.assertTrue(response.requires_confirmation)
+        self.assertEqual(response.result["primary_event_id"], "one")
+        self.assertEqual(response.result["new_date"], "2026-07-07")
+        self.assertEqual(response.result["new_time"], "15:00:00")
+
+    async def test_context_event_can_be_rescheduled_without_title_match(self):
+        events = [event("one", "Product Sync", 14)]
+        with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=events)):
+            response = await assistant._handle_reschedule(
+                {"id": "user-1"},
+                {
+                    "title": "this",
+                    "date": "2026-07-07",
+                    "start_time": "15:00",
+                },
+                selected_event_id="one",
+            )
+
+        self.assertTrue(response.requires_confirmation)
+        self.assertEqual(response.result["primary_event_id"], "one")
+        self.assertEqual(response.result["new_date"], "2026-07-07")
+        self.assertEqual(response.result["new_time"], "15:00:00")
 
     async def test_find_slot_ignores_invalid_requested_time(self):
         with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=[])):

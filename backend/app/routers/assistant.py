@@ -7,7 +7,7 @@ Tier 3: confirm + execute for cancel/reschedule.
 
 from __future__ import annotations
 
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -50,7 +50,26 @@ def _parse_time_value(value: str | None) -> time | None:
         return None
 
 
-def _find_matches(all_events, parsed: dict) -> list[dict]:
+def _event_overlaps_date(ev: dict, target_date: date) -> bool:
+    event_date = _parse_date_value(ev.get("date"))
+    event_time = _parse_time_value(ev.get("start_time"))
+    if event_date is None or event_time is None:
+        return False
+    try:
+        duration = int(ev.get("duration_minutes") or 0)
+    except (TypeError, ValueError):
+        return False
+    if duration <= 0:
+        return False
+
+    event_start = datetime.combine(event_date, event_time)
+    event_end = event_start + timedelta(minutes=duration)
+    day_start = datetime.combine(target_date, time.min)
+    day_end = day_start + timedelta(days=1)
+    return event_start < day_end and event_end > day_start
+
+
+def _find_matches(all_events, parsed: dict, *, use_date_filter: bool = True) -> list[dict]:
     """Match events by title substring and optional parsed date."""
     title_query = (parsed.get("title") or "").lower().strip()
     target_date = _parse_date_value(parsed.get("date"))
@@ -61,10 +80,8 @@ def _find_matches(all_events, parsed: dict) -> list[dict]:
         ev_title = (ev_dict.get("title") or "").lower()
         if title_query and title_query not in ev_title:
             continue
-        if target_date is not None:
-            ev_date = _parse_date_value(ev_dict.get("date"))
-            if ev_date != target_date:
-                continue
+        if use_date_filter and target_date is not None and not _event_overlaps_date(ev_dict, target_date):
+            continue
         matches.append(ev_dict)
 
     return matches
@@ -143,11 +160,9 @@ async def _handle_query(user: dict, parsed: dict) -> AssistantResponse:
     all_events = await data_access.list_events(user["id"])
     matching = []
     for ev in all_events:
-        ev_date = _parse_date_value(
-            ev.date if hasattr(ev, "date") else ev.get("date")
-        )
-        if ev_date == target_date:
-            matching.append(_event_to_dict(ev))
+        ev_dict = _event_to_dict(ev)
+        if _event_overlaps_date(ev_dict, target_date):
+            matching.append(ev_dict)
 
     if not matching:
         return AssistantResponse(
@@ -226,14 +241,25 @@ def _selected_match(matches: list[dict], selected_event_id: str | None) -> list[
     return [item for item in matches if str(item.get("id", "")).split("_")[0] == base_id]
 
 
+def _action_matches(
+    all_events,
+    parsed: dict,
+    selected_event_id: str | None = None,
+    *,
+    use_date_filter: bool = True,
+) -> list[dict]:
+    if selected_event_id:
+        return _selected_match([_event_to_dict(ev) for ev in all_events], selected_event_id)
+    return _find_matches(all_events, parsed, use_date_filter=use_date_filter)
+
+
 async def _handle_cancel(
     user: dict,
     parsed: dict,
     selected_event_id: str | None = None,
 ) -> AssistantResponse:
     all_events = await data_access.list_events(user["id"])
-    matches = _find_matches(all_events, parsed)
-    matches = _selected_match(matches, selected_event_id)
+    matches = _action_matches(all_events, parsed, selected_event_id)
 
     if not matches:
         return AssistantResponse(
@@ -266,8 +292,12 @@ async def _handle_reschedule(
     selected_event_id: str | None = None,
 ) -> AssistantResponse:
     all_events = await data_access.list_events(user["id"])
-    matches = _find_matches(all_events, parsed)
-    matches = _selected_match(matches, selected_event_id)
+    matches = _action_matches(
+        all_events,
+        parsed,
+        selected_event_id,
+        use_date_filter=False,
+    )
 
     if not matches:
         return AssistantResponse(
@@ -335,8 +365,7 @@ async def _handle_update(
     selected_event_id: str | None = None,
 ) -> AssistantResponse:
     all_events = await data_access.list_events(user["id"])
-    matches = _find_matches(all_events, parsed)
-    matches = _selected_match(matches, selected_event_id)
+    matches = _action_matches(all_events, parsed, selected_event_id)
 
     if not matches:
         return AssistantResponse(
