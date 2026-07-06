@@ -1,4 +1,5 @@
-import { EventData } from "@/components/calendar/EventDialog";
+import { CATEGORIES } from "@/lib/categories";
+import type { EventData } from "@/components/calendar/EventDialog";
 
 export type EventTemplate = {
   id: string;
@@ -11,6 +12,10 @@ export type EventTemplate = {
 };
 
 const STORAGE_KEY = "timeora_templates";
+const MIN_TEMPLATE_DURATION = 5;
+const MAX_TEMPLATE_DURATION = 480;
+const DEFAULT_TEMPLATE_START_TIME = "09:00:00";
+const TIME_VALUE_PATTERN = /^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/;
 
 const DEFAULT_TEMPLATES: EventTemplate[] = [
   {
@@ -60,10 +65,43 @@ function isEventTemplate(value: unknown): value is EventTemplate {
     typeof template.title === "string" &&
     typeof template.duration_minutes === "number" &&
     Number.isFinite(template.duration_minutes) &&
+    template.duration_minutes >= MIN_TEMPLATE_DURATION &&
+    template.duration_minutes <= MAX_TEMPLATE_DURATION &&
     typeof template.start_time === "string" &&
-    (typeof template.category === "string" || template.category === null) &&
+    TIME_VALUE_PATTERN.test(template.start_time) &&
+    (template.category === null || (
+      typeof template.category === "string" &&
+      template.category in CATEGORIES
+    )) &&
     typeof template.participants === "string"
   );
+}
+
+function normalizeDuration(value: number): number {
+  if (!Number.isFinite(value)) return 60;
+  return Math.min(
+    MAX_TEMPLATE_DURATION,
+    Math.max(MIN_TEMPLATE_DURATION, Math.round(value)),
+  );
+}
+
+function normalizeStartTime(value: string): string {
+  if (!TIME_VALUE_PATTERN.test(value)) return DEFAULT_TEMPLATE_START_TIME;
+  return value.length === 5 ? `${value}:00` : value;
+}
+
+function normalizeCategory(value: string | null): string | null {
+  if (!value) return null;
+  return value in CATEGORIES ? value : null;
+}
+
+function normalizeTemplate(template: Omit<EventTemplate, "id">): Omit<EventTemplate, "id"> {
+  return {
+    ...template,
+    duration_minutes: normalizeDuration(template.duration_minutes),
+    start_time: normalizeStartTime(template.start_time),
+    category: normalizeCategory(template.category),
+  };
 }
 
 function readCustomTemplates(): EventTemplate[] {
@@ -91,7 +129,7 @@ export function getCustomTemplates(): EventTemplate[] {
 export function saveTemplate(template: Omit<EventTemplate, "id">): EventTemplate {
   const custom = getCustomTemplates();
   const newTemplate: EventTemplate = {
-    ...template,
+    ...normalizeTemplate(template),
     id: `custom-${Date.now()}`,
   };
   custom.push(newTemplate);
