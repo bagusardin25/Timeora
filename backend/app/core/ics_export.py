@@ -7,7 +7,7 @@ No external dependencies.
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from uuid import uuid4
 
 
@@ -44,7 +44,7 @@ def generate_ics(
         "METHOD:PUBLISH",
     ]
 
-    now_stamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    now_stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
     for ev in events:
         ev_date = ev.get("date")

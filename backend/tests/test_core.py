@@ -1,4 +1,5 @@
 import unittest
+import warnings
 from datetime import date, time
 from unittest.mock import AsyncMock, patch
 
@@ -330,6 +331,13 @@ class TestAvailabilityEngine(unittest.TestCase):
 
 
 class TestIcsExport(unittest.TestCase):
+    def test_generation_does_not_use_deprecated_utcnow(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            output = generate_ics([])
+
+        self.assertIn("BEGIN:VCALENDAR", output)
+
     def test_generates_valid_calendar_boundaries(self):
         output = generate_ics([])
 
