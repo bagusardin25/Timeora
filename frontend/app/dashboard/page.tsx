@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useRef } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { LogOut, Brain, Download, Settings, User } from "lucide-react";
@@ -491,14 +492,18 @@ export default function DashboardPage() {
       <header className="sticky top-0 z-40 border-b border-slate-200/60 dark:border-white/5 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-2xl px-4 sm:px-6 py-3 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.03)] transition-all">
         {/* Left: Brand */}
         <div className="flex items-center gap-3">
-          <img
+          <Image
             src="/logomark_lightmode.png"
             alt="Timeora Logo"
+            width={474}
+            height={403}
             className="block dark:hidden w-9 h-9 object-contain flex-shrink-0"
           />
-          <img
+          <Image
             src="/logomark.png"
             alt="Timeora Logo"
+            width={627}
+            height={502}
             className="hidden dark:block w-9 h-9 object-contain flex-shrink-0"
           />
           <div className="flex flex-col">
