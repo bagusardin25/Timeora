@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.auth import get_current_user
 from app import data_access
 from app.core import assistant_tools, nlparser, conflicts as conflicts_engine
+from app.event_ids import base_event_id
 from app.models import AssistantRequest, AssistantResponse
 
 router = APIRouter()
@@ -237,8 +238,8 @@ def _clarification(matches: list[dict], action: str) -> AssistantResponse:
 def _selected_match(matches: list[dict], selected_event_id: str | None) -> list[dict]:
     if not selected_event_id:
         return matches
-    base_id = selected_event_id.split("_")[0]
-    return [item for item in matches if str(item.get("id", "")).split("_")[0] == base_id]
+    base_id = base_event_id(selected_event_id)
+    return [item for item in matches if base_event_id(str(item.get("id", ""))) == base_id]
 
 
 def _action_matches(

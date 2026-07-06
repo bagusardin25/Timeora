@@ -27,6 +27,7 @@ import { AvailabilityHeatmap } from "@/components/AvailabilityHeatmap";
 import { TodayAgenda } from "@/components/TodayAgenda";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { baseEventId } from "@/lib/eventIds";
 import { readStoredPreferences } from "@/lib/preferences";
 import { motion, AnimatePresence } from "framer-motion";
 import type {
@@ -304,7 +305,7 @@ export default function DashboardPage() {
 
   const handleEventCategoryChange = async (eventId: string, category: string) => {
     try {
-      const baseId = eventId.split("_")[0];
+      const baseId = baseEventId(eventId);
       await fetchApi(`/events/${baseId}`, {
         method: "PUT",
         body: JSON.stringify({ category }),
@@ -320,7 +321,7 @@ export default function DashboardPage() {
     if (!event.start) return;
     const extendedProps = event.extendedProps as CalendarExtendedProps;
     setSelectedEvent({
-      id: event.id.split("_")[0],
+      id: baseEventId(event.id),
       title: event.title,
       date: format(event.start, "yyyy-MM-dd"),
       start_time: format(event.start, "HH:mm:ss"),
@@ -345,7 +346,7 @@ export default function DashboardPage() {
     const start = rawStart instanceof Date ? rawStart : new Date(rawStart as string | number);
     const ext = (calEvent.extendedProps || {}) as CalendarExtendedProps;
     setSelectedEvent({
-      id: String(calEvent.id).split("_")[0],
+      id: baseEventId(String(calEvent.id)),
       title: calEvent.title as string,
       date: format(start, "yyyy-MM-dd"),
       start_time: format(start, "HH:mm:ss"),
@@ -373,7 +374,7 @@ export default function DashboardPage() {
     }
     const end = event.end || new Date(event.start.getTime() + 60 * 60_000);
     try {
-      await fetchApi(`/events/${event.id.split("_")[0]}`, {
+      await fetchApi(`/events/${baseEventId(event.id)}`, {
         method: "PUT",
         body: JSON.stringify({
           date: format(event.start, "yyyy-MM-dd"),
@@ -452,7 +453,7 @@ export default function DashboardPage() {
     if (!confirm("Are you sure you want to delete this event?")) return;
     setIsSaving(true);
     try {
-      const baseId = id.split("_")[0];
+      const baseId = baseEventId(id);
       await fetchApi(`/events/${baseId}`, {
         method: "DELETE",
       });

@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 from pydantic import ValidationError
 
 from app import data_access
+from app.event_ids import base_event_id
 from app.models import AssistantRequest, EventCreate, EventUpdate
 
 
@@ -69,7 +70,7 @@ async def execute_calendar_tool(user_id: str, body: AssistantRequest):
 
     if not body.event_id:
         raise HTTPException(status_code=400, detail="event_id is required for this action")
-    event_id = body.event_id.split("_")[0]
+    event_id = base_event_id(body.event_id)
 
     if action in {"cancel", "delete"}:
         await data_access.delete_event(event_id, user_id)
