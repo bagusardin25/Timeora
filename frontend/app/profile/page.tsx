@@ -7,20 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Save, User, Clock, Shield, Trash2, Download } from "lucide-react";
-
-interface UserPreferences {
-  timezone: string;
-  defaultDuration: number;
-  workingHoursStart: string;
-  workingHoursEnd: string;
-}
-
-const DEFAULT_PREFERENCES: UserPreferences = {
-  timezone: "",
-  defaultDuration: 60,
-  workingHoursStart: "09:00",
-  workingHoursEnd: "17:00",
-};
+import {
+  DEFAULT_PREFERENCES,
+  readStoredPreferences,
+  savePreferences,
+  type UserPreferences,
+} from "@/lib/preferences";
 
 function getTokenEmail(): string | null {
   try {
@@ -55,20 +47,8 @@ export default function ProfilePage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setUserEmail(email);
 
-    // Load from localStorage
-    const saved = localStorage.getItem("timeora_preferences");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setPreferences({ ...DEFAULT_PREFERENCES, ...parsed });
-      } catch {
-        // ignore
-      }
-    } else {
-      // Use detected timezone if none saved
-      const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      setPreferences((prev) => ({ ...prev, timezone: detected }));
-    }
+    const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    setPreferences(readStoredPreferences(detected));
   }, [router]);
 
   const handleChange = (key: keyof UserPreferences, value: string | number) => {
@@ -80,7 +60,8 @@ export default function ProfilePage() {
     setMessage(null);
 
     try {
-      localStorage.setItem("timeora_preferences", JSON.stringify(preferences));
+      const normalized = savePreferences(preferences);
+      setPreferences(normalized);
 
       // Optional: sync to backend later
       setMessage("Preferences saved successfully!");
