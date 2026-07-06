@@ -45,6 +45,33 @@ describe("EventActions", () => {
     expect(onAskAI).toHaveBeenCalledWith(EVENT);
   });
 
+  it("does not bubble overflow action taps to the parent calendar event", async () => {
+    const user = userEvent.setup();
+    const onEdit = vi.fn();
+    const onAskAI = vi.fn();
+    const onDelete = vi.fn();
+    const onParentClick = vi.fn();
+
+    render(
+      <div onClick={onParentClick}>
+        <EventActions
+          event={EVENT}
+          onEdit={onEdit}
+          onAskAI={onAskAI}
+          onDelete={onDelete}
+        >
+          <div>Event block</div>
+        </EventActions>
+      </div>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Event actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Ask AI" }));
+
+    expect(onAskAI).toHaveBeenCalledWith(EVENT);
+    expect(onParentClick).not.toHaveBeenCalled();
+  });
+
   it("rejects executable and malformed meeting links", () => {
     expect(safeMeetingUrl("javascript:alert(1)")).toBeNull();
     expect(safeMeetingUrl("not a link")).toBeNull();

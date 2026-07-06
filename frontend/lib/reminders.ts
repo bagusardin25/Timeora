@@ -27,6 +27,8 @@ type ReminderSchedulerOptions = {
   fallback?: (delivery: ReminderDelivery) => void;
 };
 
+const MAX_REMINDER_TIMER_DELAY_MS = 2_147_483_647;
+
 function parseLocalEventStart(event: ReminderEvent): Date {
   return new Date(`${event.date}T${event.start_time}`);
 }
@@ -117,40 +119,51 @@ export function createReminderScheduler(options: ReminderSchedulerOptions = {}) 
     fallback(delivery);
   };
 
-  return {
-    schedule(events: ReminderEvent[]) {
-      const nextKeys = new Set<string>();
+  const schedule = (events: ReminderEvent[]) => {
+    const nextKeys = new Set<string>();
 
-      for (const event of events) {
-        const fireTime = getReminderFireTime(event);
-        if (!fireTime) continue;
+    for (const event of events) {
+      const fireTime = getReminderFireTime(event);
+      if (!fireTime) continue;
 
-        const start = parseLocalEventStart(event);
-        if (Number.isNaN(start.getTime()) || start.getTime() <= now().getTime()) {
-          continue;
-        }
-
-        const key = reminderKey(event);
-        nextKeys.add(key);
-        if (delivered.has(key)) continue;
-
-        const delayMs = fireTime.getTime() - now().getTime();
-        if (delayMs <= 0) {
-          deliver(event);
-          continue;
-        }
-
-        if (timers.has(key)) continue;
-        timers.set(key, setTimer(() => deliver(event), delayMs));
+      const start = parseLocalEventStart(event);
+      if (Number.isNaN(start.getTime()) || start.getTime() <= now().getTime()) {
+        continue;
       }
 
-      for (const [key, handle] of timers) {
-        if (!nextKeys.has(key)) {
-          clearTimer(handle);
+      const key = reminderKey(event);
+      nextKeys.add(key);
+      if (delivered.has(key)) continue;
+
+      const delayMs = fireTime.getTime() - now().getTime();
+      if (delayMs <= 0) {
+        deliver(event);
+        continue;
+      }
+
+      if (timers.has(key)) continue;
+
+      if (delayMs > MAX_REMINDER_TIMER_DELAY_MS) {
+        timers.set(key, setTimer(() => {
           timers.delete(key);
-        }
+          schedule([event]);
+        }, MAX_REMINDER_TIMER_DELAY_MS));
+        continue;
       }
-    },
+
+      timers.set(key, setTimer(() => deliver(event), delayMs));
+    }
+
+    for (const [key, handle] of timers) {
+      if (!nextKeys.has(key)) {
+        clearTimer(handle);
+        timers.delete(key);
+      }
+    }
+  };
+
+  return {
+    schedule,
     cancel() {
       for (const handle of timers.values()) {
         clearTimer(handle);

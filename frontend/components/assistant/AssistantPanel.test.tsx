@@ -129,4 +129,42 @@ describe("AssistantPanel", () => {
     });
     expect(onEventsChanged).toHaveBeenCalled();
   });
+
+  it("does not offer confirmation when the assistant action payload is incomplete", async () => {
+    const user = userEvent.setup();
+    callAssistantMock.mockResolvedValueOnce({
+      intent: "create",
+      result: {},
+      message: "Create this event?",
+      requires_confirmation: true,
+    });
+    render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
+
+    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Jadwalkan sesuatu");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    expect(await screen.findByText("Create this event?")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Confirm action" })).not.toBeInTheDocument();
+  });
+
+  it("supports older Android WebView media query listeners", () => {
+    const addListener = vi.fn();
+    const removeListener = vi.fn();
+    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({
+      matches: true,
+      media: "(max-width: 767px)",
+      onchange: null,
+      addListener,
+      removeListener,
+      dispatchEvent: () => false,
+    }));
+
+    const { unmount } = render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
+
+    expect(addListener).toHaveBeenCalledWith(expect.any(Function));
+
+    unmount();
+
+    expect(removeListener).toHaveBeenCalledWith(expect.any(Function));
+  });
 });

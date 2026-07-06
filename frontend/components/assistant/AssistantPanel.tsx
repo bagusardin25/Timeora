@@ -41,39 +41,65 @@ function createMessageId(): string {
   return `msg-${Date.now().toString(36)}-${fallbackMessageCounter.toString(36)}`;
 }
 
+function subscribeMediaQuery(query: MediaQueryList, listener: () => void): () => void {
+  if (typeof query.addEventListener === "function") {
+    query.addEventListener("change", listener);
+    return () => query.removeEventListener("change", listener);
+  }
+
+  query.addListener(listener);
+  return () => query.removeListener(listener);
+}
+
 function useMobile(): boolean {
   const [mobile, setMobile] = useState(false);
   useEffect(() => {
     const query = window.matchMedia("(max-width: 767px)");
     const update = () => setMobile(query.matches);
     update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
+    return subscribeMediaQuery(query, update);
   }, []);
   return mobile;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 function executionParams(result: AssistantResult): AssistantExecuteParams | null {
-  if (!result.requires_confirmation || !result.result || typeof result.result !== "object") return null;
-  const data = result.result as Record<string, unknown>;
+  if (!result.requires_confirmation || !isRecord(result.result)) return null;
+  const data = result.result;
   if (result.intent === "create") {
+    if (!isRecord(data.event_data)) return null;
     return {
       action: "create",
-      event_data: data.event_data as Record<string, unknown>,
+      event_data: data.event_data,
     };
   }
   if (result.intent === "cancel") {
+    if (!isNonEmptyString(data.primary_event_id)) return null;
     return {
       action: "cancel",
-      event_id: data.primary_event_id as string,
+      event_id: data.primary_event_id,
     };
   }
   if (result.intent === "reschedule") {
+    if (
+      !isNonEmptyString(data.primary_event_id) ||
+      !isNonEmptyString(data.new_date) ||
+      !isNonEmptyString(data.new_time)
+    ) {
+      return null;
+    }
     return {
       action: "reschedule",
-      event_id: data.primary_event_id as string,
-      new_date: data.new_date as string,
-      new_time: data.new_time as string,
+      event_id: data.primary_event_id,
+      new_date: data.new_date,
+      new_time: data.new_time,
     };
   }
   if (result.intent === "update" || result.intent === "edit") {
