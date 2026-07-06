@@ -62,6 +62,26 @@ class TestIcsImport(unittest.TestCase):
         )
         self.assertEqual(event.external_ids, {"ics": "external-123"})
 
+    def test_parses_weekend_weekly_recurrence(self):
+        content = "\r\n".join(
+            [
+                "BEGIN:VCALENDAR",
+                "VERSION:2.0",
+                "BEGIN:VEVENT",
+                "DTSTART:20260711T090000",
+                "DTEND:20260711T100000",
+                "SUMMARY:Saturday training",
+                "RRULE:FREQ=WEEKLY;BYDAY=SA",
+                "END:VEVENT",
+                "END:VCALENDAR",
+            ]
+        )
+
+        events, errors = parse_ics(content, default_timezone="UTC")
+
+        self.assertEqual(errors, [])
+        self.assertEqual(events[0].recurrence_rule, "weekly:saturday")
+
     def test_unfolds_lines_and_uses_duration(self):
         content = "\n".join(
             [
