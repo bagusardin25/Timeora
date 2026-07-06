@@ -9,9 +9,23 @@ import type { EventData } from "./EventDialog";
 
 export function safeMeetingUrl(value?: string | null): string | null {
   if (!value) return null;
+  const normalized = value.trim();
+  if (!normalized || /\s/.test(normalized)) return null;
+  let candidate = normalized;
+  if (!candidate.includes("://")) {
+    if (candidate.startsWith("//")) {
+      candidate = `https:${candidate}`;
+    } else {
+      const host = candidate.split("/", 1)[0];
+      if (!host.includes(".")) return null;
+      candidate = `https://${candidate}`;
+    }
+  }
   try {
-    const parsed = new URL(value);
-    return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.toString() : null;
+    const parsed = new URL(candidate);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    if (parsed.username || parsed.password) return null;
+    return parsed.toString();
   } catch {
     return null;
   }
