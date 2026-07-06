@@ -37,20 +37,27 @@ interface WeeklyCalendarProps {
   onEventAskAI?: (event: EventData) => void;
 }
 
+const UNCATEGORIZED_CATEGORY_KEY = "uncategorized";
+const CATEGORY_KEYS = new Set(CATEGORY_OPTIONS.map((category) => category.key));
+const ALL_CATEGORY_KEYS = [...CATEGORY_OPTIONS.map((category) => category.key), UNCATEGORIZED_CATEGORY_KEY];
+
 const DEFAULT_CATEGORY_PRESETS: Record<string, string[]> = {
-  "All": ["meeting", "personal", "focus", "health", "social", "other", "uncategorized"],
+  "All": ALL_CATEGORY_KEYS,
   "Work": ["meeting", "focus"],
   "Focus": ["focus"],
   "Life": ["personal", "health", "social"],
 };
 
-const CATEGORY_KEYS = new Set(CATEGORY_OPTIONS.map((category) => category.key));
-
 function normalizeCalendarCategory(category: unknown): string {
-  if (typeof category !== "string") return "uncategorized";
+  if (typeof category !== "string") return UNCATEGORIZED_CATEGORY_KEY;
   const normalized = category.trim().toLowerCase();
-  if (!normalized) return "uncategorized";
+  if (!normalized) return UNCATEGORIZED_CATEGORY_KEY;
+  if (normalized === UNCATEGORIZED_CATEGORY_KEY) return UNCATEGORIZED_CATEGORY_KEY;
   return CATEGORY_KEYS.has(normalized) ? normalized : "other";
+}
+
+function normalizeSelectedCategories(categories: string[]): string[] {
+  return Array.from(new Set(categories.map(normalizeCalendarCategory)));
 }
 
 function formatCalendarDate(date: Date): string {
@@ -69,12 +76,16 @@ function readCategoryPresets(): Record<string, string[]> {
       return DEFAULT_CATEGORY_PRESETS;
     }
 
-    const validEntries = Object.entries(parsed).filter(
-      (entry): entry is [string, string[]] =>
-        typeof entry[0] === "string" &&
-        Array.isArray(entry[1]) &&
-        entry[1].every((category) => typeof category === "string"),
-    );
+    const validEntries = Object.entries(parsed).flatMap(([name, categories]) => {
+      if (
+        typeof name !== "string" ||
+        !Array.isArray(categories) ||
+        !categories.every((category) => typeof category === "string")
+      ) {
+        return [];
+      }
+      return [[name, normalizeSelectedCategories(categories)]] as Array<[string, string[]]>;
+    });
 
     return validEntries.length ? Object.fromEntries(validEntries) : DEFAULT_CATEGORY_PRESETS;
   } catch {
@@ -126,7 +137,7 @@ export function WeeklyCalendar({
       duration_minutes: Number(ext.duration_minutes || 60),
       participants: String(ext.participants || ""),
       recurrence_rule: (ext.recurrence_rule as string | null) || null,
-      category: categoryKey === "uncategorized" ? null : categoryKey,
+      category: categoryKey === UNCATEGORIZED_CATEGORY_KEY ? null : categoryKey,
       description: String(ext.description || ""),
       location_url: (ext.location_url as string | null) || null,
       priority: (ext.priority as EventData["priority"]) || "normal",
@@ -204,9 +215,7 @@ export function WeeklyCalendar({
   const [isMobile, setIsMobile] = React.useState(false);
   const [currentView, setCurrentView] = React.useState("timeGridWeek");
   const [calendarTitle, setCalendarTitle] = React.useState("");
-  const [selectedCategories, setSelectedCategories] = React.useState<string[]>(() => [
-    "meeting", "personal", "focus", "health", "social", "other", "uncategorized"
-  ]);
+  const [selectedCategories, setSelectedCategories] = React.useState<string[]>(() => ALL_CATEGORY_KEYS);
 
   // Saved views / filter presets (localStorage)
   const [presets, setPresets] = React.useState<Record<string, string[]>>(readCategoryPresets);
@@ -220,7 +229,7 @@ export function WeeklyCalendar({
   };
 
   const applyPreset = (cats: string[]) => {
-    setSelectedCategories(cats);
+    setSelectedCategories(normalizeSelectedCategories(cats));
   };
 
   const handleCategoryDrop = (e: React.DragEvent, newCategory: string) => {
@@ -429,34 +438,34 @@ export function WeeklyCalendar({
           
           <button
             type="button"
-            onClick={() => toggleCategory("uncategorized")}
+            onClick={() => toggleCategory(UNCATEGORIZED_CATEGORY_KEY)}
             onDragOver={handleDragOver}
-            onDrop={(e) => handleCategoryDrop(e, "uncategorized")}
+            onDrop={(e) => handleCategoryDrop(e, UNCATEGORIZED_CATEGORY_KEY)}
             className={`flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all cursor-pointer font-medium hover:scale-[1.03] sm:min-h-8 ${
-              selectedCategories.includes("uncategorized")
+              selectedCategories.includes(UNCATEGORIZED_CATEGORY_KEY)
                 ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800"
                 : "bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 text-slate-400 dark:text-zinc-500 opacity-60 hover:opacity-100"
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full ${selectedCategories.includes("uncategorized") ? "bg-indigo-500" : "bg-slate-300 dark:bg-zinc-700"}`} />
+            <span className={`w-1.5 h-1.5 rounded-full ${selectedCategories.includes(UNCATEGORIZED_CATEGORY_KEY) ? "bg-indigo-500" : "bg-slate-300 dark:bg-zinc-700"}`} />
             <span>📅 Uncategorized</span>
             <span className="ml-0.5 px-1.5 py-0.2 bg-black/5 dark:bg-white/10 rounded-full text-[9px] font-bold">
-              {categoryCounts["uncategorized"] || 0}
+              {categoryCounts[UNCATEGORIZED_CATEGORY_KEY] || 0}
             </span>
           </button>
 
           <button
             type="button"
             onClick={() => {
-              if (selectedCategories.length === 7) {
+              if (selectedCategories.length === ALL_CATEGORY_KEYS.length) {
                 setSelectedCategories([]);
               } else {
-                setSelectedCategories(["meeting", "personal", "focus", "health", "social", "other", "uncategorized"]);
+                setSelectedCategories(ALL_CATEGORY_KEYS);
               }
             }}
             className="min-h-11 text-[11px] text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-300 transition-colors ml-2 font-semibold cursor-pointer sm:min-h-8"
           >
-            {selectedCategories.length === 7 ? "Clear All" : "Select All"}
+            {selectedCategories.length === ALL_CATEGORY_KEYS.length ? "Clear All" : "Select All"}
           </button>
         </div>
 
