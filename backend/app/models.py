@@ -30,6 +30,15 @@ def _normalize_title(value: str | None) -> str | None:
     return normalized
 
 
+def _normalize_request_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError("text cannot be blank")
+    return normalized
+
+
 def _validate_location_url(value: str | None) -> str | None:
     if value is None:
         return None
@@ -124,6 +133,8 @@ class ParsedEvent(BaseModel):
 class ParseRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=1000)
 
+    _text = field_validator("text")(_normalize_request_text)
+
 
 class ConflictCheckRequest(BaseModel):
     date: Date
@@ -200,6 +211,8 @@ class AssistantRequest(BaseModel):
     selected_event_id: str | None = None
     context_event_id: str | None = None
     event_data: dict | None = None
+
+    _text = field_validator("text")(_normalize_request_text)
 
 
 class AssistantResponse(BaseModel):
