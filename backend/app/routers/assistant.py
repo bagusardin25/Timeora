@@ -31,17 +31,23 @@ def _parse_date_value(value) -> date | None:
     if isinstance(value, date):
         return value
     if isinstance(value, str):
-        return date.fromisoformat(value[:10])
+        try:
+            return date.fromisoformat(value[:10])
+        except ValueError:
+            return None
     return None
 
 
 def _parse_time_value(value: str | None) -> time | None:
     if not value:
         return None
-    parts = value.split(":")
-    h, m = int(parts[0]), int(parts[1])
-    s = int(parts[2]) if len(parts) > 2 else 0
-    return time(h, m, s)
+    try:
+        parts = value.split(":")
+        h, m = int(parts[0]), int(parts[1])
+        s = int(parts[2]) if len(parts) > 2 else 0
+        return time(h, m, s)
+    except (TypeError, ValueError, IndexError):
+        return None
 
 
 def _find_matches(all_events, parsed: dict) -> list[dict]:
@@ -169,8 +175,7 @@ async def _handle_find_slot(user: dict, parsed: dict) -> AssistantResponse:
     event_dicts = [_event_to_dict(ev) for ev in all_events]
 
     requested_time_str = parsed.get("start_time", "09:00")
-    parts = requested_time_str.split(":")
-    requested_time = time(int(parts[0]), int(parts[1]))
+    requested_time = _parse_time_value(requested_time_str) or time(9, 0)
 
     alternatives = conflicts_engine.find_alternatives(
         event_dicts, target_date, requested_time, duration, count=5
@@ -277,6 +282,18 @@ async def _handle_reschedule(
     primary = matches[0]
     new_date = parsed.get("date")
     new_time = parsed.get("start_time")
+    if not new_date or not new_time:
+        return AssistantResponse(
+            intent="reschedule",
+            result={"events": matches, "primary_event_id": primary["id"]},
+            message=(
+                f"I found \"{primary.get('title', 'Event')}\", but I need the new date and time "
+                "before I can reschedule it."
+            ),
+            events=matches,
+            suggested_actions=["edit"],
+        )
+
     return AssistantResponse(
         intent="reschedule",
         result={

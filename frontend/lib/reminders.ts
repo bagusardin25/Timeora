@@ -57,7 +57,11 @@ export function gmailSearchUrl(event: Pick<ReminderEvent, "title" | "participant
 export async function requestReminderPermission(): Promise<ReminderPermissionState> {
   if (typeof Notification === "undefined") return "unsupported";
   if (Notification.permission !== "default") return Notification.permission;
-  return Notification.requestPermission();
+  try {
+    return await Notification.requestPermission();
+  } catch {
+    return "unsupported";
+  }
 }
 
 function currentReminderPermission(): ReminderPermissionState {

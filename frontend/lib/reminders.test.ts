@@ -1,10 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   createReminderScheduler,
   getReminderDelayMs,
   getReminderFireTime,
   gmailSearchUrl,
+  requestReminderPermission,
   type ReminderEvent,
 } from "./reminders";
 
@@ -18,6 +19,10 @@ const EVENT: ReminderEvent = {
 };
 
 describe("reminders", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("calculates the notification fire time and delay", () => {
     const fireTime = getReminderFireTime(EVENT);
 
@@ -84,5 +89,14 @@ describe("reminders", () => {
     })).toBe(
       "https://mail.google.com/mail/u/0/#search/Product%20Sync%20%2F%20Q3%20team%40example.com%20boss%40example.com",
     );
+  });
+
+  it("falls back when browser notification permission requests fail", async () => {
+    vi.stubGlobal("Notification", {
+      permission: "default",
+      requestPermission: vi.fn().mockRejectedValue(new Error("blocked")),
+    });
+
+    await expect(requestReminderPermission()).resolves.toBe("unsupported");
   });
 });

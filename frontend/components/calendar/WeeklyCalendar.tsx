@@ -68,6 +68,16 @@ function readCategoryPresets(): Record<string, string[]> {
   }
 }
 
+function writeCategoryPresets(presets: Record<string, string[]>): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem("timeora_category_presets", JSON.stringify(presets));
+  } catch {
+    // Saving a filter view should not break the calendar when storage is full,
+    // blocked, or unavailable in private browsing contexts.
+  }
+}
+
 
 export function WeeklyCalendar({
   events,
@@ -188,9 +198,11 @@ export function WeeklyCalendar({
   const [presets, setPresets] = React.useState<Record<string, string[]>>(readCategoryPresets);
 
   const saveCurrentAsPreset = (name: string) => {
-    const newPresets = { ...presets, [name]: [...selectedCategories] };
+    const presetName = name.trim();
+    if (!presetName) return;
+    const newPresets = { ...presets, [presetName]: [...selectedCategories] };
     setPresets(newPresets);
-    localStorage.setItem('timeora_category_presets', JSON.stringify(newPresets));
+    writeCategoryPresets(newPresets);
   };
 
   const applyPreset = (cats: string[]) => {
