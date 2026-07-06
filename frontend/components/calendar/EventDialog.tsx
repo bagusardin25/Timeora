@@ -103,7 +103,9 @@ export function EventDialog({
     const startMinutes = h1 * 60 + m1;
     const endMinutes = h2 * 60 + m2;
     const difference = endMinutes - startMinutes;
-    return difference > 0 ? difference : 60;
+    if (difference > 0) return difference;
+    if (difference < 0) return difference + 24 * 60;
+    return 60;
   };
 
   const handleSave = () => {

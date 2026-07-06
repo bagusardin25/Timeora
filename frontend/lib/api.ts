@@ -59,7 +59,11 @@ function requestSignal(external?: AbortSignal | null): {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
   const abortFromExternal = () => controller.abort(external?.reason);
-  external?.addEventListener('abort', abortFromExternal, { once: true });
+  if (external?.aborted) {
+    controller.abort(external.reason);
+  } else {
+    external?.addEventListener('abort', abortFromExternal, { once: true });
+  }
   return {
     signal: controller.signal,
     dispose: () => {

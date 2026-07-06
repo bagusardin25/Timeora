@@ -68,4 +68,29 @@ describe("EventDialog", () => {
 
     expect(saveButton).toBeDisabled();
   });
+
+  it("calculates duration correctly for events that end after midnight", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(
+      <EventDialog
+        open
+        onOpenChange={vi.fn()}
+        initialData={null}
+        onSave={onSave}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Judul Event"), "Late deployment");
+    await user.clear(screen.getByLabelText("Mulai"));
+    await user.type(screen.getByLabelText("Mulai"), "23:00");
+    await user.clear(screen.getByLabelText("Selesai"));
+    await user.type(screen.getByLabelText("Selesai"), "00:30");
+    await user.click(screen.getByRole("button", { name: "Simpan Event" }));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      start_time: "23:00:00",
+      duration_minutes: 90,
+    }));
+  });
 });

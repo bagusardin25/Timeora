@@ -28,6 +28,25 @@ describe("fetchApi", () => {
     expect(fetchMock.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
   });
 
+  it("honors an already-aborted caller signal before sending requests", async () => {
+    const controller = new AbortController();
+    controller.abort("closed");
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+      if (init?.signal?.aborted) {
+        return Promise.reject(new DOMException("Aborted", "AbortError"));
+      }
+      return Promise.resolve(jsonResponse(200, { ok: true }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchApi("/health", { signal: controller.signal })).rejects.toMatchObject({
+      status: 408,
+    });
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[0][1]?.signal?.aborted).toBe(true);
+  });
+
   it("clears stale credentials when refresh is rejected", async () => {
     localStorage.setItem("token", "expired-access");
     localStorage.setItem("refresh_token", "expired-refresh");
