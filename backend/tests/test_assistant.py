@@ -1,6 +1,9 @@
 import unittest
 from unittest.mock import AsyncMock, patch
 
+from fastapi import HTTPException
+
+from app.core import assistant_tools
 from app.models import AssistantRequest, EventResponse
 from app.routers import assistant
 
@@ -94,6 +97,71 @@ class TestAssistantNativeTools(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(response.executed)
         self.assertEqual(response.intent, "create")
         self.assertEqual(create_event.await_args.args[0], "user-1")
+
+    async def test_reschedule_rejects_invalid_time_as_bad_request(self):
+        body = AssistantRequest(
+            confirm=True,
+            action="reschedule",
+            event_id="event-1",
+            new_date="2026-07-07",
+            new_time="not-a-time",
+        )
+        with patch.object(assistant_tools.data_access, "update_event", AsyncMock()) as update_event:
+            with self.assertRaises(HTTPException) as raised:
+                await assistant_tools.execute_calendar_tool("user-1", body)
+
+        self.assertEqual(raised.exception.status_code, 400)
+        self.assertIn("new_date and new_time", raised.exception.detail)
+        update_event.assert_not_awaited()
+
+    async def test_reschedule_rejects_invalid_date_as_bad_request(self):
+        body = AssistantRequest(
+            confirm=True,
+            action="reschedule",
+            event_id="event-1",
+            new_date="not-a-date",
+            new_time="09:00",
+        )
+        with patch.object(assistant_tools.data_access, "update_event", AsyncMock()) as update_event:
+            with self.assertRaises(HTTPException) as raised:
+                await assistant_tools.execute_calendar_tool("user-1", body)
+
+        self.assertEqual(raised.exception.status_code, 400)
+        self.assertIn("new_date and new_time", raised.exception.detail)
+        update_event.assert_not_awaited()
+
+    async def test_create_rejects_invalid_event_data_as_bad_request(self):
+        body = AssistantRequest(
+            confirm=True,
+            action="create",
+            event_data={
+                "date": "2026-07-07",
+                "start_time": "09:00:00",
+                "duration_minutes": 30,
+            },
+        )
+        with patch.object(assistant_tools.data_access, "create_event", AsyncMock()) as create_event:
+            with self.assertRaises(HTTPException) as raised:
+                await assistant_tools.execute_calendar_tool("user-1", body)
+
+        self.assertEqual(raised.exception.status_code, 400)
+        self.assertIn("Invalid event data", raised.exception.detail)
+        create_event.assert_not_awaited()
+
+    async def test_update_rejects_invalid_event_data_as_bad_request(self):
+        body = AssistantRequest(
+            confirm=True,
+            action="update",
+            event_id="event-1",
+            event_data={"reminder_minutes": 10081},
+        )
+        with patch.object(assistant_tools.data_access, "update_event", AsyncMock()) as update_event:
+            with self.assertRaises(HTTPException) as raised:
+                await assistant_tools.execute_calendar_tool("user-1", body)
+
+        self.assertEqual(raised.exception.status_code, 400)
+        self.assertIn("Invalid event data", raised.exception.detail)
+        update_event.assert_not_awaited()
 
 
 if __name__ == "__main__":
