@@ -3,7 +3,7 @@ from datetime import date, time
 
 from pydantic import ValidationError
 
-from app.models import EventCreate, EventUpdate
+from app.models import AssistantRequest, EventCreate, EventUpdate, ParseRequest
 
 
 class TestEventDetails(unittest.TestCase):
@@ -63,6 +63,19 @@ class TestEventDetails(unittest.TestCase):
     def test_rejects_excessive_reminder(self):
         with self.assertRaises(ValidationError):
             self._event(reminder_minutes=10081)
+
+    def test_trims_parse_and_assistant_text(self):
+        parse_request = ParseRequest(text="  jadwalkan meeting besok  ")
+        assistant_request = AssistantRequest(text="  apa jadwal besok  ")
+
+        self.assertEqual(parse_request.text, "jadwalkan meeting besok")
+        self.assertEqual(assistant_request.text, "apa jadwal besok")
+
+    def test_rejects_blank_parse_and_assistant_text(self):
+        with self.assertRaises(ValidationError):
+            ParseRequest(text="   ")
+        with self.assertRaises(ValidationError):
+            AssistantRequest(text="   ")
 
 
 if __name__ == "__main__":
