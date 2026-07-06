@@ -129,4 +129,31 @@ describe("WeeklyCalendar", () => {
     expect(screen.getByTestId("calendar")).toHaveTextContent("1");
     expect(screen.getByRole("button", { name: /Other1/ })).toBeVisible();
   });
+
+  it("normalizes legacy categories from saved presets", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem("timeora_category_presets", JSON.stringify({ Legacy: ["work"] }));
+
+    render(
+      <WeeklyCalendar
+        events={[
+          {
+            id: "evt_legacy",
+            title: "Legacy work event",
+            start: "2026-07-06T10:00:00",
+            extendedProps: { category: "work" },
+          },
+        ]}
+        onDateClick={noop}
+        onEventClick={noop}
+        onEventDrop={noop}
+        onEventResize={noop}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Legacy" }));
+
+    expect(screen.getByTestId("calendar")).toHaveTextContent("1");
+    expect(screen.getByRole("button", { name: /Other1/ })).toBeVisible();
+  });
 });

@@ -9,6 +9,7 @@ from app.models import (
     EventResponse,
     EventUpdate,
 )
+from app.storage_normalization import json_object, string_list
 from app import supabase_store
 
 
@@ -35,9 +36,6 @@ async def upsert_user(user_id: str, email: str) -> None:
 
 
 def _row_to_event(row) -> EventResponse:
-    external_ids = row.get("external_ids") or {}
-    if isinstance(external_ids, str):
-        external_ids = json.loads(external_ids)
     return EventResponse(
         id=str(row["id"]),
         user_id=str(row["user_id"]),
@@ -51,9 +49,9 @@ def _row_to_event(row) -> EventResponse:
         description=row.get("description") or "",
         location_url=row.get("location_url"),
         priority=row.get("priority") or "normal",
-        tags=list(row.get("tags") or []),
+        tags=string_list(row.get("tags")),
         reminder_minutes=row.get("reminder_minutes"),
-        external_ids=external_ids,
+        external_ids=json_object(row.get("external_ids")),
         sync_status=row.get("sync_status") or "not_synced",
         last_synced_at=row.get("last_synced_at"),
     )

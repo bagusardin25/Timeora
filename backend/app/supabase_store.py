@@ -11,6 +11,7 @@ from app.models import (
     EventResponse,
     EventUpdate,
 )
+from app.storage_normalization import json_object, string_list
 
 _HEADERS = lambda: {
     "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
@@ -63,9 +64,9 @@ def _row_to_event(row: dict) -> EventResponse:
         description=row.get("description") or "",
         location_url=row.get("location_url"),
         priority=row.get("priority") or "normal",
-        tags=list(row.get("tags") or []),
+        tags=string_list(row.get("tags")),
         reminder_minutes=row.get("reminder_minutes"),
-        external_ids=row.get("external_ids") or {},
+        external_ids=json_object(row.get("external_ids")),
         sync_status=row.get("sync_status") or "not_synced",
         last_synced_at=row.get("last_synced_at"),
     )
