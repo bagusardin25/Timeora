@@ -73,6 +73,33 @@ class TestAssistantClarification(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.result["primary_event_id"], "one")
         self.assertEqual(response.result["event_data"], {"priority": "important"})
 
+    async def test_reschedule_preview_requires_new_date_and_time(self):
+        events = [event("one", "Product Sync", 14)]
+        with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=events)):
+            response = await assistant._handle_reschedule(
+                {"id": "user-1"},
+                {"title": "Product Sync", "date": None, "start_time": None},
+            )
+
+        self.assertFalse(response.requires_confirmation)
+        self.assertEqual(response.intent, "reschedule")
+        self.assertIn("new date and time", response.message)
+        self.assertIn("edit", response.suggested_actions)
+
+    async def test_find_slot_ignores_invalid_requested_time(self):
+        with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=[])):
+            response = await assistant._handle_find_slot(
+                {"id": "user-1"},
+                {
+                    "date": "2026-07-06",
+                    "start_time": "not-a-time",
+                    "duration_minutes": 60,
+                },
+            )
+
+        self.assertEqual(response.intent, "find_slot")
+        self.assertGreater(len(response.result), 0)
+
 
 class TestAssistantNativeTools(unittest.IsolatedAsyncioTestCase):
     async def test_confirmed_create_uses_calendar_data_access(self):
