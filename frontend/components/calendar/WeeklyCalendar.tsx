@@ -8,6 +8,7 @@ import interactionPlugin, {
   type DateClickArg,
   type EventResizeDoneArg,
 } from "@fullcalendar/interaction";
+import { format } from "date-fns";
 import type {
   EventClickArg,
   EventDropArg,
@@ -42,6 +43,10 @@ const DEFAULT_CATEGORY_PRESETS: Record<string, string[]> = {
   "Focus": ["focus"],
   "Life": ["personal", "health", "social"],
 };
+
+function formatCalendarDate(date: Date): string {
+  return format(date, "yyyy-MM-dd");
+}
 
 function readCategoryPresets(): Record<string, string[]> {
   if (typeof window === "undefined") return DEFAULT_CATEGORY_PRESETS;
@@ -481,8 +486,8 @@ export function WeeklyCalendar({
           datesSet={(arg) => {
             setCalendarTitle(arg.view.title);
             if (onDatesChange) {
-              const from = arg.start.toISOString().slice(0, 10);
-              const to = arg.end.toISOString().slice(0, 10);
+              const from = formatCalendarDate(arg.start);
+              const to = formatCalendarDate(arg.end);
               onDatesChange(from, to);
             }
           }}

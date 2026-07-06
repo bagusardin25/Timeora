@@ -1,5 +1,5 @@
 import json
-from datetime import date, datetime, time, timedelta
+from datetime import date, time
 
 from app.core import conflicts as conflicts_engine
 from app.database import ensure_pool
@@ -57,45 +57,6 @@ def _row_to_event(row) -> EventResponse:
         sync_status=row.get("sync_status") or "not_synced",
         last_synced_at=row.get("last_synced_at"),
     )
-
-
-async def _check_conflict_sql(
-    conn, user_id: str, event_date, start_time, duration_minutes, exclude_id=None
-):
-    new_end = (
-        datetime.combine(event_date, start_time) + timedelta(minutes=duration_minutes)
-    ).time()
-    query = """
-        SELECT id, title, start_time, duration_minutes
-        FROM events
-        WHERE user_id = $1 AND date = $2
-          AND (deleted_at IS NULL)
-          AND start_time < $3
-          AND (start_time + (duration_minutes::text || ' minutes')::interval) > $4
-    """
-    params = [user_id, event_date, new_end, start_time]
-    if exclude_id:
-        query += " AND id != $5"
-        params.append(exclude_id)
-    return await conn.fetchrow(query, *params)
-
-
-async def _generate_alternatives_sql(
-    conn, user_id: str, event_date, duration_minutes, count=3
-) -> list[AlternativeSlot]:
-    slots: list[AlternativeSlot] = []
-    candidate = time(8, 0)
-    while len(slots) < count and candidate < time(22, 0):
-        conflict = await _check_conflict_sql(
-            conn, user_id, event_date, candidate, duration_minutes
-        )
-        if not conflict:
-            slots.append(
-                AlternativeSlot(start_time=candidate, duration_minutes=duration_minutes)
-            )
-        candidate_dt = datetime.combine(event_date, candidate) + timedelta(minutes=30)
-        candidate = candidate_dt.time()
-    return slots
 
 
 async def _events_as_dicts(user_id: str) -> list[dict]:
