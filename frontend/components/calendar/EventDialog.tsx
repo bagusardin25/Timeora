@@ -172,7 +172,7 @@ export function EventDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[560px] glass border border-zinc-200/50 dark:border-white/10 bg-white/90 dark:bg-zinc-950/90 shadow-2xl backdrop-blur-2xl rounded-t-3xl sm:rounded-2xl overflow-hidden p-0 gap-0 fixed sm:static bottom-0 left-0 right-0 w-full sm:w-auto max-h-[calc(100dvh-1rem)] sm:max-h-[90dvh] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-bottom sm:data-[state=closed]:slide-out-to-bottom-0 data-[state=open]:slide-in-from-bottom sm:data-[state=open]:slide-in-from-bottom-0">
+      <DialogContent className="glass fixed top-auto bottom-0 left-0 right-0 z-50 w-full translate-x-0 translate-y-0 border border-zinc-200/50 bg-white/90 p-0 gap-0 shadow-2xl backdrop-blur-2xl rounded-t-3xl overflow-hidden max-h-[calc(100dvh-1rem)] dark:border-white/10 dark:bg-zinc-950/90 sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:right-auto sm:w-full sm:max-w-[560px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:max-h-[90dvh] data-[state=closed]:slide-out-to-bottom sm:data-[state=closed]:slide-out-to-bottom-0 data-[state=open]:slide-in-from-bottom sm:data-[state=open]:slide-in-from-bottom-0">
         <DialogHeader className="px-6 py-5 border-b border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-black/20">
           <DialogTitle className="text-xl font-semibold flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
