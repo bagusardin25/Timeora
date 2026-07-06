@@ -106,7 +106,8 @@ export function EventDialog({
   };
 
   const handleSave = () => {
-    if (!formData.title || !formData.date || !formData.start_time) return;
+    const title = formData.title?.trim();
+    if (!title || !formData.date || !formData.start_time) return;
     
     // Convert HH:MM to HH:MM:SS for start_time if needed
     let finalStart = formData.start_time;
@@ -116,7 +117,7 @@ export function EventDialog({
 
     onSave({
       id: formData.id,
-      title: formData.title,
+      title,
       date: formData.date,
       start_time: finalStart,
       duration_minutes: formData.duration_minutes || 60,
@@ -138,10 +139,11 @@ export function EventDialog({
   };
 
   const handleSaveAsTemplate = () => {
-    if (!formData.title) return;
+    const title = formData.title?.trim();
+    if (!title) return;
     saveTemplate({
-      name: formData.title,
-      title: formData.title,
+      name: title,
+      title,
       duration_minutes: formData.duration_minutes || 60,
       start_time: formData.start_time || "09:00:00",
       category: formData.category || null,
@@ -458,7 +460,7 @@ export function EventDialog({
                 Hapus
               </Button>
             )}
-            {!formData.id && formData.title && (
+            {!formData.id && formData.title?.trim() && (
               <Button
                 type="button"
                 variant="ghost"
