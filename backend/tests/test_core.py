@@ -35,6 +35,33 @@ class TestNaturalLanguageParser(unittest.TestCase):
         self.assertEqual(result["start_time"], "14:00")
         self.assertEqual(result["duration_minutes"], 30)
 
+    def test_invalid_time_minutes_do_not_crash_parser(self):
+        result = parse(
+            "jadwalkan deployment besok jam 10:75 selama 30 menit",
+            self.today,
+        )
+
+        self.assertEqual(result["intent"], "create")
+        self.assertEqual(result["title"], "deployment")
+        self.assertEqual(result["start_time"], "09:00")
+        self.assertIn("No time found — defaulting to 09:00", result["warnings"])
+
+    def test_parses_indonesian_midnight_wording(self):
+        result = parse("jadwalkan maintenance besok jam 12 malam", self.today)
+
+        self.assertEqual(result["date"], "2026-07-05")
+        self.assertEqual(result["start_time"], "00:00")
+
+    def test_absolute_date_without_year_rolls_forward_when_past(self):
+        result = parse(
+            "jadwalkan kickoff 1 Januari jam 9 pagi",
+            today=date(2026, 12, 31),
+        )
+
+        self.assertEqual(result["date"], "2027-01-01")
+        self.assertEqual(result["start_time"], "09:00")
+        self.assertEqual(result["title"], "kickoff")
+
     def test_parses_english_day_after_tomorrow_before_tomorrow(self):
         result = parse("review day after tomorrow at 11am", self.today)
 
