@@ -43,6 +43,20 @@ describe("fetchApi", () => {
     expect(localStorage.getItem("refresh_token")).toBeNull();
   });
 
+  it("attaches an abort signal to token refresh requests", async () => {
+    localStorage.setItem("token", "expired-access");
+    localStorage.setItem("refresh_token", "expired-refresh");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse(401, { detail: "expired" }))
+      .mockResolvedValueOnce(jsonResponse(401, { detail: "invalid refresh" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchApi("/events")).rejects.toBeInstanceOf(ApiError);
+
+    expect(fetchMock.mock.calls[1][1]?.signal).toBeInstanceOf(AbortSignal);
+  });
+
   it("clears a stale access token when no refresh token is available", async () => {
     localStorage.setItem("token", "expired-access");
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(401, { detail: "expired" }));
