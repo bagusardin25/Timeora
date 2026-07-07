@@ -221,8 +221,11 @@ export default function DashboardPage() {
       const a = document.createElement("a");
       a.href = url;
       a.download = "timeora.ics";
+      a.style.display = "none";
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
       setAssistantToast("Calendar exported — timeora.ics downloaded.");
     } catch (err: unknown) {
       toast.error(errorMessage(err, "Failed to export calendar"));
@@ -560,10 +563,12 @@ export default function DashboardPage() {
             size="sm"
             onClick={handleExportIcs}
             disabled={exporting}
+            aria-label="Export .ics"
+            data-testid="export-ics-button"
             className="hidden sm:flex hover:bg-violet-50 hover:text-violet-600 dark:hover:bg-violet-500/10 dark:hover:text-violet-500 transition-colors font-medium rounded-xl"
           >
             <Download className="w-4 h-4 mr-2" />
-            Export
+            Export .ics
           </Button>
           
           <Button variant="ghost" size="sm" onClick={handleLogout} className="hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-500 transition-colors font-medium rounded-xl">

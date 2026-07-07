@@ -20,6 +20,11 @@ async def init_pool(retries: int = 3) -> None:
     global pool, _active_dsn
     if pool is not None:
         return
+    if settings.SUPABASE_URL and settings.SUPABASE_SERVICE_ROLE_KEY:
+        print("[db] Supabase REST store configured; skipping direct database pool")
+        pool = None
+        _active_dsn = None
+        return
 
     candidates = candidate_database_dsns()
     if not candidates:

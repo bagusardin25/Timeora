@@ -13,15 +13,39 @@ from app.models import (
 )
 
 router = APIRouter()
+AUTH_PROVIDER_TIMEOUT = httpx.Timeout(10.0, connect=5.0)
 
-_SUPABASE_HEADERS = {
-    "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
-    "Content-Type": "application/json",
-}
+
+def _supabase_headers() -> dict[str, str]:
+    return {
+        "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+    }
 
 
 async def _ensure_user_row(user_id: str, email: str) -> None:
     await data_access.upsert_user(user_id, email)
+
+
+async def _post_supabase(url: str, payload: dict) -> httpx.Response:
+    try:
+        async with httpx.AsyncClient(timeout=AUTH_PROVIDER_TIMEOUT) as client:
+            return await client.post(
+                url,
+                json=payload,
+                headers=_supabase_headers(),
+            )
+    except httpx.TimeoutException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Authentication provider timed out",
+        ) from exc
+    except httpx.RequestError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Authentication provider unavailable",
+        ) from exc
 
 
 @router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
@@ -33,8 +57,7 @@ async def register(body: RegisterRequest):
         "email_confirm": True,
     }
 
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(url, json=payload, headers=_SUPABASE_HEADERS)
+    resp = await _post_supabase(url, payload)
 
     if resp.status_code not in (200, 201):
         detail = "Registration failed"
@@ -64,12 +87,10 @@ async def register(body: RegisterRequest):
         await _ensure_user_row(user_id, email)
 
     login_url = f"{settings.SUPABASE_URL}/auth/v1/token?grant_type=password"
-    async with httpx.AsyncClient() as client:
-        login_resp = await client.post(
-            login_url,
-            json={"email": body.email, "password": body.password},
-            headers=_SUPABASE_HEADERS,
-        )
+    login_resp = await _post_supabase(
+        login_url,
+        {"email": body.email, "password": body.password},
+    )
 
     if login_resp.status_code == 200:
         login_data = login_resp.json()
@@ -88,8 +109,7 @@ async def login(body: LoginRequest):
     url = f"{settings.SUPABASE_URL}/auth/v1/token?grant_type=password"
     payload = {"email": body.email, "password": body.password}
 
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(url, json=payload, headers=_SUPABASE_HEADERS)
+    resp = await _post_supabase(url, payload)
 
     if resp.status_code != 200:
         raise HTTPException(
@@ -113,12 +133,7 @@ async def login(body: LoginRequest):
 async def refresh_session(body: RefreshRequest):
     """Refresh an expired session using a Supabase refresh token."""
     url = f"{settings.SUPABASE_URL}/auth/v1/token?grant_type=refresh_token"
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(
-            url,
-            json={"refresh_token": body.refresh_token},
-            headers=_SUPABASE_HEADERS,
-        )
+    resp = await _post_supabase(url, {"refresh_token": body.refresh_token})
 
     if resp.status_code != 200:
         raise HTTPException(

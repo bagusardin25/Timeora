@@ -13,8 +13,12 @@ from app.storage_normalization import json_object, string_list
 from app import supabase_store
 
 
+def _use_supabase_rest() -> bool:
+    return supabase_store.is_configured()
+
+
 def db_available() -> bool:
-    if supabase_store.is_configured():
+    if _use_supabase_rest():
         return True
     from app.database import get_pool
 
@@ -22,6 +26,9 @@ def db_available() -> bool:
 
 
 async def upsert_user(user_id: str, email: str) -> None:
+    if _use_supabase_rest():
+        await supabase_store.upsert_user(user_id, email)
+        return
     pool = await ensure_pool()
     if pool is not None:
         async with pool.acquire() as conn:
@@ -31,8 +38,6 @@ async def upsert_user(user_id: str, email: str) -> None:
                 email,
             )
         return
-    if supabase_store.is_configured():
-        await supabase_store.upsert_user(user_id, email)
 
 
 def _row_to_event(row) -> EventResponse:
@@ -109,6 +114,8 @@ async def _conflict_detail(
 
 
 async def list_events(user_id: str) -> list[EventResponse]:
+    if _use_supabase_rest():
+        return await supabase_store.list_events(user_id)
     pool = await ensure_pool()
     if pool is not None:
         async with pool.acquire() as conn:
@@ -123,6 +130,10 @@ async def list_events(user_id: str) -> list[EventResponse]:
 async def has_external_event_id(
     user_id: str, provider: str, external_id: str
 ) -> bool:
+    if _use_supabase_rest():
+        return await supabase_store.has_external_event_id(
+            user_id, provider, external_id
+        )
     pool = await ensure_pool()
     if pool is not None:
         async with pool.acquire() as conn:
@@ -147,6 +158,8 @@ async def has_external_event_id(
 
 
 async def get_event(event_id: str, user_id: str) -> EventResponse:
+    if _use_supabase_rest():
+        return await supabase_store.get_event(event_id, user_id)
     pool = await ensure_pool()
     if pool is not None:
         async with pool.acquire() as conn:
@@ -164,6 +177,8 @@ async def get_event(event_id: str, user_id: str) -> EventResponse:
 
 
 async def create_event(user_id: str, body: EventCreate) -> EventResponse:
+    if _use_supabase_rest():
+        return await supabase_store.create_event(user_id, body)
     detail = await _conflict_detail(
         user_id, body.date, body.start_time, body.duration_minutes
     )
@@ -215,6 +230,8 @@ async def create_event(user_id: str, body: EventCreate) -> EventResponse:
 async def update_event(
     event_id: str, user_id: str, body: EventUpdate
 ) -> EventResponse:
+    if _use_supabase_rest():
+        return await supabase_store.update_event(event_id, user_id, body)
     existing = await get_event(event_id, user_id)
     update_data = body.model_dump(exclude_unset=True)
     if not update_data:
@@ -273,6 +290,9 @@ async def update_event(
 
 async def delete_event(event_id: str, user_id: str) -> None:
     """Soft-delete: sets deleted_at instead of removing the row."""
+    if _use_supabase_rest():
+        await supabase_store.delete_event(event_id, user_id)
+        return
     pool = await ensure_pool()
     if pool is not None:
         async with pool.acquire() as conn:
@@ -291,6 +311,8 @@ async def delete_event(event_id: str, user_id: str) -> None:
 
 async def restore_event(event_id: str, user_id: str) -> EventResponse:
     """Restore a soft-deleted event by clearing deleted_at."""
+    if _use_supabase_rest():
+        return await supabase_store.restore_event(event_id, user_id)
     pool = await ensure_pool()
     if pool is not None:
         async with pool.acquire() as conn:
@@ -310,6 +332,10 @@ async def restore_event(event_id: str, user_id: str) -> EventResponse:
 async def check_conflict(
     user_id: str, event_date: date, start_time: time, duration_minutes: int
 ):
+    if _use_supabase_rest():
+        return await supabase_store.check_conflict(
+            user_id, event_date, start_time, duration_minutes
+        )
     detail = await _conflict_detail(
         user_id, event_date, start_time, duration_minutes
     )

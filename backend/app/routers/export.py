@@ -35,7 +35,7 @@ async def export_ics(user: dict = Depends(get_current_user)):
 
     return Response(
         content=ics_content,
-        media_type="text/calendar",
+        media_type="text/calendar; charset=utf-8",
         headers={
             "Content-Disposition": "attachment; filename=timeora.ics",
         },
