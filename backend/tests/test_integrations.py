@@ -1,9 +1,10 @@
 import unittest
+import os
 from unittest.mock import patch
 
 from fastapi import HTTPException
 
-from app.config import settings
+from app.config import Settings, settings
 from app.core.ics_import import parse_ics
 from app.integrations.crypto import (
     decrypt_token,
@@ -13,6 +14,20 @@ from app.integrations.crypto import (
 )
 from app.integrations.email import participant_emails
 from app.integrations.webhooks import validate_webhook_target
+
+
+class TestProviderConfig(unittest.TestCase):
+    def test_documented_openrouter_env_var_is_used(self):
+        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "documented-key"}, clear=True):
+            config = Settings(_env_file=None)
+
+        self.assertEqual(config.openrouter_api_key, "documented-key")
+
+    def test_legacy_openroute_env_var_still_works(self):
+        with patch.dict(os.environ, {"OPENROUTE_API_KEY": "legacy-key"}, clear=True):
+            config = Settings(_env_file=None)
+
+        self.assertEqual(config.openrouter_api_key, "legacy-key")
 
 
 class TestIcsImport(unittest.TestCase):
@@ -46,6 +61,26 @@ class TestIcsImport(unittest.TestCase):
             event.participants, "one@example.com, two@example.com"
         )
         self.assertEqual(event.external_ids, {"ics": "external-123"})
+
+    def test_parses_weekend_weekly_recurrence(self):
+        content = "\r\n".join(
+            [
+                "BEGIN:VCALENDAR",
+                "VERSION:2.0",
+                "BEGIN:VEVENT",
+                "DTSTART:20260711T090000",
+                "DTEND:20260711T100000",
+                "SUMMARY:Saturday training",
+                "RRULE:FREQ=WEEKLY;BYDAY=SA",
+                "END:VEVENT",
+                "END:VCALENDAR",
+            ]
+        )
+
+        events, errors = parse_ics(content, default_timezone="UTC")
+
+        self.assertEqual(errors, [])
+        self.assertEqual(events[0].recurrence_rule, "weekly:saturday")
 
     def test_unfolds_lines_and_uses_duration(self):
         content = "\n".join(

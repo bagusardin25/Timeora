@@ -1,34 +1,43 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Save, User, Clock, Shield, Trash2, Download, Calendar as CalendarIcon } from "lucide-react";
+import { ArrowLeft, Save, User, Clock, Shield, Trash2, Download } from "lucide-react";
+import {
+  DEFAULT_PREFERENCES,
+  readStoredPreferences,
+  savePreferences,
+  type UserPreferences,
+} from "@/lib/preferences";
+import { exportIcs } from "@/lib/api";
 
-interface UserPreferences {
-  timezone: string;
-  defaultDuration: number;
-  workingHoursStart: string;
-  workingHoursEnd: string;
+function decodeBase64Url(value: string): string {
+  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
 }
-
-const DEFAULT_PREFERENCES: UserPreferences = {
-  timezone: "",
-  defaultDuration: 60,
-  workingHoursStart: "09:00",
-  workingHoursEnd: "17:00",
-};
 
 function getTokenEmail(): string | null {
   try {
     const token = localStorage.getItem("token");
     if (!token) return null;
+    const payloadSegment = token.split(".")[1];
+    if (!payloadSegment) return null;
 
     // Simple JWT payload decode (no validation)
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.email || payload.user_metadata?.email || null;
+    const payload = JSON.parse(decodeBase64Url(payloadSegment)) as {
+      email?: unknown;
+      user_metadata?: { email?: unknown };
+    };
+    if (typeof payload.email === "string") return payload.email;
+    if (typeof payload.user_metadata?.email === "string") return payload.user_metadata.email;
+    return null;
   } catch {
     return null;
   }
@@ -54,20 +63,8 @@ export default function ProfilePage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setUserEmail(email);
 
-    // Load from localStorage
-    const saved = localStorage.getItem("timeora_preferences");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setPreferences({ ...DEFAULT_PREFERENCES, ...parsed });
-      } catch {
-        // ignore
-      }
-    } else {
-      // Use detected timezone if none saved
-      const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      setPreferences((prev) => ({ ...prev, timezone: detected }));
-    }
+    const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    setPreferences(readStoredPreferences(detected));
   }, [router]);
 
   const handleChange = (key: keyof UserPreferences, value: string | number) => {
@@ -79,7 +76,8 @@ export default function ProfilePage() {
     setMessage(null);
 
     try {
-      localStorage.setItem("timeora_preferences", JSON.stringify(preferences));
+      const normalized = savePreferences(preferences);
+      setPreferences(normalized);
 
       // Optional: sync to backend later
       setMessage("Preferences saved successfully!");
@@ -93,20 +91,19 @@ export default function ProfilePage() {
 
   const handleExportData = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api").replace(/\/$/, "");
-      const res = await fetch(`${baseUrl}/export/ics`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) throw new Error("Export failed");
-
-      const blob = await res.blob();
+      const blob = await exportIcs();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
-      a.download = "timeora-full-export.ics";
-      a.click();
-      URL.revokeObjectURL(url);
+      try {
+        a.href = url;
+        a.download = "timeora-full-export.ics";
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+      } finally {
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
       setMessage("Data exported successfully!");
     } catch {
       setMessage("Export failed. Please try again.");
@@ -139,14 +136,18 @@ export default function ProfilePage() {
             Back to Dashboard
           </Button>
           <div className="flex items-center gap-2">
-            <img
+            <Image
               src="/logomark_lightmode.png"
               alt="Timeora Logo"
+              width={474}
+              height={403}
               className="block dark:hidden w-8 h-8 object-contain"
             />
-            <img
+            <Image
               src="/logomark.png"
               alt="Timeora Logo"
+              width={627}
+              height={502}
               className="hidden dark:block w-8 h-8 object-contain"
             />
             <div>

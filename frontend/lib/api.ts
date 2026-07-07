@@ -1,4 +1,7 @@
+import { persistAuthTokens } from './session';
+
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/+$/, '');
+const DEFAULT_TIMEOUT_MS = 15_000;
 
 type JsonRecord = Record<string, unknown>;
 
@@ -35,24 +38,72 @@ type AuthTokenResponse = {
   refresh_token?: string;
 };
 
+function clearSession(): void {
+  localStorage.removeItem('token');
+  localStorage.removeItem('refresh_token');
+  window.dispatchEvent(new CustomEvent('timeora:auth-expired'));
+}
+
+async function responseData(response: Response): Promise<unknown> {
+  if (response.status === 204) return null;
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    return response.json().catch(() => ({}));
+  }
+  const text = await response.text().catch(() => '');
+  return text ? { detail: text } : {};
+}
+
+function requestSignal(external?: AbortSignal | null): {
+  signal: AbortSignal;
+  dispose: () => void;
+} {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+  const abortFromExternal = () => controller.abort(external?.reason);
+  if (external?.aborted) {
+    controller.abort(external.reason);
+  } else {
+    external?.addEventListener('abort', abortFromExternal, { once: true });
+  }
+  return {
+    signal: controller.signal,
+    dispose: () => {
+      window.clearTimeout(timeout);
+      external?.removeEventListener('abort', abortFromExternal);
+    },
+  };
+}
+
 async function refreshAccessToken(): Promise<boolean> {
   const refreshToken = localStorage.getItem('refresh_token');
-  if (!refreshToken) return false;
+  if (!refreshToken) {
+    if (localStorage.getItem('token')) clearSession();
+    return false;
+  }
+  const timeout = requestSignal();
   try {
     const resp = await fetch(`${API_BASE_URL}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refreshToken }),
+      signal: timeout.signal,
     });
-    if (!resp.ok) return false;
+    if (!resp.ok) {
+      clearSession();
+      return false;
+    }
     const data = await resp.json() as AuthTokenResponse;
     if (data.access_token) {
-      localStorage.setItem('token', data.access_token);
-      if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
+      persistAuthTokens(data, { preserveRefreshToken: true });
       return true;
     }
+    clearSession();
   } catch {
+    clearSession();
     return false;
+  } finally {
+    timeout.dispose();
   }
   return false;
 }
@@ -71,10 +122,26 @@ export async function fetchApi<T = unknown>(
   }
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  const timeout = requestSignal(options.signal);
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+      signal: timeout.signal,
+    });
+  } catch (error: unknown) {
+    if (timeout.signal.aborted) {
+      throw new ApiError(408, { detail: 'The request took too long. Please try again.' }, 'Request timed out');
+    }
+    throw new ApiError(
+      0,
+      { detail: error instanceof Error ? error.message : 'Network request failed' },
+      'Network request failed',
+    );
+  } finally {
+    timeout.dispose();
+  }
 
   if (response.status === 401 && retry && !endpoint.includes('/auth/')) {
     const refreshed = await refreshAccessToken();
@@ -82,7 +149,7 @@ export async function fetchApi<T = unknown>(
   }
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
+    const errorData = await responseData(response);
     throw new ApiError(response.status, errorData, 'An error occurred while fetching data');
   }
 
@@ -90,7 +157,7 @@ export async function fetchApi<T = unknown>(
     return null as T;
   }
 
-  return response.json() as Promise<T>;
+  return responseData(response) as Promise<T>;
 }
 
 export type ParseResult = {
@@ -112,13 +179,26 @@ export type AssistantResult = {
   message: string;
   requires_confirmation?: boolean;
   executed?: boolean;
+  clarification?: {
+    type: string;
+    prompt: string;
+    choices: Array<{
+      id: string;
+      title: string;
+      date?: string | null;
+      start_time?: string | null;
+    }>;
+  } | null;
+  events?: ApiEvent[];
+  suggested_actions?: string[];
 };
 
 export type AssistantExecuteParams = {
-  event_id: string;
-  action: 'cancel' | 'reschedule';
+  event_id?: string;
+  action: 'cancel' | 'reschedule' | 'create' | 'update';
   new_date?: string;
   new_time?: string;
+  event_data?: Record<string, unknown>;
 };
 
 export async function parseEventNL(text: string): Promise<ParseResult> {
@@ -128,10 +208,13 @@ export async function parseEventNL(text: string): Promise<ParseResult> {
   });
 }
 
-export async function callAssistant(text: string): Promise<AssistantResult> {
+export async function callAssistant(
+  text: string,
+  options?: { selected_event_id?: string; context_event_id?: string },
+): Promise<AssistantResult> {
   return fetchApi<AssistantResult>('/assistant', {
     method: 'POST',
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, ...options }),
   });
 }
 
@@ -144,6 +227,7 @@ export async function executeAssistant(params: AssistantExecuteParams): Promise<
       action: params.action,
       new_date: params.new_date,
       new_time: params.new_time,
+      event_data: params.event_data,
     }),
   });
 }
@@ -232,6 +316,11 @@ export type ApiEvent = {
   participants?: string;
   recurrence_rule?: string | null;
   category?: string | null;
+  description: string;
+  location_url?: string | null;
+  priority: 'low' | 'normal' | 'important';
+  tags: string[];
+  reminder_minutes?: number | null;
   external_ids?: Record<string, string>;
   sync_status?: string;
   last_synced_at?: string | null;
@@ -253,13 +342,33 @@ export async function fetchEventsExpanded(
   return fetchApi<ApiEvent[]>(`/events?${qs.toString()}`);
 }
 
-export async function exportIcs(): Promise<Blob> {
+export async function exportIcs(retry = true): Promise<Blob> {
   const token = localStorage.getItem('token');
-  const response = await fetch(`${API_BASE_URL}/export/ics`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const timeout = requestSignal();
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/export/ics`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      signal: timeout.signal,
+    });
+  } catch (error: unknown) {
+    if (timeout.signal.aborted) {
+      throw new ApiError(408, { detail: 'The export took too long. Please try again.' }, 'Export timed out');
+    }
+    throw new ApiError(
+      0,
+      { detail: error instanceof Error ? error.message : 'Calendar export failed' },
+      'Calendar export failed',
+    );
+  } finally {
+    timeout.dispose();
+  }
+  if (response.status === 401 && retry) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) return exportIcs(false);
+  }
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
+    const errorData = await responseData(response);
     throw new ApiError(response.status, errorData, 'Failed to export calendar');
   }
   return response.blob();

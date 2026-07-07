@@ -1,4 +1,6 @@
-import { EventData } from "@/components/calendar/EventDialog";
+import { CATEGORIES } from "@/lib/categories";
+import type { EventData } from "@/components/calendar/EventDialog";
+import { format } from "date-fns";
 
 export type EventTemplate = {
   id: string;
@@ -11,6 +13,10 @@ export type EventTemplate = {
 };
 
 const STORAGE_KEY = "timeora_templates";
+const MIN_TEMPLATE_DURATION = 5;
+const MAX_TEMPLATE_DURATION = 480;
+const DEFAULT_TEMPLATE_START_TIME = "09:00:00";
+const TIME_VALUE_PATTERN = /^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/;
 
 const DEFAULT_TEMPLATES: EventTemplate[] = [
   {
@@ -51,37 +57,94 @@ const DEFAULT_TEMPLATES: EventTemplate[] = [
   },
 ];
 
-export function getTemplates(): EventTemplate[] {
-  if (typeof window === "undefined") return DEFAULT_TEMPLATES;
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return DEFAULT_TEMPLATES;
-    const parsed = JSON.parse(stored) as EventTemplate[];
-    return [...DEFAULT_TEMPLATES, ...parsed];
-  } catch {
-    return DEFAULT_TEMPLATES;
-  }
+function isEventTemplate(value: unknown): value is EventTemplate {
+  if (!value || typeof value !== "object") return false;
+  const template = value as Partial<EventTemplate>;
+  return (
+    typeof template.id === "string" &&
+    typeof template.name === "string" &&
+    typeof template.title === "string" &&
+    typeof template.duration_minutes === "number" &&
+    Number.isFinite(template.duration_minutes) &&
+    template.duration_minutes >= MIN_TEMPLATE_DURATION &&
+    template.duration_minutes <= MAX_TEMPLATE_DURATION &&
+    typeof template.start_time === "string" &&
+    TIME_VALUE_PATTERN.test(template.start_time) &&
+    (template.category === null || (
+      typeof template.category === "string" &&
+      template.category in CATEGORIES
+    )) &&
+    typeof template.participants === "string"
+  );
 }
 
-export function getCustomTemplates(): EventTemplate[] {
+function normalizeDuration(value: number): number {
+  if (!Number.isFinite(value)) return 60;
+  return Math.min(
+    MAX_TEMPLATE_DURATION,
+    Math.max(MIN_TEMPLATE_DURATION, Math.round(value)),
+  );
+}
+
+function normalizeStartTime(value: string): string {
+  if (!TIME_VALUE_PATTERN.test(value)) return DEFAULT_TEMPLATE_START_TIME;
+  return value.length === 5 ? `${value}:00` : value;
+}
+
+function normalizeCategory(value: string | null): string | null {
+  if (!value) return null;
+  return value in CATEGORIES ? value : null;
+}
+
+function normalizeTemplate(template: Omit<EventTemplate, "id">): Omit<EventTemplate, "id"> {
+  return {
+    ...template,
+    duration_minutes: normalizeDuration(template.duration_minutes),
+    start_time: normalizeStartTime(template.start_time),
+    category: normalizeCategory(template.category),
+  };
+}
+
+function readCustomTemplates(): EventTemplate[] {
   if (typeof window === "undefined") return [];
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return [];
-    return JSON.parse(stored) as EventTemplate[];
+    const parsed = JSON.parse(stored) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isEventTemplate);
   } catch {
     return [];
   }
 }
 
+function writeCustomTemplates(templates: EventTemplate[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(templates));
+  } catch {
+    // Storage can fail in private mode or when quota is exceeded.
+    // Template save/delete should not break the event creation flow.
+  }
+}
+
+export function getTemplates(): EventTemplate[] {
+  if (typeof window === "undefined") return DEFAULT_TEMPLATES;
+  return [...DEFAULT_TEMPLATES, ...readCustomTemplates()];
+}
+
+export function getCustomTemplates(): EventTemplate[] {
+  return readCustomTemplates();
+}
+
 export function saveTemplate(template: Omit<EventTemplate, "id">): EventTemplate {
   const custom = getCustomTemplates();
   const newTemplate: EventTemplate = {
-    ...template,
+    ...normalizeTemplate(template),
     id: `custom-${Date.now()}`,
   };
   custom.push(newTemplate);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(custom));
+  writeCustomTemplates(custom);
   return newTemplate;
 }
 
@@ -89,7 +152,7 @@ export function deleteTemplate(id: string): void {
   // Only allow deleting custom templates
   if (id.startsWith("preset-")) return;
   const custom = getCustomTemplates().filter((t) => t.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(custom));
+  writeCustomTemplates(custom);
 }
 
 export function applyTemplate(
@@ -98,7 +161,7 @@ export function applyTemplate(
 ): Partial<EventData> {
   return {
     title: template.title,
-    date: date || new Date().toISOString().slice(0, 10),
+    date: date || format(new Date(), "yyyy-MM-dd"),
     start_time: template.start_time,
     duration_minutes: template.duration_minutes,
     participants: template.participants,

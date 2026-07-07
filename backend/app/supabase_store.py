@@ -1,8 +1,9 @@
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time
 
 import httpx
 from fastapi import HTTPException, status
 
+from app.core import conflicts as conflicts_engine
 from app.config import settings
 from app.models import (
     AlternativeSlot,
@@ -10,6 +11,7 @@ from app.models import (
     EventResponse,
     EventUpdate,
 )
+from app.storage_normalization import json_object, string_list
 
 _HEADERS = lambda: {
     "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
@@ -59,7 +61,12 @@ def _row_to_event(row: dict) -> EventResponse:
         participants=row.get("participants") or "",
         recurrence_rule=row.get("recurrence_rule"),
         category=row.get("category"),
-        external_ids=row.get("external_ids") or {},
+        description=row.get("description") or "",
+        location_url=row.get("location_url"),
+        priority=row.get("priority") or "normal",
+        tags=string_list(row.get("tags")),
+        reminder_minutes=row.get("reminder_minutes"),
+        external_ids=json_object(row.get("external_ids")),
         sync_status=row.get("sync_status") or "not_synced",
         last_synced_at=row.get("last_synced_at"),
     )
@@ -74,17 +81,35 @@ def _serialize_event_payload(data: dict) -> dict:
     return payload
 
 
-def _event_end(start: time, duration_minutes: int) -> time:
-    dt = datetime.combine(date.today(), start) + timedelta(minutes=duration_minutes)
-    return dt.time()
+def _events_as_dicts(events: list[EventResponse]) -> list[dict]:
+    return [event.model_dump(mode="json") for event in events]
 
 
-def _times_overlap(
-    start_a: time, dur_a: int, start_b: time, dur_b: int
-) -> bool:
-    end_a = _event_end(start_a, dur_a)
-    end_b = _event_end(start_b, dur_b)
-    return start_a < end_b and start_b < end_a
+def _alternatives_from_engine(
+    events: list[EventResponse],
+    event_date: date,
+    start_time: time,
+    duration_minutes: int,
+    count: int = 3,
+) -> list[AlternativeSlot]:
+    raw = conflicts_engine.find_alternatives(
+        _events_as_dicts(events),
+        event_date,
+        start_time,
+        duration_minutes,
+        count=count,
+    )
+    slots: list[AlternativeSlot] = []
+    for alt in raw:
+        hours, minutes = alt["start_time"].split(":", 1)
+        slots.append(
+            AlternativeSlot(
+                start_time=time(int(hours), int(minutes)),
+                duration_minutes=alt["duration_minutes"],
+                reason=alt.get("reason", ""),
+            )
+        )
+    return slots
 
 
 async def upsert_user(user_id: str, email: str) -> None:
@@ -159,32 +184,37 @@ async def _find_conflict(
     exclude_id: str | None = None,
 ) -> dict | None:
     events = await list_events(user_id)
-    for event in events:
-        if exclude_id and event.id == exclude_id:
-            continue
-        if event.date != event_date:
-            continue
-        if _times_overlap(
-            start_time, duration_minutes, event.start_time, event.duration_minutes
-        ):
-            return {"id": event.id, "title": event.title}
+    hits = conflicts_engine.check_conflicts(
+        _events_as_dicts(events),
+        event_date,
+        start_time,
+        duration_minutes,
+        exclude_id=exclude_id,
+    )
+    if hits:
+        hit = hits[0]
+        return {
+            "id": str(hit.get("id")),
+            "title": hit.get("title") or "Existing event",
+        }
     return None
 
 
 async def _generate_alternatives(
-    user_id: str, event_date: date, duration_minutes: int, count: int = 3
+    user_id: str,
+    event_date: date,
+    start_time: time,
+    duration_minutes: int,
+    count: int = 3,
 ) -> list[AlternativeSlot]:
-    slots: list[AlternativeSlot] = []
-    candidate = time(8, 0)
-    while len(slots) < count and candidate < time(22, 0):
-        conflict = await _find_conflict(user_id, event_date, candidate, duration_minutes)
-        if not conflict:
-            slots.append(
-                AlternativeSlot(start_time=candidate, duration_minutes=duration_minutes)
-            )
-        candidate_dt = datetime.combine(event_date, candidate) + timedelta(minutes=30)
-        candidate = candidate_dt.time()
-    return slots
+    events = await list_events(user_id)
+    return _alternatives_from_engine(
+        events,
+        event_date,
+        start_time,
+        duration_minutes,
+        count=count,
+    )
 
 
 async def create_event(user_id: str, body: EventCreate) -> EventResponse:
@@ -192,7 +222,12 @@ async def create_event(user_id: str, body: EventCreate) -> EventResponse:
         user_id, body.date, body.start_time, body.duration_minutes
     )
     if conflict:
-        alts = await _generate_alternatives(user_id, body.date, body.duration_minutes)
+        alts = await _generate_alternatives(
+            user_id,
+            body.date,
+            body.start_time,
+            body.duration_minutes,
+        )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
@@ -212,6 +247,11 @@ async def create_event(user_id: str, body: EventCreate) -> EventResponse:
             "participants": body.participants,
             "recurrence_rule": body.recurrence_rule,
             "category": body.category,
+            "description": body.description,
+            "location_url": body.location_url,
+            "priority": body.priority,
+            "tags": body.tags,
+            "reminder_minutes": body.reminder_minutes,
             "external_ids": body.external_ids,
         }
     )
@@ -231,10 +271,40 @@ async def create_event(user_id: str, body: EventCreate) -> EventResponse:
 async def update_event(
     event_id: str, user_id: str, body: EventUpdate
 ) -> EventResponse:
-    await get_event(event_id, user_id)
+    existing = await get_event(event_id, user_id)
     update_data = body.model_dump(exclude_unset=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
+
+    event_date = body.date if body.date is not None else existing.date
+    start_time = body.start_time if body.start_time is not None else existing.start_time
+    duration_minutes = (
+        body.duration_minutes
+        if body.duration_minutes is not None
+        else existing.duration_minutes
+    )
+    conflict = await _find_conflict(
+        user_id,
+        event_date,
+        start_time,
+        duration_minutes,
+        exclude_id=event_id,
+    )
+    if conflict:
+        alts = await _generate_alternatives(
+            user_id,
+            event_date,
+            start_time,
+            duration_minutes,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "message": "Time slot conflicts with existing event",
+                "conflicting_event": conflict["title"],
+                "alternatives": [a.model_dump(mode="json") for a in alts],
+            },
+        )
 
     url = f"{_base()}/events"
     params = {"id": f"eq.{event_id}", "user_id": f"eq.{user_id}"}
@@ -300,5 +370,10 @@ async def check_conflict(
     conflict = await _find_conflict(user_id, event_date, start_time, duration_minutes)
     if not conflict:
         return False, None, []
-    alts = await _generate_alternatives(user_id, event_date, duration_minutes)
+    alts = await _generate_alternatives(
+        user_id,
+        event_date,
+        start_time,
+        duration_minutes,
+    )
     return True, conflict["title"], alts

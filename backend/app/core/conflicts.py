@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta
 
+MINUTES_PER_DAY = 24 * 60
+
 
 def _to_minutes(t: time) -> int:
     """Convert a time to minutes since midnight."""
@@ -20,14 +22,27 @@ def _from_minutes(m: int) -> time:
     return time(m // 60, m % 60)
 
 
-def _event_range(ev: dict) -> tuple[int, int]:
-    """Return (start_min, end_min) for an event dict."""
+def _event_date(ev: dict) -> date | None:
+    value = ev.get("date")
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        return date.fromisoformat(value[:10])
+    return None
+
+
+def _event_range(ev: dict, reference_date: date | None = None) -> tuple[int, int]:
+    """Return (start_min, end_min), optionally relative to a reference date."""
     st = ev["start_time"]
     if isinstance(st, str):
         parts = st.split(":")
         start_min = int(parts[0]) * 60 + int(parts[1])
     else:
         start_min = _to_minutes(st)
+    if reference_date is not None:
+        ev_date = _event_date(ev)
+        if ev_date is not None:
+            start_min += (ev_date - reference_date).days * MINUTES_PER_DAY
     end_min = start_min + int(ev["duration_minutes"])
     return start_min, end_min
 
@@ -56,13 +71,8 @@ def check_conflicts(
     for ev in events:
         if exclude_id and str(ev.get("id")) == str(exclude_id):
             continue
-        ev_date = ev.get("date")
-        if isinstance(ev_date, str):
-            ev_date = date.fromisoformat(ev_date)
-        if ev_date != new_date:
-            continue
 
-        ev_start, ev_end = _event_range(ev)
+        ev_start, ev_end = _event_range(ev, reference_date=new_date)
         if ev_start < new_end_min and ev_end > new_start_min:
             conflicts.append(ev)
     return conflicts
@@ -84,18 +94,6 @@ def find_alternatives(
         start_time (str HH:MM), duration_minutes, reason (str)
     Lunch hour 12:00–13:00 slots are deprioritised (moved to end).
     """
-    # Gather occupied ranges (with buffer) for the requested date
-    occupied: list[tuple[int, int]] = []
-    for ev in events:
-        ev_date = ev.get("date")
-        if isinstance(ev_date, str):
-            ev_date = date.fromisoformat(ev_date)
-        if ev_date != requested_date:
-            continue
-        s, e = _event_range(ev)
-        occupied.append((s - buffer_minutes, e + buffer_minutes))
-    occupied.sort()
-
     # Scan candidates in 15-min increments
     requested_min = _to_minutes(requested_time)
     candidates: list[dict] = []
@@ -105,12 +103,13 @@ def find_alternatives(
         slot_start = candidate_min
         slot_end = candidate_min + duration
 
-        # Check overlap with any occupied range
-        free = True
-        for occ_start, occ_end in occupied:
-            if slot_start < occ_end and slot_end > occ_start:
-                free = False
-                break
+        free = not check_conflicts(
+            events,
+            requested_date,
+            _from_minutes(slot_start),
+            duration,
+            buffer_minutes=buffer_minutes,
+        )
 
         if free:
             # Build reason

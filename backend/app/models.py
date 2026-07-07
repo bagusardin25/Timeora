@@ -1,7 +1,86 @@
 from datetime import date as Date, datetime as DateTime, time as Time
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from urllib.parse import urlparse
+
+from pydantic import BaseModel, Field, field_validator
+
+_KNOWN_CATEGORIES = {
+    "meeting",
+    "personal",
+    "focus",
+    "health",
+    "social",
+    "other",
+}
+
+
+def _normalize_tags(value: list[str] | None) -> list[str] | None:
+    if value is None:
+        return None
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw_tag in value:
+        tag = raw_tag.strip()
+        key = tag.casefold()
+        if not tag or key in seen:
+            continue
+        seen.add(key)
+        normalized.append(tag)
+    return normalized
+
+
+def _normalize_category(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip().lower()
+    if not normalized:
+        return None
+    if normalized in _KNOWN_CATEGORIES:
+        return normalized
+    return "other"
+
+
+def _normalize_title(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError("title cannot be blank")
+    return normalized
+
+
+def _normalize_request_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError("text cannot be blank")
+    return normalized
+
+
+def _validate_location_url(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    if not normalized:
+        return None
+    if any(char.isspace() for char in normalized):
+        raise ValueError("location_url must use http or https")
+    if "://" not in normalized:
+        if normalized.startswith("//"):
+            normalized = f"https:{normalized}"
+        else:
+            host = normalized.split("/", 1)[0]
+            if "." not in host:
+                raise ValueError("location_url must use http or https")
+            normalized = f"https://{normalized}"
+    parsed = urlparse(normalized)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("location_url must use http or https")
+    if parsed.username or parsed.password:
+        raise ValueError("location_url must use http or https")
+    return normalized
 
 
 class EventCreate(BaseModel):
@@ -12,7 +91,17 @@ class EventCreate(BaseModel):
     participants: str = ""
     recurrence_rule: str | None = None
     category: str | None = None
+    description: str = Field("", max_length=5000)
+    location_url: str | None = Field(None, max_length=2048)
+    priority: Literal["low", "normal", "important"] = "normal"
+    tags: list[str] = Field(default_factory=list, max_length=20)
+    reminder_minutes: int | None = Field(None, ge=0, le=10080)
     external_ids: dict[str, str] = Field(default_factory=dict)
+
+    _title = field_validator("title")(_normalize_title)
+    _location_url = field_validator("location_url")(_validate_location_url)
+    _tags = field_validator("tags")(_normalize_tags)
+    _category = field_validator("category")(_normalize_category)
 
 
 class EventUpdate(BaseModel):
@@ -23,6 +112,16 @@ class EventUpdate(BaseModel):
     participants: str | None = None
     recurrence_rule: str | None = None
     category: str | None = None
+    description: str | None = Field(None, max_length=5000)
+    location_url: str | None = Field(None, max_length=2048)
+    priority: Literal["low", "normal", "important"] | None = None
+    tags: list[str] | None = Field(None, max_length=20)
+    reminder_minutes: int | None = Field(None, ge=0, le=10080)
+
+    _title = field_validator("title")(_normalize_title)
+    _location_url = field_validator("location_url")(_validate_location_url)
+    _tags = field_validator("tags")(_normalize_tags)
+    _category = field_validator("category")(_normalize_category)
 
 
 class EventResponse(BaseModel):
@@ -35,9 +134,16 @@ class EventResponse(BaseModel):
     participants: str
     recurrence_rule: str | None = None
     category: str | None = None
+    description: str = ""
+    location_url: str | None = None
+    priority: Literal["low", "normal", "important"] = "normal"
+    tags: list[str] = Field(default_factory=list)
+    reminder_minutes: int | None = None
     external_ids: dict[str, str] = Field(default_factory=dict)
     sync_status: str = "not_synced"
     last_synced_at: DateTime | None = None
+
+    _category = field_validator("category")(_normalize_category)
 
 
 class ParsedEvent(BaseModel):
@@ -50,6 +156,8 @@ class ParsedEvent(BaseModel):
 
 class ParseRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=1000)
+
+    _text = field_validator("text")(_normalize_request_text)
 
 
 class ConflictCheckRequest(BaseModel):
@@ -124,6 +232,11 @@ class AssistantRequest(BaseModel):
     action: str | None = None
     new_date: str | None = None
     new_time: str | None = None
+    selected_event_id: str | None = None
+    context_event_id: str | None = None
+    event_data: dict | None = None
+
+    _text = field_validator("text")(_normalize_request_text)
 
 
 class AssistantResponse(BaseModel):
@@ -132,6 +245,9 @@ class AssistantResponse(BaseModel):
     message: str
     requires_confirmation: bool = False
     executed: bool = False
+    clarification: dict | None = None
+    events: list[dict] = Field(default_factory=list)
+    suggested_actions: list[str] = Field(default_factory=list)
 
 
 class InsightAction(BaseModel):

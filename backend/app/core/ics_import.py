@@ -117,6 +117,8 @@ def _recurrence_rule(value: str | None) -> str | None:
             "WE": "wednesday",
             "TH": "thursday",
             "FR": "friday",
+            "SA": "saturday",
+            "SU": "sunday",
         }
         if days == ["MO", "TU", "WE", "TH", "FR"]:
             return "weekdays"
@@ -183,6 +185,10 @@ def parse_ics(
             categories = properties.get("CATEGORIES", [({}, "")])[0][1]
             category = categories.split(",", 1)[0].strip().lower() or None
             recurrence = properties.get("RRULE", [({}, "")])[0][1]
+            description = _unescape(
+                properties.get("DESCRIPTION", [({}, "")])[0][1]
+            ).strip()
+            location_url = properties.get("URL", [({}, "")])[0][1].strip() or None
 
             events.append(
                 EventCreate(
@@ -193,6 +199,8 @@ def parse_ics(
                     participants=", ".join(attendees),
                     recurrence_rule=_recurrence_rule(recurrence),
                     category=category,
+                    description=description,
+                    location_url=location_url,
                     external_ids={"ics": uid} if uid else {},
                 )
             )

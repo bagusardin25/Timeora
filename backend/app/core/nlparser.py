@@ -60,6 +60,19 @@ _INTENT_PATTERNS: list[tuple[str, list[str]]] = [
         r"\bbatalkan\b", r"\bcancel\b", r"\bhapus\b", r"\bdelete\b",
         r"\bremove\b",
     ]),
+    ("update", [
+        r"\bupdate\b", r"\bedit\b",
+        r"\b(?:add|set|change|ubah|tambahkan?|kasih)\b.+\b(?:description|deskripsi|details?|notes?|catatan)\b",
+        r"\b(?:tag|tags|label|labeli)\b",
+        r"\b(?:set|change|ubah|tambahkan?|kasih)\b.+\b(?:tags?|labels?|tagar)\b",
+        r"\b(?:remind me|ingatkan(?:\s+saya)?|beri pengingat)\b",
+        r"\b(?:set|change|ubah|tambahkan?|kasih)\b.+\b(?:reminder|pengingat)\b",
+        r"\bmake\b.+\b(?:important|normal|low priority|not important)\b",
+        r"\bmark\b.+\b(?:important|normal|low priority|not important)\b",
+        r"\bset\b.+\bpriority\b",
+        r"\bjadikan\b", r"\btandai\b",
+        r"\bubah\s+(?!jadwal\b)",
+    ]),
     ("query", [
         r"\bapa jadwal\b", r"\bwhat do i have\b", r"\bjadwal hari\b",
         r"\bshow schedule\b", r"\bshow my\b", r"\blihat jadwal\b",
@@ -120,6 +133,22 @@ def _parse_date(text: str, today: date) -> tuple[date | None, str]:
     """Try to extract a date from *text*.  Returns (date, cleaned_text)."""
     low = text.lower()
 
+    def resolve_month_day(day_num: int, month_num: int, explicit_year: str | None) -> date | None:
+        if explicit_year:
+            try:
+                return date(int(explicit_year), month_num, day_num)
+            except ValueError:
+                return None
+
+        for candidate_year in range(today.year, today.year + 5):
+            try:
+                result_date = date(candidate_year, month_num, day_num)
+            except ValueError:
+                continue
+            if result_date >= today:
+                return result_date
+        return None
+
     # Relative dates — ID
     if re.search(r"\bhari\s+ini\b", low):
         return today, re.sub(r"\bhari\s+ini\b", "", text, flags=re.I).strip()
@@ -167,28 +196,22 @@ def _parse_date(text: str, today: date) -> tuple[date | None, str]:
     if m:
         day_num = int(m.group(1))
         month_name = m.group(2)
-        year = int(m.group(3)) if m.group(3) else today.year
         if month_name in _MONTHS:
-            try:
-                result_date = date(year, _MONTHS[month_name], day_num)
+            result_date = resolve_month_day(day_num, _MONTHS[month_name], m.group(3))
+            if result_date is not None:
                 cleaned = text[:m.start()] + text[m.end():]
                 return result_date, cleaned.strip()
-            except ValueError:
-                pass
 
     # Month DD [, YYYY]
     m = re.search(r"\b([a-zA-Z]+)\s+(\d{1,2})(?:\s*,?\s*(\d{4}))?\b", low)
     if m:
         month_name = m.group(1)
         day_num = int(m.group(2))
-        year = int(m.group(3)) if m.group(3) else today.year
         if month_name in _MONTHS:
-            try:
-                result_date = date(year, _MONTHS[month_name], day_num)
+            result_date = resolve_month_day(day_num, _MONTHS[month_name], m.group(3))
+            if result_date is not None:
                 cleaned = text[:m.start()] + text[m.end():]
                 return result_date, cleaned.strip()
-            except ValueError:
-                pass
 
     # ISO: YYYY-MM-DD
     m = re.search(r"\b(\d{4})-(\d{2})-(\d{2})\b", text)
@@ -203,6 +226,14 @@ def _parse_date(text: str, today: date) -> tuple[date | None, str]:
     return None, text
 
 
+def _safe_time(hour: int, minute: int) -> time | None:
+    if not 0 <= hour <= 23:
+        return None
+    if not 0 <= minute <= 59:
+        return None
+    return time(hour, minute)
+
+
 def _parse_time(text: str) -> tuple[time | None, str]:
     """Try to extract a time from *text*."""
     low = text.lower()
@@ -213,15 +244,16 @@ def _parse_time(text: str) -> tuple[time | None, str]:
         h = int(m.group(1))
         mins = int(m.group(2)) if m.group(2) else 0
         period = m.group(3)
-        if period == "siang" and 1 <= h <= 5:
+        if period == "malam" and h == 12:
+            h = 0
+        elif period == "siang" and 1 <= h <= 5:
             h += 12
         elif period in ("sore", "malam") and h < 12:
             h += 12
         elif period == "pagi" and h == 12:
             h = 0
-        h = min(h, 23)
         cleaned = text[:m.start()] + text[m.end():]
-        return time(h, mins), cleaned.strip()
+        return _safe_time(h, mins), cleaned.strip()
 
     # "at 3pm", "at 10:30am", "at 14:00"
     m = re.search(r"\bat\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b", low)
@@ -233,9 +265,8 @@ def _parse_time(text: str) -> tuple[time | None, str]:
             h += 12
         elif period == "am" and h == 12:
             h = 0
-        h = min(h, 23)
         cleaned = text[:m.start()] + text[m.end():]
-        return time(h, mins), cleaned.strip()
+        return _safe_time(h, mins), cleaned.strip()
 
     # Bare "3pm", "10am", "3:30pm"
     m = re.search(r"\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b", low)
@@ -247,17 +278,16 @@ def _parse_time(text: str) -> tuple[time | None, str]:
             h += 12
         elif period == "am" and h == 12:
             h = 0
-        h = min(h, 23)
         cleaned = text[:m.start()] + text[m.end():]
-        return time(h, mins), cleaned.strip()
+        return _safe_time(h, mins), cleaned.strip()
 
     # "pukul 10:00", "pukul 14.30"
     m = re.search(r"\bpukul\s+(\d{1,2})[\.:]\s*(\d{2})\b", low)
     if m:
-        h = min(int(m.group(1)), 23)
+        h = int(m.group(1))
         mins = int(m.group(2))
         cleaned = text[:m.start()] + text[m.end():]
-        return time(h, mins), cleaned.strip()
+        return _safe_time(h, mins), cleaned.strip()
 
     return None, text
 
@@ -326,6 +356,135 @@ def _parse_recurrence(text: str) -> tuple[str | None, str]:
     return None, text
 
 
+def _parse_update_data(text: str) -> tuple[dict[str, Any], str]:
+    """Extract event update fields and return cleaned text for title matching."""
+    event_data: dict[str, Any] = {}
+    remaining = text
+
+    def parse_minutes(raw_number: str, raw_unit: str) -> int:
+        value = int(raw_number)
+        return value * 60 if raw_unit.lower() in {"hour", "hours", "jam"} else value
+
+    def split_tags(raw_tags: str) -> list[str]:
+        tags: list[str] = []
+        seen: set[str] = set()
+        for raw_tag in re.split(r"[,;]|\band\b|\bdan\b", raw_tags, flags=re.I):
+            tag = raw_tag.strip().strip("#.,;:-–— ")
+            key = tag.casefold()
+            if not tag or key in seen:
+                continue
+            seen.add(key)
+            tags.append(tag)
+        return tags
+
+    field_first_description = re.search(
+        r"^\s*(?:add|set|update|edit|change|ubah|tambahkan?|kasih)?\s*"
+        r"(?:description|deskripsi|details?|notes?|catatan)\s+"
+        r"(?P<description>.+?)\s+(?:to|for|ke|untuk)\s+(?P<title>.+)$",
+        remaining,
+        flags=re.I,
+    )
+    if field_first_description:
+        event_data["description"] = field_first_description.group("description").strip(" .,:;")
+        remaining = field_first_description.group("title").strip()
+
+    if not event_data:
+        title_first_description = re.search(
+            r"\b(?:description|deskripsi|details?|notes?|catatan)\b\s*"
+            r"(?:to|as|jadi|menjadi|dengan|:)?\s*(?P<description>.+)$",
+            remaining,
+            flags=re.I,
+        )
+        if title_first_description:
+            event_data["description"] = title_first_description.group("description").strip(" .,:;")
+            remaining = remaining[:title_first_description.start()].strip()
+
+    if not event_data:
+        tag_command = re.search(
+            r"^\s*(?:tag|tags|label|labeli|tandai)\s+(?P<title>.+?)\s+"
+            r"(?:with|as|dengan|sebagai|:)\s+(?P<tags>.+)$",
+            remaining,
+            flags=re.I,
+        )
+        if tag_command:
+            tags = split_tags(tag_command.group("tags"))
+            if tags:
+                event_data["tags"] = tags
+                remaining = tag_command.group("title").strip()
+
+    if not event_data:
+        title_first_tags = re.search(
+            r"\b(?:tags?|labels?|tagar)\b\s*(?:to|as|with|dengan|:)?\s*(?P<tags>.+)$",
+            remaining,
+            flags=re.I,
+        )
+        if title_first_tags:
+            tags = split_tags(title_first_tags.group("tags"))
+            if tags:
+                event_data["tags"] = tags
+                remaining = remaining[:title_first_tags.start()].strip()
+
+    if not event_data:
+        reminder_before = re.search(
+            r"^\s*(?:remind me|ingatkan(?:\s+saya)?|beri pengingat)\s+"
+            r"(?P<number>\d+)\s*(?P<unit>minutes?|mins?|menit|hours?|jam)\s+"
+            r"(?:before|sebelum)\s+(?P<title>.+)$",
+            remaining,
+            flags=re.I,
+        )
+        if reminder_before:
+            event_data["reminder_minutes"] = parse_minutes(
+                reminder_before.group("number"),
+                reminder_before.group("unit"),
+            )
+            remaining = reminder_before.group("title").strip()
+
+    if not event_data:
+        title_first_reminder = re.search(
+            r"\b(?:reminder|pengingat|ingatkan)\b\s*"
+            r"(?:to|for|at|before|sebelum|:)?\s*"
+            r"(?P<number>\d+)\s*(?P<unit>minutes?|mins?|menit|hours?|jam)\b",
+            remaining,
+            flags=re.I,
+        )
+        if title_first_reminder:
+            event_data["reminder_minutes"] = parse_minutes(
+                title_first_reminder.group("number"),
+                title_first_reminder.group("unit"),
+            )
+            remaining = f"{remaining[:title_first_reminder.start()]} {remaining[title_first_reminder.end():]}"
+
+    priority_patterns = [
+        (r"\b(?:not important|not urgent|tidak penting|gak penting|ga penting|nggak penting|low priority|rendah)\b", "low"),
+        (r"\b(?:important|urgent|penting|prioritas tinggi)\b", "important"),
+        (r"\b(?:normal|biasa)\b", "normal"),
+    ]
+    if not event_data:
+        for pattern, priority in priority_patterns:
+            m = re.search(pattern, remaining, flags=re.I)
+            if m:
+                event_data["priority"] = priority
+                remaining = f"{remaining[:m.start()]} {remaining[m.end():]}"
+                break
+
+    if event_data:
+        cleanup_patterns = [
+            r"\bmake\b", r"\bmark\b", r"\bset\b", r"\bjadikan\b",
+            r"\btandai\b", r"\bubah\b", r"\bedit\b", r"\bupdate\b",
+            r"\bpriority\b", r"\bprioritas(?:nya)?\b", r"\bas\b",
+            r"\bdescription\b", r"\bdeskripsi\b", r"\bdetails?\b",
+            r"\bnotes?\b", r"\bcatatan\b", r"\btags?\b", r"\blabels?\b",
+            r"\btagar\b", r"\breminder\b", r"\bpengingat\b",
+            r"\bto\b", r"\bfor\b", r"\bwith\b", r"\bdengan\b",
+            r"\bjadi\b", r"\bmenjadi\b",
+        ]
+        for pattern in cleanup_patterns:
+            remaining = re.sub(pattern, " ", remaining, flags=re.I)
+
+    remaining = re.sub(r"\s+", " ", remaining).strip()
+    return event_data, remaining
+
+
 def _extract_title(text: str) -> str:
     """Clean up remaining text to use as event title."""
     # Remove common prefixes
@@ -334,6 +493,7 @@ def _extract_title(text: str) -> str:
         r"\badd\b", r"\btambah\b", r"\bset\b", r"\bbook\b",
         r"\bpindahkan\b", r"\breschedule\b", r"\bmove\b",
         r"\bbatalkan\b", r"\bcancel\b", r"\bhapus\b",
+        r"\bupdate\b", r"\bedit\b", r"\bjadikan\b", r"\btandai\b",
     ]
     result = text
     for p in prefixes:
@@ -389,17 +549,22 @@ def parse(text: str, today: date | None = None) -> dict[str, Any]:
         if intent == "create":
             warnings.append("No time found — defaulting to 09:00")
 
-    # 5. Duration
+    # 5. Update data
+    event_data: dict[str, Any] = {}
+    if intent == "update":
+        event_data, remaining = _parse_update_data(remaining)
+
+    # 6. Duration
     duration, remaining = _parse_duration(remaining)
     if duration is None:
         duration = 60
         if intent == "create":
             warnings.append("No duration found — defaulting to 60 minutes")
 
-    # 6. Title from remaining text
+    # 7. Title from remaining text
     title = _extract_title(remaining)
 
-    # 7. Compute ISO datetimes for convenience
+    # 8. Compute ISO datetimes for convenience
     if parsed_date is not None:
         start_dt = datetime.combine(parsed_date, parsed_time)
         end_dt = start_dt + timedelta(minutes=duration)
@@ -411,7 +576,7 @@ def parse(text: str, today: date | None = None) -> dict[str, Any]:
         end_at = None
         date_value = None
 
-    return {
+    result = {
         "intent": intent,
         "title": title,
         "date": date_value,
@@ -424,3 +589,6 @@ def parse(text: str, today: date | None = None) -> dict[str, Any]:
         "start_at": start_at,
         "end_at": end_at,
     }
+    if event_data:
+        result["event_data"] = event_data
+    return result

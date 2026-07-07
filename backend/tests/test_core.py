@@ -1,4 +1,5 @@
 import unittest
+import warnings
 from datetime import date, time
 from unittest.mock import AsyncMock, patch
 
@@ -34,6 +35,33 @@ class TestNaturalLanguageParser(unittest.TestCase):
         self.assertEqual(result["start_time"], "14:00")
         self.assertEqual(result["duration_minutes"], 30)
 
+    def test_invalid_time_minutes_do_not_crash_parser(self):
+        result = parse(
+            "jadwalkan deployment besok jam 10:75 selama 30 menit",
+            self.today,
+        )
+
+        self.assertEqual(result["intent"], "create")
+        self.assertEqual(result["title"], "deployment")
+        self.assertEqual(result["start_time"], "09:00")
+        self.assertIn("No time found — defaulting to 09:00", result["warnings"])
+
+    def test_parses_indonesian_midnight_wording(self):
+        result = parse("jadwalkan maintenance besok jam 12 malam", self.today)
+
+        self.assertEqual(result["date"], "2026-07-05")
+        self.assertEqual(result["start_time"], "00:00")
+
+    def test_absolute_date_without_year_rolls_forward_when_past(self):
+        result = parse(
+            "jadwalkan kickoff 1 Januari jam 9 pagi",
+            today=date(2026, 12, 31),
+        )
+
+        self.assertEqual(result["date"], "2027-01-01")
+        self.assertEqual(result["start_time"], "09:00")
+        self.assertEqual(result["title"], "kickoff")
+
     def test_parses_english_day_after_tomorrow_before_tomorrow(self):
         result = parse("review day after tomorrow at 11am", self.today)
 
@@ -66,6 +94,34 @@ class TestNaturalLanguageParser(unittest.TestCase):
         self.assertEqual(result["start_time"], "09:00")
         self.assertEqual(result["duration_minutes"], 60)
         self.assertEqual(len(result["warnings"]), 3)
+
+    def test_detects_priority_update_intent(self):
+        result = parse("make Product Sync important", self.today)
+
+        self.assertEqual(result["intent"], "update")
+        self.assertEqual(result["title"], "Product Sync")
+        self.assertEqual(result["event_data"], {"priority": "important"})
+
+    def test_detects_description_update_intent(self):
+        result = parse("set Product Sync description to Bring Q3 notes", self.today)
+
+        self.assertEqual(result["intent"], "update")
+        self.assertEqual(result["title"], "Product Sync")
+        self.assertEqual(result["event_data"], {"description": "Bring Q3 notes"})
+
+    def test_detects_tag_update_intent(self):
+        result = parse("tag Product Sync with client, roadmap", self.today)
+
+        self.assertEqual(result["intent"], "update")
+        self.assertEqual(result["title"], "Product Sync")
+        self.assertEqual(result["event_data"], {"tags": ["client", "roadmap"]})
+
+    def test_detects_reminder_update_intent(self):
+        result = parse("set Product Sync reminder to 30 minutes", self.today)
+
+        self.assertEqual(result["intent"], "update")
+        self.assertEqual(result["title"], "Product Sync")
+        self.assertEqual(result["event_data"], {"reminder_minutes": 30})
 
 
 class TestConflictEngine(unittest.TestCase):
@@ -124,6 +180,61 @@ class TestConflictEngine(unittest.TestCase):
         )
 
         self.assertFalse(alternatives[0]["start_time"].startswith("12:"))
+
+    def test_detects_previous_day_event_crossing_midnight(self):
+        hits = check_conflicts(
+            [
+                {
+                    "id": "overnight",
+                    "title": "Late deployment",
+                    "date": "2026-07-05",
+                    "start_time": "23:30",
+                    "duration_minutes": 90,
+                }
+            ],
+            self.event_date,
+            time(0, 30),
+            30,
+        )
+
+        self.assertEqual([item["id"] for item in hits], ["overnight"])
+
+    def test_detects_next_day_event_when_new_slot_crosses_midnight(self):
+        hits = check_conflicts(
+            [
+                {
+                    "id": "early-call",
+                    "title": "Early call",
+                    "date": "2026-07-07",
+                    "start_time": "00:30",
+                    "duration_minutes": 30,
+                }
+            ],
+            self.event_date,
+            time(23, 30),
+            90,
+        )
+
+        self.assertEqual([item["id"] for item in hits], ["early-call"])
+
+    def test_alternatives_avoid_previous_day_overnight_events(self):
+        alternatives = find_alternatives(
+            [
+                {
+                    "id": "overnight",
+                    "title": "Overnight maintenance",
+                    "date": "2026-07-05",
+                    "start_time": "23:30",
+                    "duration_minutes": 600,
+                }
+            ],
+            self.event_date,
+            time(8, 0),
+            60,
+            count=1,
+        )
+
+        self.assertGreaterEqual(alternatives[0]["start_time"], "09:45")
 
 
 class TestRecurrenceEngine(unittest.TestCase):
@@ -302,6 +413,13 @@ class TestAvailabilityEngine(unittest.TestCase):
 
 
 class TestIcsExport(unittest.TestCase):
+    def test_generation_does_not_use_deprecated_utcnow(self):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            output = generate_ics([])
+
+        self.assertIn("BEGIN:VCALENDAR", output)
+
     def test_generates_valid_calendar_boundaries(self):
         output = generate_ics([])
 
@@ -343,6 +461,31 @@ class TestIcsExport(unittest.TestCase):
 
         self.assertIn("DTSTART:20260706T233000", output)
         self.assertIn("DTEND:20260707T010000", output)
+
+    def test_exports_recurrence_rules(self):
+        output = generate_ics(
+            [
+                {
+                    "id": "event-1",
+                    "title": "Weekly standup",
+                    "date": "2026-07-06",
+                    "start_time": "09:00",
+                    "duration_minutes": 30,
+                    "recurrence_rule": "weekly:senin",
+                },
+                {
+                    "id": "event-2",
+                    "title": "Weekday focus",
+                    "date": "2026-07-06",
+                    "start_time": "10:00",
+                    "duration_minutes": 60,
+                    "recurrence_rule": "weekdays",
+                },
+            ]
+        )
+
+        self.assertIn("RRULE:FREQ=WEEKLY;BYDAY=MO", output)
+        self.assertIn("RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", output)
 
 
 class TestEventUpdateConflicts(unittest.IsolatedAsyncioTestCase):

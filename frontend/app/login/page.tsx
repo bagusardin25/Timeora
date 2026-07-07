@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { persistAuthTokens } from '@/lib/session';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -44,10 +46,7 @@ export default function LoginPage() {
         throw new Error('Login response did not include an access token');
       }
 
-      localStorage.setItem('token', data.access_token);
-      if (data.refresh_token) {
-        localStorage.setItem('refresh_token', data.refresh_token);
-      }
+      persistAuthTokens(data);
       router.push('/dashboard');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');
@@ -74,17 +73,19 @@ export default function LoginPage() {
         {/* Brand Logo Header */}
         <div className="flex justify-center mb-8">
           <Link href="/">
-            <img
+            <Image
               src="/logomark_text_lightmode.png"
               alt="Timeora Logo"
-              className="block dark:hidden object-contain"
-              style={{ height: "40px", width: "auto" }}
+              width={585}
+              height={148}
+              className="block h-10 w-auto object-contain dark:hidden"
             />
-            <img
+            <Image
               src="/logomark_text.png"
               alt="Timeora Logo"
-              className="hidden dark:block object-contain"
-              style={{ height: "40px", width: "auto" }}
+              width={588}
+              height={166}
+              className="hidden h-10 w-auto object-contain dark:block"
             />
           </Link>
         </div>

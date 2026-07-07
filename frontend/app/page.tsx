@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
@@ -77,17 +78,19 @@ export default function LandingPage() {
       >
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center group">
-            <img
+            <Image
               src="/logomark_text_lightmode.png"
               alt="Timeora Logo"
-              className="block dark:hidden object-contain transition-transform group-hover:scale-102"
-              style={{ height: "28px", width: "111px" }}
+              width={585}
+              height={148}
+              className="block h-7 w-[111px] object-contain transition-transform group-hover:scale-102 dark:hidden"
             />
-            <img
+            <Image
               src="/logomark_text.png"
               alt="Timeora Logo"
-              className="hidden dark:block object-contain transition-transform group-hover:scale-102"
-              style={{ height: "28px", width: "99px" }}
+              width={588}
+              height={166}
+              className="hidden h-7 w-[99px] object-contain transition-transform group-hover:scale-102 dark:block"
             />
           </Link>
           <div className="flex items-center gap-3">
@@ -513,14 +516,18 @@ export default function LandingPage() {
       <footer className="px-6 py-12 border-t border-slate-100 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-900">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <img
+            <Image
               src="/logomark_lightmode.png"
               alt="Timeora Logo"
+              width={474}
+              height={403}
               className="block dark:hidden w-8 h-8 object-contain"
             />
-            <img
+            <Image
               src="/logomark.png"
               alt="Timeora Logo"
+              width={627}
+              height={502}
               className="hidden dark:block w-8 h-8 object-contain"
             />
             <span className="text-lg font-bold text-slate-800 dark:text-zinc-200 tracking-tight">Timeora</span>

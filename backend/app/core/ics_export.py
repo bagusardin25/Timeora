@@ -7,8 +7,26 @@ No external dependencies.
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from uuid import uuid4
+
+_RECURRENCE_BYDAY = {
+    "senin": "MO",
+    "monday": "MO",
+    "selasa": "TU",
+    "tuesday": "TU",
+    "rabu": "WE",
+    "wednesday": "WE",
+    "kamis": "TH",
+    "thursday": "TH",
+    "jumat": "FR",
+    "jum'at": "FR",
+    "friday": "FR",
+    "sabtu": "SA",
+    "saturday": "SA",
+    "minggu": "SU",
+    "sunday": "SU",
+}
 
 
 def _format_dt(d: date, t: time) -> str:
@@ -25,6 +43,26 @@ def _escape(text: str) -> str:
         .replace(",", "\\,")
         .replace("\n", "\\n")
     )
+
+
+def _rrule(rule: str | None) -> str | None:
+    if not rule:
+        return None
+    normalized = rule.strip().lower()
+    if normalized == "daily":
+        return "FREQ=DAILY"
+    if normalized == "monthly":
+        return "FREQ=MONTHLY"
+    if normalized == "weekdays":
+        return "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"
+    if normalized == "weekly":
+        return "FREQ=WEEKLY"
+    if normalized.startswith("weekly:"):
+        day = normalized.split(":", 1)[1]
+        byday = _RECURRENCE_BYDAY.get(day)
+        if byday:
+            return f"FREQ=WEEKLY;BYDAY={byday}"
+    return None
 
 
 def generate_ics(
@@ -44,7 +82,7 @@ def generate_ics(
         "METHOD:PUBLISH",
     ]
 
-    now_stamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    now_stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
     for ev in events:
         ev_date = ev.get("date")
@@ -63,6 +101,9 @@ def generate_ics(
         uid = ev.get("id", str(uuid4()))
         title = _escape(ev.get("title", "Untitled"))
         participants = ev.get("participants", "")
+        description = ev.get("description", "")
+        location_url = ev.get("location_url")
+        recurrence_rule = _rrule(ev.get("recurrence_rule"))
 
         lines.append("BEGIN:VEVENT")
         lines.append(f"UID:{uid}")
@@ -70,8 +111,15 @@ def generate_ics(
         lines.append(f"DTSTART:{_format_dt(ev_date, ev_time)}")
         lines.append(f"DTEND:{_format_dt(end_dt.date(), end_dt.time())}")
         lines.append(f"SUMMARY:{title}")
+        description_parts = [description] if description else []
         if participants:
-            lines.append(f"DESCRIPTION:Participants: {_escape(participants)}")
+            description_parts.append(f"Participants: {participants}")
+        if description_parts:
+            lines.append(f"DESCRIPTION:{_escape(chr(10).join(description_parts))}")
+        if location_url:
+            lines.append(f"URL:{location_url}")
+        if recurrence_rule:
+            lines.append(f"RRULE:{recurrence_rule}")
         lines.append("END:VEVENT")
 
     lines.append("END:VCALENDAR")
