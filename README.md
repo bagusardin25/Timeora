@@ -92,7 +92,7 @@ project JWKS.
 
 ---
 
-## 🔄 Loop Engineering (Hackathon Core)
+## 🔄 Loop Engineering 
 
 This project was built with a strict **write → verify → fail → fix → verify** loop, documented transparently in [`LOOP.md`](./LOOP.md).
 
@@ -100,23 +100,34 @@ This project was built with a strict **write → verify → fail → fix → ver
 
 | Layer | Coverage | Current local result |
 |---|---|---|
-| Backend unit | JWT security, bilingual parsing, conflict ranking, recurrence, analytics, availability, ICS, integration security, event details, native assistant tools | **54/54 passed** |
-| Frontend unit | API hardening, calendar action menus, assistant chat, reminder scheduler, notification fallback, event dialog positioning | **14/14 passed** |
+| Backend unit | JWT security, bilingual parsing, conflict ranking, recurrence, analytics, availability, ICS, integration security, event details, native assistant tools | **116/116 passed** |
+| Frontend unit | API hardening, calendar action menus, assistant chat, reminder scheduler, notification fallback, event dialog positioning | **55/55 passed** across 14 files |
 | Frontend static | ESLint + strict TypeScript | **Passed** |
 | Frontend build | Next.js production bundle | **Passed** |
-| TestSprite backend | Health, DB, signed JWT, forged-JWT rejection, parse, availability | Final gate |
-| TestSprite frontend | Register → login → Command Bar → save → calendar assertion | Final gate |
+| TestSprite backend | Health, DB, signed JWT, forged-JWT rejection, parse, availability, auth refresh, ICS export, assistant execution | **Passing** |
+| TestSprite frontend | Register → login → Command Bar → save → calendar assertion, ICS download, assistant cancel confirmation | **Passing** |
 
 The complete maker → verify → failure → fix history is documented in
 [`LOOP.md`](./LOOP.md), with platform test IDs and matching commits.
 
-### CI/CD verification gate (+5 bonus)
+Latest remediation evidence: commit `ea2e8e9` fixed the reported auth/session
+502s and ICS export regression, Railway deployed it successfully, and manual
+TestSprite CLI readback returned no failed or blocked tests for the project.
+
+### CI/CD verification gate 
 
 GitHub Actions runs local quality checks first, waits for the matching Vercel
 revision and a healthy Railway deployment, then executes fixed TestSprite
 backend and frontend test IDs. Failed or blocked TestSprite verdicts fail the
 workflow and trigger failure-bundle collection; they are not converted into
 false-green builds.
+
+### Deployment branches
+
+- Vercel frontend tracks `main`.
+- Railway backend tracks `backend`.
+- After backend fixes land on `main`, fast-forward `backend` from `main` and
+  push `backend` so production runs the same verified commit.
 
 ---
 
@@ -172,7 +183,7 @@ uvicorn app.main:app --reload --port 8000
 ```bash
 cd frontend
 npm install
-cp .env.example .env.local    # Set NEXT_PUBLIC_API_URL
+# Create .env.local and set NEXT_PUBLIC_API_URL
 npm run dev
 ```
 
@@ -183,8 +194,10 @@ npm run dev
 DATABASE_URL=postgresql://...
 SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=...
-JWT_SECRET=...
+SUPABASE_JWT_SECRET=...
 OPENROUTER_API_KEY=...
+OPENAI_API_KEY=...
+OPENAI_MODEL=gpt-4o-mini
 INTEGRATION_ENCRYPTION_KEY=...
 INTEGRATION_SIGNING_KEY=...
 INTEGRATION_RESEND_API_KEY=...
@@ -212,6 +225,28 @@ npm test
 npm run lint
 npx tsc --noEmit
 npm run build
+```
+
+### Manual TestSprite verification
+
+```bash
+testsprite auth status
+
+testsprite test run 2aadf520-65ff-4f1b-9e28-80406e3fbe28 \
+  --target-url https://timeora-production.up.railway.app \
+  --wait --timeout 300 --output json
+
+testsprite test run 5c7bac18-9569-4c14-af7f-17d3bb6d6909 \
+  --target-url https://timeora-alpha.vercel.app \
+  --wait --timeout 600 --output json
+
+testsprite --output json test list \
+  --project fe31e397-bb11-4aae-af0f-2916b246b3f5 \
+  --status failed
+
+testsprite --output json test list \
+  --project fe31e397-bb11-4aae-af0f-2916b246b3f5 \
+  --status blocked
 ```
 
 ---
