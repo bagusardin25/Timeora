@@ -1188,11 +1188,12 @@ export default function LandingPage() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Link
                   href="/register"
-                  className="group inline-flex items-center gap-2 bg-white text-zinc-950 px-10 py-4 rounded-2xl text-lg font-bold hover:bg-zinc-100 transition-colors shadow-[0_0_40px_rgba(255,255,255,0.2)] hover:shadow-[0_0_60px_rgba(255,255,255,0.3)]"
+                  className="group bg-white text-zinc-950 px-10 py-4 rounded-2xl text-lg font-bold hover:bg-zinc-100 transition-colors shadow-[0_0_40px_rgba(255,255,255,0.2)] hover:shadow-[0_0_60px_rgba(255,255,255,0.3)]"
                 >
                   <motion.span
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
+                    className="flex items-center gap-2"
                   >
                     {t.ctaButton}
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
