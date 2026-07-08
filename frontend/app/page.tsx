@@ -115,6 +115,16 @@ const content = {
     ctaTitle: "Ready to reclaim your time?",
     ctaSub: "Join Timeora and start scheduling smarter — powered by AI, designed for modern professionals who speak English or Indonesian.",
     ctaButton: "Get Started for Free",
+    integrationsTitle: "Works with the tools you already use",
+    integrationsSub: "Seamless sync with your calendars and favorite apps.",
+    trustTitle: "Trusted & Secure",
+    trustItems: [
+      "Free during beta",
+      "No credit card required",
+      "Data stays private",
+      "Google & Outlook Calendar",
+      "No AI training on your data"
+    ]
   },
   id: {
     signIn: "Masuk",
@@ -160,6 +170,16 @@ const content = {
     ctaTitle: "Siap merebut kembali waktu Anda?",
     ctaSub: "Bergabung dengan Timeora dan jadwalkan lebih cerdas — ditenagai AI, dirancang untuk profesional modern yang berbicara Inggris atau Indonesia.",
     ctaButton: "Mulai Secara Gratis",
+    integrationsTitle: "Terhubung dengan tools yang sudah Anda pakai",
+    integrationsSub: "Sinkronisasi mulus dengan kalender dan aplikasi favorit Anda.",
+    trustTitle: "Terpercaya & Aman",
+    trustItems: [
+      "Gratis selama beta",
+      "Tanpa kartu kredit",
+      "Data tetap privat",
+      "Google & Outlook Calendar",
+      "AI tidak melatih data Anda"
+    ]
   }
 };
 
@@ -826,6 +846,62 @@ export default function LandingPage() {
               <div className="text-sm text-slate-500">"Marketing sync tomorrow at 2pm for 45 minutes"</div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ─── INTEGRATIONS & TRUST ─── */}
+      <section className="px-6 py-16 sm:py-20 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-950/50">
+        <div className="max-w-6xl mx-auto">
+          {/* Integrations */}
+          <div className="text-center mb-10">
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-3">
+              {t.integrationsTitle}
+            </h2>
+            <p className="text-slate-500 dark:text-zinc-400 text-lg max-w-md mx-auto">
+              {t.integrationsSub}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4 mb-12">
+            {[
+              { name: "Google Calendar", icon: "📅" },
+              { name: "Outlook", icon: "📆" },
+              { name: "Slack", icon: "💬" },
+              { name: "Linear", icon: "🔗" },
+              { name: "Asana", icon: "📋" },
+              { name: "Todoist", icon: "✅" },
+              { name: "Zapier", icon: "⚡" },
+              { name: "Zoom", icon: "🎥" },
+            ].map((tool, idx) => (
+              <div 
+                key={idx} 
+                className="flex items-center justify-center gap-3 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-5 py-4 hover:border-violet-200 dark:hover:border-violet-800 transition-colors"
+              >
+                <span className="text-xl">{tool.icon}</span>
+                <span className="font-semibold text-sm text-slate-700 dark:text-zinc-300">{tool.name}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Trust Grid */}
+          <div className="text-center mb-6">
+            <h3 className="text-xl font-semibold mb-6">{t.trustTitle}</h3>
+          </div>
+          <div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto">
+            {t.trustItems.map((item, idx) => (
+              <div 
+                key={idx} 
+                className="flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-sm font-medium text-slate-600 dark:text-zinc-400"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                {item}
+              </div>
+            ))}
+          </div>
+
+          <p className="text-center text-xs text-slate-500 dark:text-zinc-500 mt-6">
+            Enterprise-grade security coming soon • SOC 2 & GDPR compliant
+          </p>
         </div>
       </section>
 
