@@ -1193,7 +1193,7 @@ export default function LandingPage() {
                   <motion.span
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="inline-flex items-center gap-2"
+                    className="flex items-center gap-2"
                   >
                     {t.ctaButton}
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
