@@ -483,7 +483,7 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/register"
-              className="group flex items-center gap-2 bg-zinc-950 text-white px-8 py-4 rounded-2xl text-base font-semibold hover:bg-zinc-800 transition-colors shadow-xl hover:shadow-2xl"
+              className="group bg-zinc-950 text-white px-8 py-4 rounded-2xl text-base font-semibold hover:bg-zinc-800 transition-colors shadow-xl hover:shadow-2xl"
             >
               <motion.span
                 whileHover={{ scale: 1.05 }}
@@ -498,7 +498,7 @@ export default function LandingPage() {
               href="https://github.com/bagusardin25/Timeora"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-8 py-4 rounded-2xl text-base font-medium text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm hover:bg-white dark:hover:bg-zinc-800 transition-colors shadow-sm hover:shadow-md"
+              className="px-8 py-4 rounded-2xl text-base font-medium text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm hover:bg-white dark:hover:bg-zinc-800 transition-colors shadow-sm hover:shadow-md"
             >
               <motion.span
                 whileHover={{ scale: 1.05 }}
