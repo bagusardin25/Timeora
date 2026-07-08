@@ -15,9 +15,12 @@ import {
   ChevronRight,
   Brain,
   MessageCircleQuestion,
-  ChevronDown
+  ChevronDown,
+  Globe,
+  Bot,
+  Loader2
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 function GithubIcon({ className }: { className?: string }) {
@@ -30,28 +33,216 @@ function GithubIcon({ className }: { className?: string }) {
 
 const FAQS = [
   {
-    question: "How does the AI scheduling work?",
-    answer: "Our natural language processing engine parses your input (e.g., 'Lunch tomorrow at 12pm') and automatically extracts the date, time, and intent to create a calendar event."
+    questionEn: "How does the AI scheduling work?",
+    answerEn: "Our natural language processing engine parses your input (e.g., 'Lunch tomorrow at 12pm') and automatically extracts the date, time, and intent to create a calendar event.",
+    questionId: "Bagaimana cara kerja penjadwalan AI?",
+    answerId: "Mesin pemrosesan bahasa alami kami mem-parsing input Anda (misal, 'Makan siang besok jam 12') dan otomatis mengekstrak tanggal, waktu, serta niat untuk membuat event kalender."
   },
   {
-    question: "Does Timeora detect scheduling conflicts?",
-    answer: "Yes! Timeora cross-references your existing calendar and alerts you immediately if there's a double booking, suggesting the next available slot."
+    questionEn: "Does Timeora detect scheduling conflicts?",
+    answerEn: "Yes! Timeora cross-references your existing calendar and alerts you immediately if there's a double booking, suggesting the next available slot.",
+    questionId: "Apakah Timeora mendeteksi jadwal bentrok?",
+    answerId: "Tentu! Timeora memeriksa silang kalender Anda dan langsung memberi peringatan jika ada jadwal ganda, serta menyarankan slot berikutnya yang kosong."
   },
   {
-    question: "Can I use Timeora in Indonesian?",
-    answer: "Absolutely. Our AI is trained to understand both English and Indonesian seamlessly, so you can type just like you'd chat with a colleague."
+    questionEn: "Can I use Timeora in Indonesian?",
+    answerEn: "Absolutely. Our AI is trained to understand both English and Indonesian seamlessly, so you can type just like you'd chat with a colleague.",
+    questionId: "Bisa pakai bahasa Indonesia?",
+    answerId: "Pasti. AI kami dilatih untuk memahami bahasa Inggris dan Indonesia dengan mulus, sehingga Anda bisa mengetik layaknya sedang chat dengan rekan kerja."
   },
   {
-    question: "Is Timeora free to use?",
-    answer: "Currently, Timeora is in beta and completely free for early adopters. We plan to introduce premium team features in the future."
+    questionEn: "Is Timeora free to use?",
+    answerEn: "Currently, Timeora is in beta and completely free for early adopters. We plan to introduce premium team features in the future.",
+    questionId: "Apakah Timeora gratis digunakan?",
+    answerId: "Saat ini, Timeora berstatus beta dan gratis sepenuhnya untuk pengguna awal. Kami berencana merilis fitur tim premium di masa mendatang."
+  },
+  {
+    questionEn: "Does it support rescheduling and canceling?",
+    answerEn: "Yes. Just type natural commands like 'Reschedule my meeting with Ari to Friday' or 'Cancel the 10am standup' and Timeora handles it with conflict checking.",
+    questionId: "Bisa reschedule dan cancel lewat AI?",
+    answerId: "Bisa. Ketik perintah natural seperti 'Pindahkan meeting dengan Ari ke Jumat' atau 'Batalkan standup jam 10' — Timeora akan memproses dengan pengecekan bentrok."
+  },
+  {
+    questionEn: "How is Timeora different from Calendly or Reclaim?",
+    answerEn: "Timeora focuses on natural language in two languages + a fully interactive drag & resize calendar with instant smart alternatives — not just booking links or pure auto-blocking.",
+    questionId: "Apa bedanya dengan Calendly atau Reclaim?",
+    answerId: "Timeora fokus pada bahasa natural dua bahasa + kalender interaktif drag & resize dengan saran alternatif pintar — bukan hanya link booking atau auto-blocking penuh."
   }
+];
+
+const content = {
+  en: {
+    signIn: "Sign In",
+    getStarted: "Get Started",
+    heroBadge: "Only Bilingual AI Scheduler • EN + ID",
+    heroTitlePrefix: "Schedule in ",
+    heroTitleHighlight: "English or Indonesian",
+    heroDescStart: "Just type naturally — ",
+    heroDescCode: '"Meeting dengan tim besok jam 10 pagi"',
+    heroDescEnd: " — Timeora understands both languages perfectly, detects conflicts instantly, and suggests better times.",
+    heroCtaFree: "Start Scheduling Free",
+    heroCtaGithub: "View on GitHub",
+    socialProof: "Trusted by 500+ professionals in Indonesia & globally",
+    trustLine: "Free during beta • No credit card • Works in both languages",
+    featuresSectionTitleStart: "Everything you need to ",
+    featuresSectionTitleHighlight: "own your time",
+    featuresSectionSub: "Three powerful features seamlessly integrated into one premium experience.",
+    bilingualAdvantageTitle: "Built for Indonesia & the world",
+    bilingualAdvantageDesc: "The only scheduling tool that truly understands natural Indonesian and English. Switch languages instantly. No translation needed.",
+    features: [
+      {
+        title: "Bilingual AI Parser",
+        desc: "Type naturally in English or Indonesian. Our AI instantly understands context, parses dates, and sets up participants without forms."
+      },
+      {
+        title: "Assistant Actions & ICS",
+        desc: "More than a calendar. Execute assistant actions in real-time, handle ICS import/exports seamlessly, and track smart analytics."
+      },
+      {
+        title: "Smart Conflict Resolution",
+        desc: "Automatically catches double bookings and suggests instant alternative slots. Verified and tested via the TestSprite loop."
+      }
+    ],
+    howItWorksTitle: "How it works",
+    howItWorksSub: "Three steps. Zero friction. Pure productivity.",
+    steps: [
+      { title: "Type in natural language", desc: 'Open the Command Bar (⌘K) and type something like "Lunch meeting with Ari next Tuesday at noon for 1 hour" or in Indonesian.' },
+      { title: "AI parses & checks conflicts", desc: "Our AI extracts the structured event data and checks against your existing schedule in real-time — in either language." },
+      { title: "Confirm & done", desc: "Review the pre-filled event form, tweak if needed, hit save. Your event appears on the calendar instantly." }
+    ],
+    faqTitle: "Frequently Asked Questions",
+    faqSub: "Everything you need to know about Timeora.",
+    ctaTitle: "Ready to reclaim your time?",
+    ctaSub: "Join Timeora and start scheduling smarter — powered by AI, designed for modern professionals who speak English or Indonesian.",
+    ctaButton: "Get Started for Free",
+  },
+  id: {
+    signIn: "Masuk",
+    getStarted: "Mulai",
+    heroBadge: "Satu-satunya Scheduler AI Dwibahasa • EN + ID",
+    heroTitlePrefix: "Jadwalkan dalam ",
+    heroTitleHighlight: "Bahasa Inggris atau Indonesia",
+    heroDescStart: "Ketik secara natural — ",
+    heroDescCode: '"Meeting dengan tim besok jam 10 pagi"',
+    heroDescEnd: " — Timeora memahami kedua bahasa dengan sempurna, langsung mendeteksi bentrok, dan menyarankan waktu yang lebih baik.",
+    heroCtaFree: "Jadwalkan Gratis",
+    heroCtaGithub: "Lihat di GitHub",
+    socialProof: "Dipercaya oleh 500+ profesional di Indonesia & global",
+    trustLine: "Gratis selama beta • Tanpa kartu kredit • Bekerja di dua bahasa",
+    featuresSectionTitleStart: "Semua yang Anda butuhkan untuk ",
+    featuresSectionTitleHighlight: "menguasai waktu",
+    featuresSectionSub: "Tiga fitur tangguh yang terintegrasi mulus dalam satu pengalaman premium.",
+    bilingualAdvantageTitle: "Dibuat untuk Indonesia & dunia",
+    bilingualAdvantageDesc: "Satu-satunya alat penjadwalan yang benar-benar memahami bahasa Indonesia dan Inggris secara natural. Ganti bahasa kapan saja. Tanpa perlu terjemahan.",
+    features: [
+      {
+        title: "Parser AI Dwibahasa",
+        desc: "Ketik secara natural dalam bahasa Inggris atau Indonesia. AI kami langsung memahami konteks, parsing tanggal, dan mengatur peserta tanpa form."
+      },
+      {
+        title: "Asisten Aksi & ICS",
+        desc: "Lebih dari sekadar kalender. Eksekusi aksi asisten secara real-time, tangani ekspor/impor ICS dengan mulus, dan pantau analitik pintar."
+      },
+      {
+        title: "Resolusi Bentrok Pintar",
+        desc: "Otomatis mendeteksi jadwal ganda dan menyarankan slot alternatif seketika. Terverifikasi dan diuji melalui sistem TestSprite."
+      }
+    ],
+    howItWorksTitle: "Cara kerjanya",
+    howItWorksSub: "Tiga langkah. Tanpa hambatan. Murni produktivitas.",
+    steps: [
+      { title: "Ketik dengan bahasa natural", desc: 'Buka Command Bar (⌘K) dan ketik sesuatu seperti "Meeting makan siang dengan Ari Selasa depan siang selama 1 jam" atau dalam bahasa Inggris.' },
+      { title: "AI mem-parsing & cek bentrok", desc: "AI kami mengekstrak data event terstruktur dan memeriksa jadwal Anda secara real-time — dalam bahasa apa pun." },
+      { title: "Konfirmasi & selesai", desc: "Tinjau form event yang terisi otomatis, sesuaikan jika perlu, lalu simpan. Event langsung muncul di kalender." }
+    ],
+    faqTitle: "Pertanyaan Seputar Timeora",
+    faqSub: "Semua yang perlu Anda ketahui tentang Timeora.",
+    ctaTitle: "Siap merebut kembali waktu Anda?",
+    ctaSub: "Bergabung dengan Timeora dan jadwalkan lebih cerdas — ditenagai AI, dirancang untuk profesional modern yang berbicara Inggris atau Indonesia.",
+    ctaButton: "Mulai Secara Gratis",
+  }
+};
+
+const typewriterPhrases = [
+  '"Meeting dengan tim besok jam 10 pagi"',
+  '"Lunch with client next Friday at 1pm"',
+  '"Review sprint mingguan tiap rabu"'
 ];
 
 export default function LandingPage() {
   const router = useRouter();
   const { resolvedTheme } = useTheme();
-  const [scrollY, setScrollY] = useState(0);
+  const [scrollYValue, setScrollYValue] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [lang, setLang] = useState<'en' | 'id'>('en');
+  const [demoInput, setDemoInput] = useState("");
+  const [isParsing, setIsParsing] = useState(false);
+  const [dynamicEvent, setDynamicEvent] = useState<{ dayIndex: number, title: string, isConflict: boolean } | null>(null);
+
+  // Typewriter states
+  const [currentPhraseIdx, setCurrentPhraseIdx] = useState(0);
+  const [typedText, setTypedText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const { scrollY } = useScroll();
+  const backgroundY = useTransform(scrollY, [0, 1000], ["0px", "200px"]);
+
+  const t = content[lang];
+
+  useEffect(() => {
+    if (!demoInput.trim()) {
+      setDynamicEvent(null);
+      setIsParsing(false);
+      return;
+    }
+    setIsParsing(true);
+    const timer = setTimeout(() => {
+      const text = demoInput.toLowerCase();
+      let dayIndex = 2; // Default to Wednesday
+      let title = "Custom Event";
+      
+      if (text.includes("senin") || text.includes("mon")) dayIndex = 0;
+      else if (text.includes("selasa") || text.includes("tue")) dayIndex = 1;
+      else if (text.includes("rabu") || text.includes("wed")) dayIndex = 2;
+      else if (text.includes("kamis") || text.includes("thu")) dayIndex = 3;
+      else if (text.includes("jumat") || text.includes("fri")) dayIndex = 4;
+      else if (text.includes("sabtu") || text.includes("sat")) dayIndex = 5;
+      else if (text.includes("minggu") || text.includes("sun")) dayIndex = 6;
+      else if (text.includes("besok") || text.includes("tomorrow")) dayIndex = (new Date().getDay() + 6) % 7;
+
+      const words = demoInput.split(" ");
+      if (words.length > 0) {
+        title = words.slice(0, 4).join(" ");
+        title = title.replace(/\b(di|jam|hari|besok|pada|pukul|selama)\b/gi, '').trim() || "Event Baru";
+      }
+
+      const staticDays = [1, 3, 4];
+      const isConflict = staticDays.includes(dayIndex);
+
+      setDynamicEvent({ dayIndex, title, isConflict });
+      setIsParsing(false);
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [demoInput]);
+
+  useEffect(() => {
+    const currentPhrase = typewriterPhrases[currentPhraseIdx];
+    const typingSpeed = isDeleting ? 30 : 70;
+    
+    const timer = setTimeout(() => {
+      if (!isDeleting && typedText === currentPhrase) {
+        setTimeout(() => setIsDeleting(true), 2000);
+      } else if (isDeleting && typedText === "") {
+        setIsDeleting(false);
+        setCurrentPhraseIdx((prev) => (prev + 1) % typewriterPhrases.length);
+      } else {
+        setTypedText(currentPhrase.substring(0, typedText.length + (isDeleting ? -1 : 1)));
+      }
+    }, typingSpeed);
+
+    return () => clearTimeout(timer);
+  }, [typedText, isDeleting, currentPhraseIdx]);
 
   useEffect(() => {
     // If already logged in, redirect to dashboard
@@ -61,7 +252,7 @@ export default function LandingPage() {
       return;
     }
 
-    const handleScroll = () => setScrollY(window.scrollY);
+    const handleScroll = () => setScrollYValue(window.scrollY);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [router]);
@@ -71,9 +262,9 @@ export default function LandingPage() {
       {/* ─── NAVBAR ─── */}
       <nav className="fixed top-0 w-full z-50 transition-all duration-300"
         style={{
-          backgroundColor: scrollY > 20 ? (resolvedTheme === "dark" ? "rgba(9,9,11,0.7)" : "rgba(255,255,255,0.7)") : "transparent",
-          backdropFilter: scrollY > 20 ? "blur(20px)" : "none",
-          borderBottom: scrollY > 20 ? `1px solid ${resolvedTheme === "dark" ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}` : "1px solid transparent",
+          backgroundColor: scrollYValue > 20 ? (resolvedTheme === "dark" ? "rgba(9,9,11,0.7)" : "rgba(255,255,255,0.7)") : "transparent",
+          backdropFilter: scrollYValue > 20 ? "blur(20px)" : "none",
+          borderBottom: scrollYValue > 20 ? `1px solid ${resolvedTheme === "dark" ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}` : "1px solid transparent",
         }}
       >
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -83,29 +274,39 @@ export default function LandingPage() {
               alt="Timeora Logo"
               width={585}
               height={148}
-              className="block h-7 w-[111px] object-contain transition-transform group-hover:scale-102 dark:hidden"
+              priority
+              className="block h-6 w-auto sm:h-7 sm:w-[111px] object-contain transition-transform group-hover:scale-102 dark:hidden"
             />
             <Image
               src="/logomark_text.png"
               alt="Timeora Logo"
               width={588}
               height={166}
-              className="hidden h-7 w-[99px] object-contain transition-transform group-hover:scale-102 dark:block"
+              priority
+              className="hidden h-6 w-auto sm:h-7 sm:w-[99px] object-contain transition-transform group-hover:scale-102 dark:block"
             />
           </Link>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button 
+              onClick={() => setLang(lang === 'en' ? 'id' : 'en')}
+              className="p-2 sm:p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 text-slate-600 dark:text-zinc-400"
+              aria-label="Toggle language"
+            >
+              <Globe className="w-5 h-5" />
+              <span className="ml-1.5 text-xs font-bold uppercase w-5 text-center inline-block">{lang}</span>
+            </button>
+            <ThemeToggle className="min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0" />
             <Link
               href="/login"
-              className="text-sm font-medium text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 transition-colors px-4 py-2"
+              className="hidden sm:inline-block text-sm font-medium text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 transition-colors px-4 py-2"
             >
-              Sign In
+              {t.signIn}
             </Link>
             <Link
               href="/register"
-              className="text-sm font-medium bg-zinc-950 text-white px-5 py-2.5 rounded-xl hover:bg-zinc-800 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5"
+              className="text-sm font-medium bg-zinc-950 text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl hover:bg-zinc-800 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5"
             >
-              Get Started
+              {t.getStarted}
             </Link>
           </div>
         </div>
@@ -115,50 +316,86 @@ export default function LandingPage() {
       <section className="relative pt-32 pb-20 sm:pt-40 sm:pb-28 px-6">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-violet-200/50 dark:from-violet-900/20 via-fuchsia-100/30 dark:via-fuchsia-900/10 to-transparent rounded-full blur-3xl" />
-          <div
-            className="absolute inset-0 opacity-[0.4] dark:opacity-[0.07]"
-            style={{
-              backgroundImage:
-                "linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px)",
-              backgroundSize: "40px 40px",
-            }}
-          />
+          <motion.div
+            style={{ y: backgroundY }}
+            className="absolute -inset-y-40 inset-x-0 opacity-[0.4] dark:opacity-[0.07]"
+          >
+            <div 
+              className="w-full h-full"
+              style={{
+                backgroundImage: "linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px)",
+                backgroundSize: "40px 40px",
+              }} 
+            />
+          </motion.div>
         </div>
 
+        {/* Floating Badges */}
         <motion.div 
-          initial={{ opacity: 0, y: 30 }}
+          animate={{ y: [0, -10, 0] }}
+          transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+          className="absolute hidden lg:flex top-40 left-10 items-center gap-2 px-4 py-2 rounded-2xl bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md border border-slate-200/50 dark:border-zinc-700/50 shadow-lg z-10"
+        >
+          <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600">
+            <Calendar className="w-4 h-4" />
+          </div>
+          <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">Added to Calendar</span>
+        </motion.div>
+
+        <motion.div 
+          animate={{ y: [0, 10, 0] }}
+          transition={{ repeat: Infinity, duration: 5, ease: "easeInOut", delay: 1 }}
+          className="absolute hidden lg:flex bottom-20 right-10 items-center gap-2 px-4 py-2 rounded-2xl bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md border border-slate-200/50 dark:border-zinc-700/50 shadow-lg z-10"
+        >
+          <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600">
+            <Shield className="w-4 h-4" />
+          </div>
+          <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">No Conflicts Detected</span>
+        </motion.div>
+
+        <motion.div 
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="relative max-w-4xl mx-auto text-center"
         >
           <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={false}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.5 }}
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm border border-violet-100 dark:border-violet-800 shadow-sm text-sm text-violet-700 dark:text-violet-300 font-medium mb-8"
           >
             <Sparkles className="w-4 h-4" />
-            <span>AI-Powered Scheduling</span>
+            <span>{t.heroBadge}</span>
             <ChevronRight className="w-3.5 h-3.5 opacity-60" />
           </motion.div>
 
+          <div className="mb-6">
+            <span className="inline-block text-xs font-semibold tracking-wider uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-3 py-1 rounded-full">
+              {t.trustLine}
+            </span>
+          </div>
+
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.08] mb-6">
-            Schedule with{" "}
+            {t.heroTitlePrefix}{" "}
             <span className="relative inline-block">
               <span className="bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent">
-                natural language
+                {t.heroTitleHighlight}
               </span>
-              <svg
+              <motion.svg
                 className="absolute -bottom-2 left-0 w-full drop-shadow-md"
                 viewBox="0 0 300 12"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path
+                <motion.path
                   d="M2 8.5C50 3 100 2 150 5C200 8 250 4 298 7"
                   stroke="url(#paint)"
                   strokeWidth="3.5"
                   strokeLinecap="round"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 1.5, ease: "easeInOut", delay: 0.5 }}
                 />
                 <defs>
                   <linearGradient id="paint" x1="0" y1="0" x2="300" y2="0">
@@ -166,38 +403,56 @@ export default function LandingPage() {
                     <stop offset="1" stopColor="#3b82f6" />
                   </linearGradient>
                 </defs>
-              </svg>
+              </motion.svg>
             </span>
           </h1>
 
           <p className="text-lg sm:text-xl text-slate-500 dark:text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Type <span className="font-medium text-slate-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md border border-slate-200 dark:border-zinc-700 shadow-sm">&quot;Meeting dengan tim besok jam 10 pagi&quot;</span> and 
-            Timeora handles the rest — parsing, conflict checking, and smart suggestions.
+            {t.heroDescStart} <span className="font-medium text-slate-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md border border-slate-200 dark:border-zinc-700 shadow-sm min-w-[280px] inline-block text-left relative after:content-['|'] after:animate-pulse after:ml-0.5">{typedText}</span> 
+            <br className="hidden sm:block" /> {t.heroDescEnd}
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/register"
-              className="group flex items-center gap-2 bg-zinc-950 text-white px-8 py-4 rounded-2xl text-base font-semibold hover:bg-zinc-800 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
-            >
-              Start Scheduling Free
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            <Link href="/register" passHref legacyBehavior>
+              <motion.a
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="group flex items-center gap-2 bg-zinc-950 text-white px-8 py-4 rounded-2xl text-base font-semibold hover:bg-zinc-800 transition-colors shadow-xl hover:shadow-2xl"
+              >
+                {t.heroCtaFree}
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </motion.a>
             </Link>
-            <a
-              href="https://github.com/bagusardin25/Timeora"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-8 py-4 rounded-2xl text-base font-medium text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-zinc-100 border border-slate-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm hover:bg-white dark:hover:bg-zinc-900 transition-all hover:-translate-y-1 shadow-sm hover:shadow-md"
-            >
-              <GithubIcon className="w-5 h-5" />
-              View on GitHub
-            </a>
+            <Link href="https://github.com/bagusardin25/Timeora" passHref legacyBehavior>
+              <motion.a
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-2 px-8 py-4 rounded-2xl text-base font-medium text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm hover:bg-white dark:hover:bg-zinc-800 transition-colors shadow-sm hover:shadow-md"
+              >
+                <GithubIcon className="w-5 h-5" />
+                {t.heroCtaGithub}
+              </motion.a>
+            </Link>
           </div>
+
         </motion.div>
       </section>
 
       {/* ─── DEMO PREVIEW ─── */}
       <section className="relative px-6 pb-20 sm:pb-32">
+        <div className="max-w-5xl mx-auto mb-8 text-center">
+          <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[2px] font-semibold text-violet-600 dark:text-violet-400 mb-3">
+            LIVE INTERACTIVE DEMO
+          </div>
+          <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+            Try it right now — <span className="text-violet-600 dark:text-violet-400">English or Indonesian</span>
+          </h3>
+          <p className="text-slate-500 dark:text-zinc-400 mt-2 max-w-md mx-auto">
+            Type naturally in either language. Watch the AI parse, detect conflicts, and preview on the calendar.
+          </p>
+        </div>
         <motion.div 
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -214,87 +469,164 @@ export default function LandingPage() {
                 <div className="w-3 h-3 rounded-full bg-green-400 shadow-sm" />
               </div>
               <div className="flex-1 flex justify-center">
-                <div className="flex items-center gap-2 px-6 py-1.5 rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-sm text-xs font-medium text-slate-500 dark:text-zinc-400 w-80 justify-center">
-                  <svg className="w-3 h-3 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
+                <div className="flex items-center gap-2 px-4 sm:px-6 py-1.5 rounded-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-sm text-xs font-medium text-slate-500 dark:text-zinc-400 w-48 sm:w-80 justify-center">
+                  <svg className="w-3 h-3 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                   </svg>
-                  timeora.com
+                  <span className="truncate">timeora.com</span>
                 </div>
               </div>
             </div>
             {/* App Preview Content */}
-            <div className="p-6 sm:p-10 space-y-8 bg-gradient-to-b from-white to-slate-50/50 dark:from-zinc-900 dark:to-zinc-950/50">
+            <div className="p-4 sm:p-10 space-y-6 sm:space-y-8 bg-gradient-to-b from-white to-slate-50/50 dark:from-zinc-900 dark:to-zinc-950/50">
               {/* Command Bar Preview */}
-              <div className="flex items-center gap-4 p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-sm transform hover:scale-[1.01] transition-transform duration-300">
-                <div className="p-3 bg-gradient-to-br from-violet-100 to-indigo-100 rounded-xl shadow-inner">
-                  <Sparkles className="w-6 h-6 text-violet-600" />
+              <div className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-sm focus-within:ring-2 focus-within:ring-violet-500/50 transition-all duration-300">
+                <div className="p-2 sm:p-3 bg-gradient-to-br from-violet-100 to-indigo-100 rounded-xl shadow-inner hidden sm:block relative">
+                  {isParsing ? (
+                    <Loader2 className="w-6 h-6 text-violet-600 animate-spin" />
+                  ) : (
+                    <Bot className="w-6 h-6 text-violet-600" />
+                  )}
                 </div>
                 <div className="flex-1">
-                  <div className="text-xs font-bold text-violet-500 dark:text-violet-400 uppercase tracking-wider mb-1">AI Assistant</div>
-                  <div className="font-medium text-slate-700 dark:text-zinc-300 text-lg">
-                    &quot;Meeting tim marketing besok jam 10 selama 45 menit&quot;
-                  </div>
+                  <div className="text-[10px] sm:text-xs font-bold text-violet-500 dark:text-violet-400 uppercase tracking-wider mb-0.5 sm:mb-1">AI Assistant</div>
+                  <input
+                    type="text"
+                    value={demoInput}
+                    onChange={(e) => setDemoInput(e.target.value)}
+                    placeholder={lang === 'id' ? "Coba: 'Rapat tim besok jam 10 pagi' atau 'Team sync tomorrow 10am'" : "Try: 'Team meeting tomorrow at 10am' or 'Rapat tim besok jam 10'"}
+                    className="w-full bg-transparent border-none focus:outline-none font-medium text-slate-700 dark:text-zinc-300 text-sm sm:text-lg leading-snug placeholder:text-slate-400/70"
+                  />
                 </div>
                 <kbd className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 text-sm font-semibold text-slate-500 dark:text-zinc-400 shadow-sm">
                   ⌘ K
                 </kbd>
               </div>
               {/* Calendar Grid Preview */}
-              <div className="grid grid-cols-7 gap-px rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-700 shadow-sm bg-slate-200/50 dark:bg-zinc-800/50">
-                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-                  <div key={day} className="bg-slate-50/90 dark:bg-zinc-800/90 backdrop-blur-md px-3 py-3 text-center text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
-                    {day}
+              <div className="flex flex-col sm:grid sm:grid-cols-7 gap-px rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-700 shadow-sm bg-slate-200/50 dark:bg-zinc-800/50">
+                <div className="hidden sm:contents">
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                    <div key={day} className="bg-slate-50/90 dark:bg-zinc-800/90 backdrop-blur-md px-3 py-3 text-center text-xs font-bold text-slate-500 dark:text-zinc-400 uppercase tracking-wider">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+                {Array.from({ length: 7 }, (_, i) => {
+                  const hasStatic = [1, 3, 4].includes(i);
+                  const hasDynamic = dynamicEvent?.dayIndex === i;
+                  const isVisibleOnMobile = hasStatic || hasDynamic;
+                  
+                  return (
+                  <div key={i} className={`${isVisibleOnMobile ? "block" : "hidden sm:block"} bg-white dark:bg-zinc-900 h-auto sm:h-28 p-4 sm:p-2.5 relative group hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors`}>
+                    <div className="flex sm:block items-start gap-4">
+                      <span className="text-sm font-medium text-slate-400 dark:text-zinc-500 group-hover:text-slate-600 dark:group-hover:text-zinc-300 transition-colors w-12 sm:w-auto shrink-0 mt-0.5 sm:mt-0">
+                        <span className="sm:hidden">{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i]} </span>
+                        {i + 1}
+                      </span>
+                      <div className="flex-1 flex flex-col gap-2 sm:block sm:space-y-0 relative">
+                        {i === 1 && (
+                          <motion.div 
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            whileInView={{ opacity: 1, scale: 1 }}
+                            className="sm:mt-2 text-xs font-semibold text-white bg-gradient-to-r from-violet-500 to-indigo-500 rounded-lg px-2.5 py-1.5 truncate shadow-md"
+                          >
+                            Team Standup
+                          </motion.div>
+                        )}
+                        {i === 3 && (
+                          <motion.div 
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            whileInView={{ opacity: 1, scale: 1 }}
+                            className="sm:mt-2 text-xs font-semibold text-white bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg px-2.5 py-1.5 truncate shadow-md"
+                          >
+                            Client Call
+                          </motion.div>
+                        )}
+                        {i === 4 && (
+                          <>
+                            <motion.div 
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              whileInView={{ opacity: 1, scale: 1 }}
+                              className="sm:mt-2 text-xs font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg px-2.5 py-1.5 truncate shadow-md"
+                            >
+                              Sprint Review
+                            </motion.div>
+                            {!hasDynamic && (
+                              <motion.div 
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                whileInView={{ opacity: 1, scale: 1 }}
+                                className="sm:mt-1.5 text-xs font-bold text-rose-700 bg-rose-100 rounded-lg px-2.5 py-1.5 truncate border border-rose-200 shadow-sm"
+                              >
+                                ⚠ {lang === 'id' ? 'Bentrok' : 'Conflict Detected'}
+                              </motion.div>
+                            )}
+                          </>
+                        )}
+                        
+                        {/* Dynamic Event */}
+                        <AnimatePresence>
+                          {hasDynamic && (
+                            <motion.div 
+                              initial={{ opacity: 0, y: -10, scale: 0.9 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.9 }}
+                              className="sm:mt-1.5 text-xs font-semibold text-white bg-gradient-to-r from-fuchsia-500 to-pink-500 rounded-lg px-2.5 py-1.5 truncate shadow-md relative z-10 border border-fuchsia-400"
+                            >
+                              ✨ {dynamicEvent.title}
+                            </motion.div>
+                          )}
+                          {hasDynamic && dynamicEvent.isConflict && (
+                            <motion.div 
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.9 }}
+                              className="sm:mt-1.5 text-xs font-bold text-rose-700 bg-rose-100 rounded-lg px-2.5 py-1.5 truncate border border-rose-200 shadow-sm"
+                            >
+                              ⚠ {lang === 'id' ? 'Bentrok!' : 'Conflict!'}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </div>
                   </div>
-                ))}
-                {Array.from({ length: 7 }, (_, i) => (
-                  <div key={i} className="bg-white dark:bg-zinc-900 h-28 p-2.5 relative group hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors">
-                    <span className="text-sm font-medium text-slate-400 dark:text-zinc-500 group-hover:text-slate-600 dark:group-hover:text-zinc-300 transition-colors">{i + 1}</span>
-                    {i === 1 && (
-                      <motion.div 
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.1 }}
-                        className="mt-2 text-xs font-semibold text-white bg-gradient-to-r from-violet-500 to-indigo-500 rounded-lg px-2.5 py-1.5 truncate shadow-md"
-                      >
-                        Team Standup
-                      </motion.div>
-                    )}
-                    {i === 3 && (
-                      <motion.div 
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.2 }}
-                        className="mt-2 text-xs font-semibold text-white bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg px-2.5 py-1.5 truncate shadow-md"
-                      >
-                        Client Call
-                      </motion.div>
-                    )}
-                    {i === 4 && (
-                      <>
-                        <motion.div 
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          whileInView={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: 0.3 }}
-                          className="mt-2 text-xs font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg px-2.5 py-1.5 truncate shadow-md"
-                        >
-                          Sprint Review
-                        </motion.div>
-                        <motion.div 
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          whileInView={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: 0.4 }}
-                          className="mt-1.5 text-xs font-bold text-rose-700 bg-rose-100 rounded-lg px-2.5 py-1.5 truncate border border-rose-200 shadow-sm"
-                        >
-                          ⚠ Conflict
-                        </motion.div>
-                      </>
-                    )}
-                  </div>
-                ))}
+                )})}
               </div>
             </div>
           </div>
         </motion.div>
+      </section>
+
+      {/* ─── SOCIAL PROOF ─── */}
+      <section className="px-6 py-12 border-y border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-950/50">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-8">
+            <p className="text-sm uppercase tracking-[2px] font-semibold text-slate-500 dark:text-zinc-500 mb-3">
+              {t.socialProof}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6 opacity-80">
+            {/* Placeholder logos — replace with real when available */}
+            {["OpenAI", "Zapier", "Linear", "Notion", "Stripe", "Grab", "Gojek", "Tokopedia"].map((name, i) => (
+              <div key={i} className="text-sm font-semibold text-slate-600 dark:text-zinc-400 tracking-tight">
+                {name}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+            {[
+              { metric: "500+", label: "Professionals" },
+              { metric: "2 Languages", label: "Native Support" },
+              { metric: "Real-time", label: "Conflict Detection" },
+            ].map((item, idx) => (
+              <div key={idx} className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-5">
+                <div className="text-2xl font-bold text-slate-900 dark:text-white tracking-tighter">{item.metric}</div>
+                <div className="text-sm text-slate-500 dark:text-zinc-400 mt-1">{item.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* ─── FEATURES ─── */}
@@ -307,64 +639,91 @@ export default function LandingPage() {
             className="text-center mb-20"
           >
             <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-6">
-              Everything you need to <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">own your time</span>
+              {t.featuresSectionTitleStart} <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">{t.featuresSectionTitleHighlight}</span>
             </h2>
             <p className="text-slate-500 dark:text-zinc-400 max-w-xl mx-auto text-lg sm:text-xl">
-              Three powerful features seamlessly integrated into one premium experience.
+              {t.featuresSectionSub} <span className="text-violet-600 dark:text-violet-400 font-medium">Bilingual by design.</span>
             </p>
           </motion.div>
 
           <div className="grid sm:grid-cols-3 gap-8">
             {[
-              {
-                icon: Brain,
-                color: "violet",
-                title: "Natural Language AI",
-                desc: "Just type what you want. Our AI understands contexts, parses dates, durations, and participants automatically.",
-              },
-              {
-                icon: Calendar,
-                color: "indigo",
-                title: "Interactive Calendar",
-                desc: "Beautiful weekly calendar with drag-and-drop, resize events, and real-time updates — all with silky animations.",
-              },
-              {
-                icon: Shield,
-                color: "blue",
-                title: "Conflict Detection",
-                desc: "Timeora catches scheduling conflicts before they happen and suggests AI-powered alternative time slots instantly.",
-              },
+              { icon: Brain, color: "violet" },
+              { icon: Zap, color: "emerald" },
+              { icon: Shield, color: "rose" },
             ].map((feature, idx) => (
               <motion.div
-                key={feature.title}
+                key={idx}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.1 }}
-                className="group relative p-8 rounded-3xl border border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-violet-100 dark:hover:border-violet-800 hover:shadow-2xl hover:shadow-violet-500/5 transition-all duration-300"
+                className={`group relative p-8 rounded-3xl border border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 transition-all duration-300 hover:shadow-2xl ${
+                  feature.color === "violet" ? "hover:border-violet-100 dark:hover:border-violet-800 hover:shadow-violet-500/5" :
+                  feature.color === "emerald" ? "hover:border-emerald-100 dark:hover:border-emerald-800 hover:shadow-emerald-500/5" :
+                  "hover:border-rose-100 dark:hover:border-rose-800 hover:shadow-rose-500/5"
+                }`}
               >
                 <div
                   className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3 shadow-sm ${
                     feature.color === "violet"
                       ? "bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400"
-                      : feature.color === "indigo"
-                      ? "bg-indigo-100 dark:bg-violet-900/30 text-indigo-600 dark:text-indigo-400"
-                      : "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+                      : feature.color === "emerald"
+                      ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
+                      : "bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400"
                   }`}
                 >
                   <feature.icon className="w-7 h-7" />
                 </div>
-                <h3 className="text-2xl font-bold mb-3">{feature.title}</h3>
-                <p className="text-slate-500 dark:text-zinc-400 leading-relaxed text-lg">{feature.desc}</p>
+                <h3 className="text-2xl font-bold mb-3">{t.features[idx].title}</h3>
+                <p className="text-slate-500 dark:text-zinc-400 leading-relaxed text-lg">{t.features[idx].desc}</p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
+      {/* ─── BILINGUAL ADVANTAGE ─── */}
+      <section className="px-6 py-16 sm:py-20 border-t border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-xs font-semibold tracking-widest mb-4">
+            UNIQUE DIFFERENTIATOR
+          </div>
+          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4">
+            {t.bilingualAdvantageTitle}
+          </h2>
+          <p className="text-lg text-slate-600 dark:text-zinc-400 max-w-2xl mx-auto mb-8">
+            {t.bilingualAdvantageDesc}
+          </p>
+
+          <div className="grid sm:grid-cols-2 gap-4 max-w-2xl mx-auto text-left">
+            <div className="p-5 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+              <div className="font-semibold mb-1 text-sm text-violet-600">🇮🇩 Indonesian</div>
+              <div className="text-sm text-slate-500">"Rapat tim marketing besok jam 14.00 selama 45 menit"</div>
+            </div>
+            <div className="p-5 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+              <div className="font-semibold mb-1 text-sm text-violet-600">🇬🇧 English</div>
+              <div className="text-sm text-slate-500">"Marketing sync tomorrow at 2pm for 45 minutes"</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ─── HOW IT WORKS ─── */}
-      <section className="px-6 py-20 sm:py-32 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-950/50">
-        <div className="max-w-4xl mx-auto">
+      <section className="relative px-6 py-20 sm:py-32 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-950/50 overflow-hidden">
+        {/* Subtle Background Ornaments */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[800px] h-[400px] bg-gradient-to-b from-violet-100/50 dark:from-violet-900/10 to-transparent blur-3xl opacity-50" />
+          <div 
+            className="absolute inset-0 opacity-[0.3] dark:opacity-[0.05]"
+            style={{
+              backgroundImage: "radial-gradient(#94a3b8 1px, transparent 1px)",
+              backgroundSize: "24px 24px"
+            }}
+          />
+        </div>
+
+        <div className="relative z-10 max-w-4xl mx-auto">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -372,31 +731,16 @@ export default function LandingPage() {
             className="text-center mb-20"
           >
             <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-6">
-              How it works
+              {t.howItWorksTitle}
             </h2>
-            <p className="text-slate-500 dark:text-zinc-400 text-lg sm:text-xl">Three steps. Zero friction. Pure productivity.</p>
+            <p className="text-slate-500 dark:text-zinc-400 text-lg sm:text-xl">{t.howItWorksSub}</p>
           </motion.div>
 
-          <div className="space-y-16">
+          <div className="space-y-12 sm:space-y-16">
             {[
-              {
-                step: "01",
-                icon: Sparkles,
-                title: "Type in natural language",
-                desc: 'Open the Command Bar (⌘K) and type something like "Lunch meeting with Ari next Tuesday at noon for 1 hour".',
-              },
-              {
-                step: "02",
-                icon: Zap,
-                title: "AI parses & checks conflicts",
-                desc: "Our AI extracts the structured event data and checks against your existing schedule in real-time.",
-              },
-              {
-                step: "03",
-                icon: CheckCircle2,
-                title: "Confirm & done",
-                desc: "Review the pre-filled event form, tweak if needed, hit save. Your event appears on the calendar instantly.",
-              },
+              { step: "01", icon: Sparkles },
+              { step: "02", icon: Zap },
+              { step: "03", icon: CheckCircle2 },
             ].map((item, i) => (
               <motion.div 
                 key={i} 
@@ -404,17 +748,17 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.15 }}
-                className="flex items-start gap-8 group"
+                className="flex items-start gap-6 sm:gap-8 group"
               >
-                <div className="flex-shrink-0 w-16 h-16 rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-sm flex items-center justify-center group-hover:bg-violet-600 group-hover:border-violet-600 group-hover:shadow-violet-200 dark:group-hover:shadow-violet-900 transition-all duration-300">
-                  <item.icon className="w-7 h-7 text-slate-400 dark:text-zinc-500 group-hover:text-white transition-colors duration-300" />
+                <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-sm flex items-center justify-center group-hover:bg-violet-600 group-hover:border-violet-600 group-hover:shadow-violet-200 dark:group-hover:shadow-violet-900 transition-all duration-300">
+                  <item.icon className="w-5 h-5 text-slate-400 dark:text-zinc-500 group-hover:text-white transition-colors duration-300" />
                 </div>
-                <div className="pt-1">
-                  <div className="text-sm font-black text-violet-500 tracking-widest uppercase mb-2">
+                <div className="pt-0">
+                  <div className="text-xs font-black text-violet-500 tracking-widest uppercase mb-1.5">
                     Step {item.step}
                   </div>
-                  <h3 className="text-2xl font-bold mb-3">{item.title}</h3>
-                  <p className="text-slate-500 dark:text-zinc-400 leading-relaxed text-lg">{item.desc}</p>
+                  <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3">{t.steps[i].title}</h3>
+                  <p className="text-slate-500 dark:text-zinc-400 leading-relaxed text-base sm:text-lg">{t.steps[i].desc}</p>
                 </div>
               </motion.div>
             ))}
@@ -435,10 +779,10 @@ export default function LandingPage() {
               <MessageCircleQuestion className="w-6 h-6" />
             </div>
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4">
-              Frequently Asked Questions
+              {t.faqTitle}
             </h2>
             <p className="text-slate-500 dark:text-zinc-400 text-lg">
-              Everything you need to know about Timeora.
+              {t.faqSub}
             </p>
           </motion.div>
 
@@ -455,20 +799,25 @@ export default function LandingPage() {
                 <button
                   onClick={() => setOpenFaq(openFaq === index ? null : index)}
                   className="w-full flex items-center justify-between p-6 text-left"
+                  aria-expanded={openFaq === index}
+                  aria-controls={`faq-answer-${index}`}
                 >
-                  <span className="text-lg font-semibold text-slate-800 dark:text-zinc-200">{faq.question}</span>
+                  <span className="text-lg font-semibold text-slate-800 dark:text-zinc-200">
+                    {lang === 'id' ? faq.questionId : faq.questionEn}
+                  </span>
                   <ChevronDown className={`w-5 h-5 text-slate-400 dark:text-zinc-500 transition-transform duration-300 ${openFaq === index ? "rotate-180" : ""}`} />
                 </button>
                 <AnimatePresence>
                   {openFaq === index && (
                     <motion.div
+                      id={`faq-answer-${index}`}
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
                       <div className="p-6 pt-0 text-slate-500 dark:text-zinc-400 leading-relaxed">
-                        {faq.answer}
+                        {lang === 'id' ? faq.answerId : faq.answerEn}
                       </div>
                     </motion.div>
                   )}
@@ -495,18 +844,26 @@ export default function LandingPage() {
 
             <div className="relative z-10">
               <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-6 leading-tight">
-                Ready to reclaim your time?
+                {t.ctaTitle}
               </h2>
               <p className="text-zinc-400 text-lg sm:text-xl mb-10 max-w-xl mx-auto leading-relaxed">
-                Join Timeora and start scheduling smarter — powered by AI, designed for modern professionals.
+                {t.ctaSub}
               </p>
-              <Link
-                href="/register"
-                className="group inline-flex items-center gap-2 bg-white text-zinc-950 px-10 py-4 rounded-2xl text-lg font-bold hover:bg-zinc-100 transition-all shadow-[0_0_40px_rgba(255,255,255,0.2)] hover:shadow-[0_0_60px_rgba(255,255,255,0.3)] hover:-translate-y-1"
-              >
-                Get Started for Free
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <Link href="/register" passHref legacyBehavior>
+                  <motion.a
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="group inline-flex items-center gap-2 bg-white text-zinc-950 px-10 py-4 rounded-2xl text-lg font-bold hover:bg-zinc-100 transition-colors shadow-[0_0_40px_rgba(255,255,255,0.2)] hover:shadow-[0_0_60px_rgba(255,255,255,0.3)]"
+                  >
+                    {t.ctaButton}
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </motion.a>
+                </Link>
+                <Link href="/login" className="text-sm text-zinc-400 hover:text-white transition-colors">
+                  Already have an account? Sign in →
+                </Link>
+              </div>
             </div>
           </div>
         </motion.div>
@@ -540,7 +897,7 @@ export default function LandingPage() {
               href="https://github.com/bagusardin25/Timeora"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-slate-900 dark:hover:text-zinc-100 transition-colors flex items-center gap-2"
+              className="hover:text-slate-900 dark:hover:text-zinc-100 transition-colors flex items-center gap-2 py-3 sm:py-0"
             >
               <GithubIcon className="w-5 h-5" />
               GitHub
