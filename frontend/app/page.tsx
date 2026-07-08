@@ -177,7 +177,14 @@ export default function LandingPage() {
   const [lang, setLang] = useState<'en' | 'id'>('en');
   const [demoInput, setDemoInput] = useState("");
   const [isParsing, setIsParsing] = useState(false);
-  const [dynamicEvent, setDynamicEvent] = useState<{ dayIndex: number, title: string, isConflict: boolean } | null>(null);
+  const [demoMode, setDemoMode] = useState<'create' | 'reschedule'>('create');
+
+  // Enhanced demo state
+  const [dynamicEvent, setDynamicEvent] = useState<{ dayIndex: number, title: string, isConflict: boolean, time?: string, duration?: string } | null>(null);
+  const [parsedData, setParsedData] = useState<any>(null);
+  const [alternatives, setAlternatives] = useState<Array<{ dayIndex: number; time: string; label: string }>>([]);
+  const [selectedAltIndex, setSelectedAltIndex] = useState<number | null>(null);
+  const [appliedMessage, setAppliedMessage] = useState<string | null>(null);
 
   // Typewriter states
   const [currentPhraseIdx, setCurrentPhraseIdx] = useState(0);
@@ -192,15 +199,24 @@ export default function LandingPage() {
   useEffect(() => {
     if (!demoInput.trim()) {
       setDynamicEvent(null);
+      setParsedData(null);
+      setAlternatives([]);
+      setAppliedMessage(null);
       setIsParsing(false);
       return;
     }
     setIsParsing(true);
+    setAppliedMessage(null);
+    setSelectedAltIndex(null);
+
     const timer = setTimeout(() => {
       const text = demoInput.toLowerCase();
-      let dayIndex = 2; // Default to Wednesday
-      let title = "Custom Event";
-      
+      let dayIndex = 2;
+      let title = demoMode === 'reschedule' ? "Rescheduled Meeting" : "New Event";
+      let time = "10:00";
+      let duration = "1 hour";
+
+      // Day detection (improved)
       if (text.includes("senin") || text.includes("mon")) dayIndex = 0;
       else if (text.includes("selasa") || text.includes("tue")) dayIndex = 1;
       else if (text.includes("rabu") || text.includes("wed")) dayIndex = 2;
@@ -210,21 +226,48 @@ export default function LandingPage() {
       else if (text.includes("minggu") || text.includes("sun")) dayIndex = 6;
       else if (text.includes("besok") || text.includes("tomorrow")) dayIndex = (new Date().getDay() + 6) % 7;
 
+      // Basic title extraction
       const words = demoInput.split(" ");
-      if (words.length > 0) {
-        title = words.slice(0, 4).join(" ");
-        title = title.replace(/\b(di|jam|hari|besok|pada|pukul|selama)\b/gi, '').trim() || "Event Baru";
-      }
+      title = words.slice(0, 5).join(" ").replace(/\b(di|jam|hari|besok|pada|pukul|selama|meeting|rapat|with|dengan)\b/gi, '').trim() || title;
+
+      // Time hints
+      if (text.includes("10") || text.includes("pagi")) time = "10:00";
+      else if (text.includes("14") || text.includes("2pm")) time = "14:00";
+      else if (text.includes("jam 9") || text.includes("9am")) time = "09:00";
+
+      if (text.includes("45") || text.includes("menit")) duration = "45 min";
+      else if (text.includes("2 jam")) duration = "2 hours";
 
       const staticDays = [1, 3, 4];
       const isConflict = staticDays.includes(dayIndex);
 
-      setDynamicEvent({ dayIndex, title, isConflict });
+      const newDynamic = { dayIndex, title, isConflict, time, duration };
+      setDynamicEvent(newDynamic);
+
+      // Structured parsed output
+      setParsedData({
+        title,
+        day: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][dayIndex],
+        time,
+        duration,
+        intent: demoMode === 'reschedule' ? "Reschedule" : "Create",
+        language: /[\u00C0-\u017F\u1E00-\u1EFF]/.test(demoInput) || text.includes("besok") || text.includes("jam") ? "Indonesian" : "English"
+      });
+
+      // Generate 3 alternative slots (smart suggestions)
+      const altDays = [dayIndex, (dayIndex + 1) % 7, (dayIndex + 2) % 7];
+      const alts = altDays.map((d, idx) => ({
+        dayIndex: d,
+        time: idx === 0 ? "11:00" : idx === 1 ? "15:30" : "09:30",
+        label: `${["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][d]} ${idx === 0 ? "11:00" : idx === 1 ? "15:30" : "09:30"}`
+      }));
+      setAlternatives(alts);
+
       setIsParsing(false);
-    }, 600);
+    }, 650);
 
     return () => clearTimeout(timer);
-  }, [demoInput]);
+  }, [demoInput, demoMode]);
 
   useEffect(() => {
     const currentPhrase = typewriterPhrases[currentPhraseIdx];
@@ -479,6 +522,23 @@ export default function LandingPage() {
             </div>
             {/* App Preview Content */}
             <div className="p-4 sm:p-10 space-y-6 sm:space-y-8 bg-gradient-to-b from-white to-slate-50/50 dark:from-zinc-900 dark:to-zinc-950/50">
+              {/* Mode Switcher */}
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => { setDemoMode('create'); setDemoInput(""); }}
+                  className={`px-4 py-1.5 text-sm rounded-full transition ${demoMode === 'create' ? 'bg-violet-600 text-white' : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-200'}`}
+                >
+                  Create Event
+                </button>
+                <button 
+                  onClick={() => { setDemoMode('reschedule'); setDemoInput(""); }}
+                  className={`px-4 py-1.5 text-sm rounded-full transition ${demoMode === 'reschedule' ? 'bg-violet-600 text-white' : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 hover:bg-slate-200'}`}
+                >
+                  Reschedule
+                </button>
+                <div className="ml-auto text-xs text-slate-400">Try both modes</div>
+              </div>
+
               {/* Command Bar Preview */}
               <div className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-sm focus-within:ring-2 focus-within:ring-violet-500/50 transition-all duration-300">
                 <div className="p-2 sm:p-3 bg-gradient-to-br from-violet-100 to-indigo-100 rounded-xl shadow-inner hidden sm:block relative">
@@ -489,12 +549,16 @@ export default function LandingPage() {
                   )}
                 </div>
                 <div className="flex-1">
-                  <div className="text-[10px] sm:text-xs font-bold text-violet-500 dark:text-violet-400 uppercase tracking-wider mb-0.5 sm:mb-1">AI Assistant</div>
+                  <div className="text-[10px] sm:text-xs font-bold text-violet-500 dark:text-violet-400 uppercase tracking-wider mb-0.5 sm:mb-1">
+                    AI Assistant • {demoMode === 'create' ? 'Create' : 'Reschedule'}
+                  </div>
                   <input
                     type="text"
                     value={demoInput}
                     onChange={(e) => setDemoInput(e.target.value)}
-                    placeholder={lang === 'id' ? "Coba: 'Rapat tim besok jam 10 pagi' atau 'Team sync tomorrow 10am'" : "Try: 'Team meeting tomorrow at 10am' or 'Rapat tim besok jam 10'"}
+                    placeholder={lang === 'id' 
+                      ? (demoMode === 'reschedule' ? "Coba: 'Pindahkan rapat Ari ke Jumat jam 14'" : "Coba: 'Rapat tim besok jam 10 pagi'") 
+                      : (demoMode === 'reschedule' ? "Reschedule my meeting with Ari to Friday 2pm" : "Try: 'Team meeting tomorrow at 10am'")}
                     className="w-full bg-transparent border-none focus:outline-none font-medium text-slate-700 dark:text-zinc-300 text-sm sm:text-lg leading-snug placeholder:text-slate-400/70"
                   />
                 </div>
@@ -502,6 +566,27 @@ export default function LandingPage() {
                   ⌘ K
                 </kbd>
               </div>
+
+              {/* Structured Output */}
+              {parsedData && (
+                <div className="rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Parsed Result</div>
+                    {appliedMessage && (
+                      <div className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2.5 py-0.5 rounded-full">{appliedMessage}</div>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-3 text-sm">
+                    <div><span className="text-slate-500">Title:</span> <span className="font-medium">{parsedData.title}</span></div>
+                    <div><span className="text-slate-500">Day:</span> <span className="font-medium">{parsedData.day}</span></div>
+                    <div><span className="text-slate-500">Time:</span> <span className="font-medium">{parsedData.time}</span></div>
+                    <div><span className="text-slate-500">Duration:</span> <span className="font-medium">{parsedData.duration}</span></div>
+                    <div><span className="text-slate-500">Intent:</span> <span className="font-medium">{parsedData.intent}</span></div>
+                    <div><span className="text-slate-500">Language:</span> <span className="font-medium">{parsedData.language}</span></div>
+                  </div>
+                </div>
+              )}
+
               {/* Calendar Grid Preview */}
               <div className="flex flex-col sm:grid sm:grid-cols-7 gap-px rounded-2xl overflow-hidden border border-slate-200 dark:border-zinc-700 shadow-sm bg-slate-200/50 dark:bg-zinc-800/50">
                 <div className="hidden sm:contents">
@@ -563,7 +648,7 @@ export default function LandingPage() {
                           </>
                         )}
                         
-                        {/* Dynamic Event */}
+                        {/* Dynamic / Proposed Event */}
                         <AnimatePresence>
                           {hasDynamic && (
                             <motion.div 
@@ -572,7 +657,7 @@ export default function LandingPage() {
                               exit={{ opacity: 0, scale: 0.9 }}
                               className="sm:mt-1.5 text-xs font-semibold text-white bg-gradient-to-r from-fuchsia-500 to-pink-500 rounded-lg px-2.5 py-1.5 truncate shadow-md relative z-10 border border-fuchsia-400"
                             >
-                              ✨ {dynamicEvent.title}
+                              {demoMode === 'reschedule' ? '↻ ' : '✨ '}{dynamicEvent.title} {dynamicEvent.time && `• ${dynamicEvent.time}`}
                             </motion.div>
                           )}
                           {hasDynamic && dynamicEvent.isConflict && (
@@ -591,6 +676,41 @@ export default function LandingPage() {
                   </div>
                 )})}
               </div>
+
+              {/* Alternative Slots */}
+              {alternatives.length > 0 && (
+                <div>
+                  <div className="text-xs uppercase tracking-wider font-semibold text-slate-500 dark:text-zinc-400 mb-2 flex items-center gap-2">
+                    Smart Alternatives — click to apply
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {alternatives.map((alt, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          const newEvent = { 
+                            dayIndex: alt.dayIndex, 
+                            title: dynamicEvent?.title || "Proposed Slot", 
+                            isConflict: [1,3,4].includes(alt.dayIndex),
+                            time: alt.time,
+                            duration: dynamicEvent?.duration || "1 hour"
+                          };
+                          setDynamicEvent(newEvent);
+                          setSelectedAltIndex(idx);
+                          setAppliedMessage("Alternative applied ✓");
+                          setTimeout(() => setAppliedMessage(null), 1800);
+                        }}
+                        className={`px-3 py-1.5 text-xs rounded-xl border transition ${selectedAltIndex === idx 
+                          ? 'bg-violet-600 text-white border-violet-600' 
+                          : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-700 hover:border-violet-300'}`}
+                      >
+                        {alt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-1.5">These are conflict-free suggestions based on your schedule.</div>
+                </div>
+              )}
             </div>
           </div>
         </motion.div>
