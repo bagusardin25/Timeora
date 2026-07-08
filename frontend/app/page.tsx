@@ -18,7 +18,11 @@ import {
   ChevronDown,
   Globe,
   Bot,
-  Loader2
+  Loader2,
+  X,
+  AlertTriangle,
+  Edit3,
+  Clock
 } from "lucide-react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -124,6 +128,21 @@ const content = {
       "Data stays private",
       "Google & Outlook Calendar",
       "No AI training on your data"
+    ],
+    problemSolutionTitle: "Traditional scheduling is broken",
+    problemSubtitle: "The old way",
+    problemItems: [
+      { icon: Calendar, title: "Tedious forms", desc: "Clicking through date pickers and dropdowns for every single event." },
+      { icon: Globe, title: "Language barrier", desc: "Most tools only feel natural in English. Indonesian feels awkward." },
+      { icon: AlertTriangle, title: "Hidden conflicts", desc: "You only find out about double bookings at the worst possible moment." },
+      { icon: Clock, title: "Manual rescheduling", desc: "Long email threads just to move one meeting." }
+    ],
+    solutionSubtitle: "The Timeora way",
+    solutionItems: [
+      { icon: Zap, title: "Natural language", desc: "Type \"Rapat tim besok jam 10\" or in English. Done." },
+      { icon: Brain, title: "Bilingual AI", desc: "Understands context perfectly in both languages with no translation." },
+      { icon: Shield, title: "Smart conflict detection", desc: "Spots problems instantly and suggests better time slots." },
+      { icon: Edit3, title: "Drag, resize & reschedule", desc: "Fully interactive calendar + change plans with a single sentence." }
     ]
   },
   id: {
@@ -179,6 +198,21 @@ const content = {
       "Data tetap privat",
       "Google & Outlook Calendar",
       "AI tidak melatih data Anda"
+    ],
+    problemSolutionTitle: "Penjadwalan tradisional itu menyiksa",
+    problemSubtitle: "Cara lama",
+    problemItems: [
+      { icon: Calendar, title: "Formulir yang membosankan", desc: "Harus klik-klik date picker dan dropdown untuk setiap event." },
+      { icon: Globe, title: "Hambatan bahasa", desc: "Kebanyakan tools hanya bagus di English. Bahasa Indonesia terasa canggung." },
+      { icon: AlertTriangle, title: "Konflik tersembunyi", desc: "Baru tahu bentrok di saat-saat paling tidak tepat." },
+      { icon: Clock, title: "Reschedule manual", desc: "Thread email panjang hanya untuk memindah satu meeting." }
+    ],
+    solutionSubtitle: "Cara Timeora",
+    solutionItems: [
+      { icon: Zap, title: "Bahasa natural", desc: "Ketik \"Rapat tim besok jam 10\" atau dalam English. Selesai." },
+      { icon: Brain, title: "AI Dwibahasa", desc: "Langsung paham konteks dalam dua bahasa tanpa terjemahan." },
+      { icon: Shield, title: "Deteksi konflik pintar", desc: "Langsung lihat masalah dan saran slot yang lebih baik." },
+      { icon: Edit3, title: "Drag, resize & reschedule", desc: "Kalender interaktif penuh + ubah rencana cukup dengan kalimat." }
     ]
   }
 };
@@ -734,6 +768,73 @@ export default function LandingPage() {
             </div>
           </div>
         </motion.div>
+      </section>
+
+      {/* ─── PROBLEM / SOLUTION ─── */}
+      <section className="px-6 py-16 sm:py-20 border-t border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4">
+              {t.problemSolutionTitle}
+            </h2>
+            <p className="text-slate-500 dark:text-zinc-400 text-lg max-w-xl mx-auto">
+              {lang === 'id' 
+                ? "Lihat bagaimana Timeora mengubah bagian paling menyebalkan dari penjadwalan." 
+                : "See how Timeora transforms the painful parts of scheduling."}
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Old Way */}
+            <div className="rounded-3xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-zinc-950 p-8">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 text-sm font-semibold mb-6">
+                {t.problemSubtitle}
+              </div>
+              <div className="space-y-6">
+                {t.problemItems.map((item, index) => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={index} className="flex gap-4">
+                      <div className="mt-1">
+                        <Icon className="w-5 h-5 text-rose-500" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900 dark:text-white">{item.title}</div>
+                        <div className="text-sm text-slate-500 dark:text-zinc-400 mt-1 leading-relaxed">{item.desc}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Timeora Way */}
+            <div className="rounded-3xl border border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-zinc-900 p-8 relative overflow-hidden">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-sm font-semibold mb-6">
+                {t.solutionSubtitle}
+              </div>
+              <div className="space-y-6">
+                {t.solutionItems.map((item, index) => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={index} className="flex gap-4">
+                      <div className="mt-1">
+                        <Icon className="w-5 h-5 text-emerald-500" />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-slate-900 dark:text-white">{item.title}</div>
+                        <div className="text-sm text-slate-600 dark:text-zinc-400 mt-1 leading-relaxed">{item.desc}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Subtle glow */}
+              <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-violet-400/10 rounded-full blur-3xl pointer-events-none" />
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* ─── SOCIAL PROOF ─── */}
