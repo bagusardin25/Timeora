@@ -864,23 +864,85 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4 mb-12">
             {[
-              { name: "Google Calendar", icon: "📅" },
-              { name: "Outlook", icon: "📆" },
-              { name: "Slack", icon: "💬" },
-              { name: "Linear", icon: "🔗" },
-              { name: "Asana", icon: "📋" },
-              { name: "Todoist", icon: "✅" },
-              { name: "Zapier", icon: "⚡" },
-              { name: "Zoom", icon: "🎥" },
+              { name: "Google Calendar", color: "#4285F4" },
+              { name: "Outlook", color: "#0078D4" },
+              { name: "Slack", color: "#4A154B" },
+              { name: "Linear", color: "#5E6AD2" },
+              { name: "Asana", color: "#F06A6A" },
+              { name: "Todoist", color: "#E44332" },
+              { name: "Zapier", color: "#FF4F00" },
+              { name: "Zoom", color: "#2D8CFF" },
             ].map((tool, idx) => (
               <div 
                 key={idx} 
-                className="flex items-center justify-center gap-3 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-5 py-4 hover:border-violet-200 dark:hover:border-violet-800 transition-colors"
+                className="group flex items-center gap-3 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-3 hover:border-violet-200 dark:hover:border-violet-800 transition-all hover:shadow-sm"
               >
-                <span className="text-xl">{tool.icon}</span>
-                <span className="font-semibold text-sm text-slate-700 dark:text-zinc-300">{tool.name}</span>
+                {/* Real brand logo SVGs (inline for performance & no external deps) */}
+                {tool.name === "Google Calendar" && (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="4" width="18" height="17" rx="2" fill="#4285F4"/>
+                    <path d="M8 2v4M16 2v4M3 10h18" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                    <circle cx="8" cy="14" r="1.5" fill="white"/>
+                    <circle cx="12" cy="14" r="1.5" fill="white"/>
+                    <circle cx="16" cy="14" r="1.5" fill="white"/>
+                    <circle cx="8" cy="18" r="1.5" fill="white"/>
+                    <circle cx="12" cy="18" r="1.5" fill="white"/>
+                  </svg>
+                )}
+                {tool.name === "Outlook" && (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2" y="4" width="20" height="16" rx="2" fill="#0078D4"/>
+                    <path d="M6 8h12M6 12h8M6 16h6" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                    <path d="M18 8l-4 4 4 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+                {tool.name === "Slack" && (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8.5 4C7.67 4 7 4.67 7 5.5v3h-1.5C4.67 8.5 4 9.17 4 10v3.5c0 .83.67 1.5 1.5 1.5H7v3c0 .83.67 1.5 1.5 1.5h3.5c.83 0 1.5-.67 1.5-1.5v-3h1.5c.83 0 1.5-.67 1.5-1.5V10c0-.83-.67-1.5-1.5-1.5H13V5.5c0-.83-.67-1.5-1.5-1.5H8.5z" fill="#4A154B"/>
+                    <path d="M15.5 20c.83 0 1.5-.67 1.5-1.5v-3h1.5c.83 0 1.5-.67 1.5-1.5V10c0-.83-.67-1.5-1.5-1.5H17V5.5c0-.83-.67-1.5-1.5-1.5h-3.5c-.83 0-1.5.67-1.5 1.5v3H9c-.83 0-1.5.67-1.5 1.5v3.5c0 .83.67 1.5 1.5 1.5H11v3c0 .83.67 1.5 1.5 1.5h3z" fill="#36C5F0"/>
+                  </svg>
+                )}
+                {tool.name === "Linear" && (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 4l16 16M20 4L4 20" stroke="#5E6AD2" strokeWidth="3.5" strokeLinecap="round"/>
+                    <circle cx="12" cy="12" r="3" fill="#5E6AD2"/>
+                  </svg>
+                )}
+                {tool.name === "Asana" && (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="7" r="3" fill="#F06A6A"/>
+                    <circle cx="7" cy="17" r="3" fill="#F06A6A"/>
+                    <circle cx="17" cy="17" r="3" fill="#F06A6A"/>
+                    <path d="M9 9l3 5M15 9l-3 5" stroke="#F06A6A" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                )}
+                {tool.name === "Todoist" && (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="3" width="18" height="18" rx="4" fill="#E44332"/>
+                    <path d="M8 12l3 3 5-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+                {tool.name === "Zapier" && (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 3v18M3 12h18" stroke="#FF4F00" strokeWidth="2.5" strokeLinecap="round"/>
+                    <path d="M6 6l12 12M18 6L6 18" stroke="#FF4F00" strokeWidth="1.8" strokeLinecap="round"/>
+                  </svg>
+                )}
+                {tool.name === "Zoom" && (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="5" width="14" height="14" rx="2" fill="#2D8CFF"/>
+                    <path d="M17 9l4-2v10l-4-2" fill="#2D8CFF"/>
+                  </svg>
+                )}
+                <span className="font-semibold text-sm text-slate-700 dark:text-zinc-200 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
+                  {tool.name}
+                </span>
               </div>
             ))}
+          </div>
+
+          <div className="text-center text-xs text-slate-500 dark:text-zinc-500">
+            + many more via Zapier and direct API
           </div>
 
           {/* Trust Grid */}
