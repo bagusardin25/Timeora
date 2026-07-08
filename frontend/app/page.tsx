@@ -502,27 +502,31 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/register" passHref legacyBehavior>
-              <motion.a
+            <Link
+              href="/register"
+              className="group flex items-center gap-2 bg-zinc-950 text-white px-8 py-4 rounded-2xl text-base font-semibold hover:bg-zinc-800 transition-colors shadow-xl hover:shadow-2xl"
+            >
+              <motion.span
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="group flex items-center gap-2 bg-zinc-950 text-white px-8 py-4 rounded-2xl text-base font-semibold hover:bg-zinc-800 transition-colors shadow-xl hover:shadow-2xl"
               >
                 {t.heroCtaFree}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </motion.a>
+              </motion.span>
             </Link>
-            <Link href="https://github.com/bagusardin25/Timeora" passHref legacyBehavior>
-              <motion.a
-                target="_blank"
-                rel="noopener noreferrer"
+            <Link
+              href="https://github.com/bagusardin25/Timeora"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-8 py-4 rounded-2xl text-base font-medium text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm hover:bg-white dark:hover:bg-zinc-800 transition-colors shadow-sm hover:shadow-md"
+            >
+              <motion.span
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="flex items-center gap-2 px-8 py-4 rounded-2xl text-base font-medium text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm hover:bg-white dark:hover:bg-zinc-800 transition-colors shadow-sm hover:shadow-md"
               >
                 <GithubIcon className="w-5 h-5" />
                 {t.heroCtaGithub}
-              </motion.a>
+              </motion.span>
             </Link>
           </div>
 
@@ -1201,15 +1205,17 @@ export default function LandingPage() {
                 {t.ctaSub}
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link href="/register" passHref legacyBehavior>
-                  <motion.a
+                <Link
+                  href="/register"
+                  className="group inline-flex items-center gap-2 bg-white text-zinc-950 px-10 py-4 rounded-2xl text-lg font-bold hover:bg-zinc-100 transition-colors shadow-[0_0_40px_rgba(255,255,255,0.2)] hover:shadow-[0_0_60px_rgba(255,255,255,0.3)]"
+                >
+                  <motion.span
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="group inline-flex items-center gap-2 bg-white text-zinc-950 px-10 py-4 rounded-2xl text-lg font-bold hover:bg-zinc-100 transition-colors shadow-[0_0_40px_rgba(255,255,255,0.2)] hover:shadow-[0_0_60px_rgba(255,255,255,0.3)]"
                   >
                     {t.ctaButton}
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </motion.a>
+                  </motion.span>
                 </Link>
                 <Link href="/login" className="text-sm text-zinc-400 hover:text-white transition-colors">
                   Already have an account? Sign in →
