@@ -87,7 +87,6 @@ const content = {
     heroCtaFree: "Start Scheduling Free",
     heroCtaGithub: "View on GitHub",
     socialProof: "Trusted by 500+ professionals in Indonesia & globally",
-    trustLine: "Free during beta • No credit card • Works in both languages",
     featuresSectionTitleStart: "Everything you need to ",
     featuresSectionTitleHighlight: "own your time",
     featuresSectionSub: "Three powerful features seamlessly integrated into one premium experience.",
@@ -157,7 +156,6 @@ const content = {
     heroCtaFree: "Jadwalkan Gratis",
     heroCtaGithub: "Lihat di GitHub",
     socialProof: "Dipercaya oleh 500+ profesional di Indonesia & global",
-    trustLine: "Gratis selama beta • Tanpa kartu kredit • Bekerja di dua bahasa",
     featuresSectionTitleStart: "Semua yang Anda butuhkan untuk ",
     featuresSectionTitleHighlight: "menguasai waktu",
     featuresSectionSub: "Tiga fitur tangguh yang terintegrasi mulus dalam satu pengalaman premium.",
@@ -466,12 +464,6 @@ export default function LandingPage() {
             <span>{t.heroBadge}</span>
             <ChevronRight className="w-3.5 h-3.5 opacity-60" />
           </motion.div>
-
-          <div className="mb-6">
-            <span className="inline-block text-xs font-semibold tracking-wider uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-3 py-1 rounded-full">
-              {t.trustLine}
-            </span>
-          </div>
 
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.08] mb-6">
             {t.heroTitlePrefix}{" "}
