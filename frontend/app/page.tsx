@@ -425,28 +425,7 @@ export default function LandingPage() {
           </motion.div>
         </div>
 
-        {/* Floating Badges */}
-        <motion.div 
-          animate={{ y: [0, -10, 0] }}
-          transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-          className="absolute hidden lg:flex top-40 left-10 items-center gap-2 px-4 py-2 rounded-2xl bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md border border-slate-200/50 dark:border-zinc-700/50 shadow-lg z-10"
-        >
-          <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600">
-            <Calendar className="w-4 h-4" />
-          </div>
-          <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">Added to Calendar</span>
-        </motion.div>
 
-        <motion.div 
-          animate={{ y: [0, 10, 0] }}
-          transition={{ repeat: Infinity, duration: 5, ease: "easeInOut", delay: 1 }}
-          className="absolute hidden lg:flex bottom-20 right-10 items-center gap-2 px-4 py-2 rounded-2xl bg-white/60 dark:bg-zinc-900/60 backdrop-blur-md border border-slate-200/50 dark:border-zinc-700/50 shadow-lg z-10"
-        >
-          <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600">
-            <Shield className="w-4 h-4" />
-          </div>
-          <span className="text-sm font-semibold text-slate-700 dark:text-zinc-300">No Conflicts Detected</span>
-        </motion.div>
 
         <motion.div 
           initial={false}
@@ -509,6 +488,7 @@ export default function LandingPage() {
               <motion.span
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-2"
               >
                 {t.heroCtaFree}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -523,6 +503,7 @@ export default function LandingPage() {
               <motion.span
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-2"
               >
                 <GithubIcon className="w-5 h-5" />
                 {t.heroCtaGithub}
