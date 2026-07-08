@@ -465,7 +465,7 @@ export default function LandingPage() {
             <ChevronRight className="w-3.5 h-3.5 opacity-60" />
           </motion.div>
 
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.08] mb-6">
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-[-0.025em] leading-none mb-6">
             {t.heroTitlePrefix}{" "}
             <span className="relative inline-block">
               <span className="bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent">
@@ -496,7 +496,7 @@ export default function LandingPage() {
             </span>
           </h1>
 
-          <p className="text-lg sm:text-xl text-slate-500 dark:text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+          <p className="text-lg sm:text-xl text-slate-500 dark:text-zinc-400 max-w-2xl mx-auto mb-10 leading-[1.65] font-medium">
             {t.heroDescStart} <span className="font-medium text-slate-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md border border-slate-200 dark:border-zinc-700 shadow-sm min-w-[280px] inline-block text-left relative after:content-['|'] after:animate-pulse after:ml-0.5">{typedText}</span> 
             <br className="hidden sm:block" /> {t.heroDescEnd}
           </p>
@@ -538,7 +538,7 @@ export default function LandingPage() {
           <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight">
             Try it right now — <span className="text-violet-600 dark:text-violet-400">English or Indonesian</span>
           </h3>
-          <p className="text-slate-500 dark:text-zinc-400 mt-2 max-w-md mx-auto">
+          <p className="text-slate-500 dark:text-zinc-400 mt-2 max-w-md mx-auto leading-relaxed">
             Type naturally in either language. Watch the AI parse, detect conflicts, and preview on the calendar.
           </p>
         </div>
@@ -766,7 +766,7 @@ export default function LandingPage() {
       <section className="px-6 py-16 sm:py-20 border-t border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4">
+            <h2 className="text-3xl sm:text-5xl font-bold tracking-tight mb-4">
               {t.problemSolutionTitle}
             </h2>
             <p className="text-slate-500 dark:text-zinc-400 text-lg max-w-xl mx-auto">
@@ -871,7 +871,7 @@ export default function LandingPage() {
             viewport={{ once: true }}
             className="text-center mb-20"
           >
-            <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-6">
+            <h2 className="text-3xl sm:text-5xl font-bold tracking-tight mb-6">
               {t.featuresSectionTitleStart} <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">{t.featuresSectionTitleHighlight}</span>
             </h2>
             <p className="text-slate-500 dark:text-zinc-400 max-w-xl mx-auto text-lg sm:text-xl">
@@ -908,7 +908,7 @@ export default function LandingPage() {
                 >
                   <feature.icon className="w-7 h-7" />
                 </div>
-                <h3 className="text-2xl font-bold mb-3">{t.features[idx].title}</h3>
+                <h3 className="text-2xl font-semibold tracking-tight mb-3">{t.features[idx].title}</h3>
                 <p className="text-slate-500 dark:text-zinc-400 leading-relaxed text-lg">{t.features[idx].desc}</p>
               </motion.div>
             ))}
@@ -1081,7 +1081,7 @@ export default function LandingPage() {
             viewport={{ once: true }}
             className="text-center mb-20"
           >
-            <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-6">
+            <h2 className="text-3xl sm:text-5xl font-bold tracking-tight mb-6">
               {t.howItWorksTitle}
             </h2>
             <p className="text-slate-500 dark:text-zinc-400 text-lg sm:text-xl">{t.howItWorksSub}</p>
@@ -1108,7 +1108,7 @@ export default function LandingPage() {
                   <div className="text-xs font-black text-violet-500 tracking-widest uppercase mb-1.5">
                     Step {item.step}
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-3">{t.steps[i].title}</h3>
+                  <h3 className="text-xl sm:text-2xl font-semibold tracking-tight mb-2 sm:mb-3">{t.steps[i].title}</h3>
                   <p className="text-slate-500 dark:text-zinc-400 leading-relaxed text-base sm:text-lg">{t.steps[i].desc}</p>
                 </div>
               </motion.div>
@@ -1194,7 +1194,7 @@ export default function LandingPage() {
             <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-600/20 rounded-full blur-[80px] pointer-events-none" />
 
             <div className="relative z-10">
-              <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-6 leading-tight">
+              <h2 className="text-4xl sm:text-5xl font-bold tracking-tight mb-6 leading-tight">
                 {t.ctaTitle}
               </h2>
               <p className="text-zinc-400 text-lg sm:text-xl mb-10 max-w-xl mx-auto leading-relaxed">
