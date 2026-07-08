@@ -158,7 +158,11 @@ async def _handle_query(user: dict, parsed: dict) -> AssistantResponse:
     if target_date is None:
         target_date = datetime.now().date()
 
-    all_events = await data_access.list_events(user["id"])
+    all_events = await data_access.list_events_window(
+        user["id"],
+        target_date - timedelta(days=1),
+        target_date,
+    )
     matching = []
     for ev in all_events:
         ev_dict = _event_to_dict(ev)
@@ -187,7 +191,11 @@ async def _handle_find_slot(user: dict, parsed: dict) -> AssistantResponse:
         target_date = datetime.now().date()
 
     duration = parsed.get("duration_minutes", 60)
-    all_events = await data_access.list_events(user["id"])
+    all_events = await data_access.list_events_window(
+        user["id"],
+        target_date - timedelta(days=1),
+        target_date,
+    )
     event_dicts = [_event_to_dict(ev) for ev in all_events]
 
     requested_time_str = parsed.get("start_time", "09:00")

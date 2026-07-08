@@ -71,7 +71,7 @@ class TestSupabaseStoreConflicts(unittest.IsolatedAsyncioTestCase):
 
         with patch.object(
             supabase_store,
-            "list_events",
+            "_events_for_conflict_check",
             AsyncMock(return_value=[previous_day_event]),
         ):
             conflict, title, alternatives = await supabase_store.check_conflict(
@@ -96,7 +96,7 @@ class TestSupabaseStoreConflicts(unittest.IsolatedAsyncioTestCase):
 
         with patch.object(
             supabase_store,
-            "list_events",
+            "_events_for_conflict_check",
             AsyncMock(return_value=[overnight_block]),
         ):
             conflict, title, alternatives = await supabase_store.check_conflict(
@@ -131,7 +131,7 @@ class TestSupabaseStoreConflicts(unittest.IsolatedAsyncioTestCase):
             patch.object(supabase_store, "get_event", AsyncMock(return_value=existing_event)),
             patch.object(
                 supabase_store,
-                "list_events",
+                "_events_for_conflict_check",
                 AsyncMock(return_value=[previous_day_event, existing_event]),
             ),
             patch.object(supabase_store, "_base", return_value="https://example.test/rest/v1"),

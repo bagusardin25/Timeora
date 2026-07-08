@@ -127,6 +127,34 @@ async def list_events(user_id: str) -> list[EventResponse]:
     return await supabase_store.list_events(user_id)
 
 
+async def list_events_window(
+    user_id: str,
+    start_date: date,
+    end_date: date,
+) -> list[EventResponse]:
+    if _use_supabase_rest():
+        return await supabase_store.list_events_window(user_id, start_date, end_date)
+    pool = await ensure_pool()
+    if pool is not None:
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT *
+                FROM events
+                WHERE user_id = $1
+                  AND date >= $2
+                  AND date <= $3
+                  AND (deleted_at IS NULL)
+                ORDER BY date, start_time
+                """,
+                user_id,
+                start_date,
+                end_date,
+            )
+            return [_row_to_event(r) for r in rows]
+    return await supabase_store.list_events_window(user_id, start_date, end_date)
+
+
 async def has_external_event_id(
     user_id: str, provider: str, external_id: str
 ) -> bool:

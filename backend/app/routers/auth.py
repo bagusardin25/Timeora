@@ -13,7 +13,7 @@ from app.models import (
 )
 
 router = APIRouter()
-AUTH_PROVIDER_TIMEOUT = httpx.Timeout(10.0, connect=5.0)
+AUTH_PROVIDER_TIMEOUT = httpx.Timeout(8.0, connect=3.0)
 
 
 def _supabase_headers() -> dict[str, str]:
@@ -25,7 +25,10 @@ def _supabase_headers() -> dict[str, str]:
 
 
 async def _ensure_user_row(user_id: str, email: str) -> None:
-    await data_access.upsert_user(user_id, email)
+    try:
+        await data_access.upsert_user(user_id, email)
+    except Exception as exc:
+        print(f"[auth] skipped user mirror upsert for {user_id}: {exc}")
 
 
 async def _post_supabase(url: str, payload: dict) -> httpx.Response:

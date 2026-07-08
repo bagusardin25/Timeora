@@ -518,12 +518,13 @@ class TestEventUpdateConflicts(unittest.IsolatedAsyncioTestCase):
             ],
         )
 
-        with self.assertRaises(HTTPException) as caught:
-            await data_access.update_event(
-                "event-1",
-                "user-1",
-                EventUpdate(start_time=time(10, 0)),
-            )
+        with patch("app.data_access._use_supabase_rest", return_value=False):
+            with self.assertRaises(HTTPException) as caught:
+                await data_access.update_event(
+                    "event-1",
+                    "user-1",
+                    EventUpdate(start_time=time(10, 0)),
+                )
 
         self.assertEqual(caught.exception.status_code, 409)
         self.assertEqual(

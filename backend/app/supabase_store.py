@@ -1,4 +1,4 @@
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 
 import httpx
 from fastapi import HTTPException, status
@@ -18,6 +18,8 @@ _HEADERS = lambda: {
     "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
     "Content-Type": "application/json",
 }
+REST_TIMEOUT = httpx.Timeout(8.0, connect=3.0)
+EVENT_PAGE_SIZE = 500
 
 
 def is_configured() -> bool:
@@ -31,6 +33,22 @@ def _base() -> str:
             detail="Database not connected",
         )
     return f"{settings.SUPABASE_URL.rstrip('/')}/rest/v1"
+
+
+async def _request(method: str, url: str, **kwargs) -> httpx.Response:
+    try:
+        async with httpx.AsyncClient(timeout=REST_TIMEOUT) as client:
+            return await getattr(client, method)(url, **kwargs)
+    except httpx.TimeoutException as exc:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Database request timed out",
+        ) from exc
+    except httpx.RequestError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Database request failed",
+        ) from exc
 
 
 def _parse_time(value) -> time:
@@ -115,29 +133,64 @@ def _alternatives_from_engine(
 async def upsert_user(user_id: str, email: str) -> None:
     url = f"{_base()}/users"
     headers = {**_HEADERS(), "Prefer": "resolution=merge-duplicates"}
-    async with httpx.AsyncClient(timeout=15) as client:
-        resp = await client.post(
-            url,
-            json={"id": user_id, "email": email},
-            headers=headers,
-        )
+    resp = await _request(
+        "post",
+        url,
+        json={"id": user_id, "email": email},
+        headers=headers,
+    )
     if resp.status_code not in (200, 201):
         print(f"[supabase_store] upsert user failed: {resp.status_code} {resp.text[:200]}")
 
 
-async def list_events(user_id: str) -> list[EventResponse]:
+async def _fetch_event_rows(params: list[tuple[str, str]]) -> list[dict]:
     url = f"{_base()}/events"
-    params = {
-        "user_id": f"eq.{user_id}",
-        "deleted_at": "is.null",
-        "order": "date.asc,start_time.asc",
-        "select": "*",
-    }
-    async with httpx.AsyncClient(timeout=15) as client:
-        resp = await client.get(url, params=params, headers=_HEADERS())
-    if resp.status_code != 200:
-        raise HTTPException(status_code=502, detail="Failed to fetch events")
-    return [_row_to_event(row) for row in resp.json()]
+    rows: list[dict] = []
+    offset = 0
+    while True:
+        page_params = [
+            *params,
+            ("limit", str(EVENT_PAGE_SIZE)),
+            ("offset", str(offset)),
+        ]
+        resp = await _request("get", url, params=page_params, headers=_HEADERS())
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail="Failed to fetch events")
+        page = resp.json()
+        if not isinstance(page, list):
+            raise HTTPException(status_code=502, detail="Invalid events response")
+        rows.extend(page)
+        if len(page) < EVENT_PAGE_SIZE:
+            return rows
+        offset += EVENT_PAGE_SIZE
+
+
+async def list_events(user_id: str) -> list[EventResponse]:
+    params = [
+        ("user_id", f"eq.{user_id}"),
+        ("deleted_at", "is.null"),
+        ("order", "date.asc,start_time.asc"),
+        ("select", "*"),
+    ]
+    rows = await _fetch_event_rows(params)
+    return [_row_to_event(row) for row in rows]
+
+
+async def list_events_window(
+    user_id: str,
+    start_date: date,
+    end_date: date,
+) -> list[EventResponse]:
+    params = [
+        ("user_id", f"eq.{user_id}"),
+        ("deleted_at", "is.null"),
+        ("date", f"gte.{start_date.isoformat()}"),
+        ("date", f"lte.{end_date.isoformat()}"),
+        ("order", "date.asc,start_time.asc"),
+        ("select", "*"),
+    ]
+    rows = await _fetch_event_rows(params)
+    return [_row_to_event(row) for row in rows]
 
 
 async def has_external_event_id(
@@ -151,8 +204,7 @@ async def has_external_event_id(
         "select": "id",
         "limit": "1",
     }
-    async with httpx.AsyncClient(timeout=15) as client:
-        resp = await client.get(url, params=params, headers=_HEADERS())
+    resp = await _request("get", url, params=params, headers=_HEADERS())
     if resp.status_code != 200:
         raise HTTPException(status_code=502, detail="Failed to check imported event")
     return bool(resp.json())
@@ -166,8 +218,7 @@ async def get_event(event_id: str, user_id: str) -> EventResponse:
         "deleted_at": "is.null",
         "select": "*",
     }
-    async with httpx.AsyncClient(timeout=15) as client:
-        resp = await client.get(url, params=params, headers=_HEADERS())
+    resp = await _request("get", url, params=params, headers=_HEADERS())
     if resp.status_code != 200:
         raise HTTPException(status_code=502, detail="Failed to fetch event")
     rows = resp.json()
@@ -176,14 +227,24 @@ async def get_event(event_id: str, user_id: str) -> EventResponse:
     return _row_to_event(rows[0])
 
 
-async def _find_conflict(
+async def _events_for_conflict_check(
     user_id: str,
+    event_date: date,
+) -> list[EventResponse]:
+    return await list_events_window(
+        user_id,
+        event_date - timedelta(days=1),
+        event_date + timedelta(days=1),
+    )
+
+
+def _find_conflict_in_events(
+    events: list[EventResponse],
     event_date: date,
     start_time: time,
     duration_minutes: int,
     exclude_id: str | None = None,
 ) -> dict | None:
-    events = await list_events(user_id)
     hits = conflicts_engine.check_conflicts(
         _events_as_dicts(events),
         event_date,
@@ -200,6 +261,23 @@ async def _find_conflict(
     return None
 
 
+async def _find_conflict(
+    user_id: str,
+    event_date: date,
+    start_time: time,
+    duration_minutes: int,
+    exclude_id: str | None = None,
+) -> dict | None:
+    events = await _events_for_conflict_check(user_id, event_date)
+    return _find_conflict_in_events(
+        events,
+        event_date,
+        start_time,
+        duration_minutes,
+        exclude_id=exclude_id,
+    )
+
+
 async def _generate_alternatives(
     user_id: str,
     event_date: date,
@@ -207,7 +285,7 @@ async def _generate_alternatives(
     duration_minutes: int,
     count: int = 3,
 ) -> list[AlternativeSlot]:
-    events = await list_events(user_id)
+    events = await _events_for_conflict_check(user_id, event_date)
     return _alternatives_from_engine(
         events,
         event_date,
@@ -218,12 +296,13 @@ async def _generate_alternatives(
 
 
 async def create_event(user_id: str, body: EventCreate) -> EventResponse:
-    conflict = await _find_conflict(
-        user_id, body.date, body.start_time, body.duration_minutes
+    events = await _events_for_conflict_check(user_id, body.date)
+    conflict = _find_conflict_in_events(
+        events, body.date, body.start_time, body.duration_minutes
     )
     if conflict:
-        alts = await _generate_alternatives(
-            user_id,
+        alts = _alternatives_from_engine(
+            events,
             body.date,
             body.start_time,
             body.duration_minutes,
@@ -257,8 +336,7 @@ async def create_event(user_id: str, body: EventCreate) -> EventResponse:
     )
     url = f"{_base()}/events"
     headers = {**_HEADERS(), "Prefer": "return=representation"}
-    async with httpx.AsyncClient(timeout=15) as client:
-        resp = await client.post(url, json=payload, headers=headers)
+    resp = await _request("post", url, json=payload, headers=headers)
     if resp.status_code not in (200, 201):
         raise HTTPException(
             status_code=502,
@@ -283,16 +361,17 @@ async def update_event(
         if body.duration_minutes is not None
         else existing.duration_minutes
     )
-    conflict = await _find_conflict(
-        user_id,
+    events = await _events_for_conflict_check(user_id, event_date)
+    conflict = _find_conflict_in_events(
+        events,
         event_date,
         start_time,
         duration_minutes,
         exclude_id=event_id,
     )
     if conflict:
-        alts = await _generate_alternatives(
-            user_id,
+        alts = _alternatives_from_engine(
+            events,
             event_date,
             start_time,
             duration_minutes,
@@ -309,13 +388,13 @@ async def update_event(
     url = f"{_base()}/events"
     params = {"id": f"eq.{event_id}", "user_id": f"eq.{user_id}"}
     headers = {**_HEADERS(), "Prefer": "return=representation"}
-    async with httpx.AsyncClient(timeout=15) as client:
-        resp = await client.patch(
-            url,
-            params=params,
-            json=_serialize_event_payload(update_data),
-            headers=headers,
-        )
+    resp = await _request(
+        "patch",
+        url,
+        params=params,
+        json=_serialize_event_payload(update_data),
+        headers=headers,
+    )
     if resp.status_code != 200:
         raise HTTPException(status_code=502, detail="Failed to update event")
     rows = resp.json()
@@ -329,13 +408,13 @@ async def delete_event(event_id: str, user_id: str) -> None:
     url = f"{_base()}/events"
     params = {"id": f"eq.{event_id}", "user_id": f"eq.{user_id}", "deleted_at": "is.null"}
     headers = {**_HEADERS(), "Prefer": "return=representation"}
-    async with httpx.AsyncClient(timeout=15) as client:
-        resp = await client.patch(
-            url,
-            params=params,
-            json={"deleted_at": datetime.utcnow().isoformat() + "Z"},
-            headers=headers,
-        )
+    resp = await _request(
+        "patch",
+        url,
+        params=params,
+        json={"deleted_at": datetime.utcnow().isoformat() + "Z"},
+        headers=headers,
+    )
     if resp.status_code != 200 or not resp.json():
         raise HTTPException(status_code=404, detail="Event not found")
 
@@ -349,13 +428,13 @@ async def restore_event(event_id: str, user_id: str) -> EventResponse:
         "deleted_at": "not.is.null",
     }
     headers = {**_HEADERS(), "Prefer": "return=representation"}
-    async with httpx.AsyncClient(timeout=15) as client:
-        resp = await client.patch(
-            url,
-            params=params,
-            json={"deleted_at": None},
-            headers=headers,
-        )
+    resp = await _request(
+        "patch",
+        url,
+        params=params,
+        json={"deleted_at": None},
+        headers=headers,
+    )
     if resp.status_code != 200:
         raise HTTPException(status_code=404, detail="Event not found or not deleted")
     rows = resp.json()
@@ -367,11 +446,12 @@ async def restore_event(event_id: str, user_id: str) -> EventResponse:
 async def check_conflict(
     user_id: str, event_date: date, start_time: time, duration_minutes: int
 ) -> tuple[bool, str | None, list[AlternativeSlot]]:
-    conflict = await _find_conflict(user_id, event_date, start_time, duration_minutes)
+    events = await _events_for_conflict_check(user_id, event_date)
+    conflict = _find_conflict_in_events(events, event_date, start_time, duration_minutes)
     if not conflict:
         return False, None, []
-    alts = await _generate_alternatives(
-        user_id,
+    alts = _alternatives_from_engine(
+        events,
         event_date,
         start_time,
         duration_minutes,

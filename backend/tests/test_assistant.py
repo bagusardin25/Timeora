@@ -93,7 +93,7 @@ class TestAssistantClarification(unittest.IsolatedAsyncioTestCase):
 
     async def test_query_exposes_structured_events(self):
         events = [event("one", "Product Sync", 14)]
-        with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=events)):
+        with patch.object(assistant.data_access, "list_events_window", AsyncMock(return_value=events)):
             response = await assistant._handle_query(
                 {"id": "user-1"},
                 {"date": "2026-07-06"},
@@ -112,7 +112,7 @@ class TestAssistantClarification(unittest.IsolatedAsyncioTestCase):
                 90,
             )
         ]
-        with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=events)):
+        with patch.object(assistant.data_access, "list_events_window", AsyncMock(return_value=events)):
             response = await assistant._handle_query(
                 {"id": "user-1"},
                 {"date": "2026-07-06"},
@@ -221,7 +221,7 @@ class TestAssistantClarification(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.result["new_time"], "15:00:00")
 
     async def test_find_slot_ignores_invalid_requested_time(self):
-        with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=[])):
+        with patch.object(assistant.data_access, "list_events_window", AsyncMock(return_value=[])):
             response = await assistant._handle_find_slot(
                 {"id": "user-1"},
                 {
