@@ -58,9 +58,13 @@ function toReminderEvent(event: EventInput): ReminderEvent | null {
 }
 
 export function NotificationCenter({ events }: { events: EventInput[] }) {
-  const [permission, setPermission] = useState<ReminderPermissionState>(() => readPermission());
+  const [permission, setPermission] = useState<ReminderPermissionState>("default");
   const [fallbacks, setFallbacks] = useState<ReminderDelivery[]>([]);
   const schedulerRef = useRef<ReturnType<typeof createReminderScheduler> | null>(null);
+
+  useEffect(() => {
+    setPermission(readPermission());
+  }, []);
 
   const reminderEvents = useMemo(
     () => events.map(toReminderEvent).filter((event): event is ReminderEvent => event !== null),

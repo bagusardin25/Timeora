@@ -82,6 +82,8 @@ export default function LoginPage() {
               width={585}
               height={148}
               className="block h-10 w-auto object-contain dark:hidden"
+              priority
+              loading="eager"
             />
             <Image
               src="/logomark_text.png"
@@ -89,6 +91,8 @@ export default function LoginPage() {
               width={588}
               height={166}
               className="hidden h-10 w-auto object-contain dark:block"
+              priority
+              loading="eager"
             />
           </Link>
         </div>
