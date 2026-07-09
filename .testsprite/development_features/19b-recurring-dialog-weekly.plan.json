@@ -1,0 +1,48 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Coverage: New Event dialog Weekly Recurrence control",
+  "description": "Create event via New Event dialog, set Repeats/Recurrence to Weekly, Save Event, verify event on calendar. Do not delete.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click Sign in and wait for the dashboard"
+    },
+    {
+      "type": "action",
+      "description": "Click + Add Event"
+    },
+    {
+      "type": "action",
+      "description": "Type TS Dialog Weekly into the Event title field"
+    },
+    {
+      "type": "action",
+      "description": "In the Repeats / Recurrence select control, choose Weekly"
+    },
+    {
+      "type": "action",
+      "description": "Click Save Event once"
+    },
+    {
+      "type": "action",
+      "description": "Wait 4 seconds for the calendar to refresh"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify a calendar event titled TS Dialog Weekly is visible on the weekly calendar"
+    }
+  ]
+}
