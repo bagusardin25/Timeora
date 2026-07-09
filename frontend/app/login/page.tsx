@@ -24,7 +24,10 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/+$/, '');
+      // Same-origin proxy (app/backend-api/[...path]/route.ts) — never hit :8000 from the browser.
+      const baseUrl = (process.env.NEXT_PUBLIC_API_URL && /^https?:\/\//i.test(process.env.NEXT_PUBLIC_API_URL)
+        ? process.env.NEXT_PUBLIC_API_URL
+        : (process.env.NEXT_PUBLIC_API_URL || '/backend-api')).replace(/\/+$/, '');
       const response = await fetch(baseUrl + '/auth/login', {
         method: 'POST',
         headers: {

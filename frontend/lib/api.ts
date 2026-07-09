@@ -1,7 +1,28 @@
 import { persistAuthTokens } from './session';
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/+$/, '');
-const DEFAULT_TIMEOUT_MS = 15_000;
+/**
+ * Prefer same-origin `/backend-api` (see app/backend-api/[...path]/route.ts).
+ * Absolute NEXT_PUBLIC_API_URL is only for production deploys.
+ * Never fall back to localhost:8000 — that hangs on many Windows browsers.
+ */
+function resolveApiBaseUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (configured && /^https?:\/\//i.test(configured)) {
+    return configured.replace(/\/+$/, '');
+  }
+  if (configured) return configured.replace(/\/+$/, '');
+  return '/backend-api';
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
+/** Visible in timeout errors / dashboard so we know the browser loaded this bundle. */
+export const API_CLIENT_BUILD = 'timeora-api-v6-no-abort';
+/**
+ * Only apply a client abort for absolute cross-origin APIs.
+ * Same-origin `/backend-api` must not be aborted early — Windows + stale
+ * localhost:8000 hang was previously reported as a generic 15s timeout.
+ */
+const DEFAULT_TIMEOUT_MS = API_BASE_URL.startsWith('http') ? 45_000 : 0;
 
 type JsonRecord = Record<string, unknown>;
 
@@ -55,11 +76,26 @@ async function responseData(response: Response): Promise<unknown> {
 }
 
 function requestSignal(external?: AbortSignal | null): {
-  signal: AbortSignal;
+  signal?: AbortSignal;
   dispose: () => void;
+  didTimeout: () => boolean;
 } {
+  // Same-origin `/backend-api` uses DEFAULT_TIMEOUT_MS=0 → no client abort at all.
+  // This prevents false "request took too long" when the browser was on a stale
+  // bundle that aborted localhost:8000 after 15s.
+  if (DEFAULT_TIMEOUT_MS <= 0 && !external) {
+    return { signal: undefined, dispose: () => undefined, didTimeout: () => false };
+  }
+
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+  let timedOut = false;
+  const timeoutId =
+    DEFAULT_TIMEOUT_MS > 0
+      ? window.setTimeout(() => {
+          timedOut = true;
+          controller.abort();
+        }, DEFAULT_TIMEOUT_MS)
+      : null;
   const abortFromExternal = () => controller.abort(external?.reason);
   if (external?.aborted) {
     controller.abort(external.reason);
@@ -68,8 +104,9 @@ function requestSignal(external?: AbortSignal | null): {
   }
   return {
     signal: controller.signal,
+    didTimeout: () => timedOut,
     dispose: () => {
-      window.clearTimeout(timeout);
+      if (timeoutId != null) window.clearTimeout(timeoutId);
       external?.removeEventListener('abort', abortFromExternal);
     },
   };
@@ -117,26 +154,40 @@ export async function fetchApi<T = unknown>(
 
   const headers = new Headers(options.headers);
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
-  if (!headers.has('Content-Type') && !isFormData) {
+  // Avoid Content-Type on GET — reduces unnecessary CORS preflight on absolute APIs.
+  if (!headers.has('Content-Type') && !isFormData && options.body != null) {
     headers.set('Content-Type', 'application/json');
   }
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
+  const url = `${API_BASE_URL}${endpoint}`;
   const timeout = requestSignal(options.signal);
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    response = await fetch(url, {
       ...options,
       headers,
-      signal: timeout.signal,
+      ...(timeout.signal ? { signal: timeout.signal } : {}),
+      cache: 'no-store',
     });
   } catch (error: unknown) {
-    if (timeout.signal.aborted) {
-      throw new ApiError(408, { detail: 'The request took too long. Please try again.' }, 'Request timed out');
+    if (timeout.didTimeout()) {
+      throw new ApiError(
+        408,
+        {
+          detail: `[${API_CLIENT_BUILD}] Timeout after ${DEFAULT_TIMEOUT_MS}ms calling ${url}. Is backend :8000 running?`,
+        },
+        'Request timed out',
+      );
     }
     throw new ApiError(
       0,
-      { detail: error instanceof Error ? error.message : 'Network request failed' },
+      {
+        detail:
+          error instanceof Error
+            ? `[${API_CLIENT_BUILD}] ${error.message} (${url})`
+            : `[${API_CLIENT_BUILD}] Network request failed (${url})`,
+      },
       'Network request failed',
     );
   } finally {
@@ -349,11 +400,16 @@ export async function exportIcs(retry = true): Promise<Blob> {
   try {
     response = await fetch(`${API_BASE_URL}/export/ics`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
-      signal: timeout.signal,
+      ...(timeout.signal ? { signal: timeout.signal } : {}),
+      cache: 'no-store',
     });
   } catch (error: unknown) {
-    if (timeout.signal.aborted) {
-      throw new ApiError(408, { detail: 'The export took too long. Please try again.' }, 'Export timed out');
+    if (timeout.didTimeout()) {
+      throw new ApiError(
+        408,
+        { detail: `[${API_CLIENT_BUILD}] Export timed out (${API_BASE_URL}/export/ics)` },
+        'Export timed out',
+      );
     }
     throw new ApiError(
       0,

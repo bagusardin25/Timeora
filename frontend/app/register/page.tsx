@@ -35,7 +35,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(/\/+$/, '');
+      const baseUrl = (process.env.NEXT_PUBLIC_API_URL || '/backend-api').replace(/\/+$/, '');
       const response = await fetch(baseUrl + '/auth/register', {
         method: 'POST',
         headers: {

@@ -16,6 +16,8 @@ import {
   exportIcs,
   applyBlockFocusTime,
   applySpreadLoad,
+  API_BASE_URL,
+  API_CLIENT_BUILD,
 } from "@/lib/api";
 import { format } from "date-fns";
 import { callAssistant } from "@/lib/api";
@@ -175,6 +177,7 @@ export default function DashboardPage() {
       setEvents(toCalendarEvents(data));
     } catch (err) {
       console.error("Failed to load events", err);
+      toast.error(errorMessage(err, "Failed to load events. Please try again."));
     }
   }, [dateRange.from, dateRange.to]);
 
@@ -190,16 +193,20 @@ export default function DashboardPage() {
       return;
     }
 
+    // One-time client diagnostics — if you still see the old timeout text,
+    // the browser is not running this build.
+    console.info(`[Timeora] API client ${API_CLIENT_BUILD} base=${API_BASE_URL}`);
+
     let cancelled = false;
-    fetchEventsExpanded(
-      INITIAL_DATE_RANGE.from,
-      INITIAL_DATE_RANGE.to,
-    )
+    // Initial calendar window only; subsequent loads go through loadEvents/refreshAll.
+    fetchEventsExpanded(INITIAL_DATE_RANGE.from, INITIAL_DATE_RANGE.to)
       .then((data) => {
         if (!cancelled) setEvents(toCalendarEvents(data));
       })
       .catch((error: unknown) => {
-        console.error("Failed to load events", error);
+        if (cancelled) return;
+        console.error("Failed to load events", error, { API_BASE_URL, API_CLIENT_BUILD });
+        toast.error(errorMessage(error, "Failed to load events. Please try again."));
       });
 
     return () => {
@@ -545,6 +552,15 @@ export default function DashboardPage() {
           <div className="hidden lg:flex items-center gap-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             AI Active
+          </div>
+
+          {/* Cache-bust indicator: if you do not see v6, hard-refresh the tab */}
+          <div
+            className="hidden sm:flex items-center max-w-[140px] truncate text-[10px] font-mono text-slate-400 dark:text-zinc-500"
+            title={`${API_CLIENT_BUILD} → ${API_BASE_URL}`}
+            data-timeora-api-build={API_CLIENT_BUILD}
+          >
+            {API_CLIENT_BUILD.replace("timeora-api-", "")}
           </div>
 
           {/* Better Keyboard Shortcuts Hint */}

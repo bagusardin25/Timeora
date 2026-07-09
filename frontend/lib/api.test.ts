@@ -18,14 +18,16 @@ describe("fetchApi", () => {
     vi.unstubAllGlobals();
   });
 
-  it("attaches an abort signal so stalled production requests can time out", async () => {
+  it("calls same-origin API without a client abort timeout", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { ok: true }));
     vi.stubGlobal("fetch", fetchMock);
 
     await fetchApi("/health");
 
     expect(fetchMock).toHaveBeenCalledOnce();
-    expect(fetchMock.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
+    // Relative /backend-api intentionally omits AbortSignal timeouts.
+    expect(fetchMock.mock.calls[0][1]?.signal).toBeUndefined();
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/backend-api/health");
   });
 
   it("honors an already-aborted caller signal before sending requests", async () => {
@@ -39,8 +41,9 @@ describe("fetchApi", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
+    // Caller abort is not a server timeout (status 408); it is a cancellation.
     await expect(fetchApi("/health", { signal: controller.signal })).rejects.toMatchObject({
-      status: 408,
+      status: 0,
     });
 
     expect(fetchMock).toHaveBeenCalledOnce();
@@ -62,7 +65,7 @@ describe("fetchApi", () => {
     expect(localStorage.getItem("refresh_token")).toBeNull();
   });
 
-  it("attaches an abort signal to token refresh requests", async () => {
+  it("retries auth refresh without requiring a client abort signal", async () => {
     localStorage.setItem("token", "expired-access");
     localStorage.setItem("refresh_token", "expired-refresh");
     const fetchMock = vi
@@ -73,7 +76,8 @@ describe("fetchApi", () => {
 
     await expect(fetchApi("/events")).rejects.toBeInstanceOf(ApiError);
 
-    expect(fetchMock.mock.calls[1][1]?.signal).toBeInstanceOf(AbortSignal);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[1][0])).toContain("/auth/refresh");
   });
 
   it("clears a stale access token when no refresh token is available", async () => {
@@ -137,7 +141,7 @@ describe("fetchApi", () => {
     });
   });
 
-  it("attaches an abort signal to calendar export requests", async () => {
+  it("exports calendar via same-origin API without client abort timeout", async () => {
     localStorage.setItem("token", "valid-access");
     const fetchMock = vi.fn().mockResolvedValue(
       new Response("BEGIN:VCALENDAR", {
@@ -149,6 +153,7 @@ describe("fetchApi", () => {
 
     await exportIcs();
 
-    expect(fetchMock.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
+    expect(fetchMock.mock.calls[0][1]?.signal).toBeUndefined();
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/backend-api/export/ics");
   });
 });
