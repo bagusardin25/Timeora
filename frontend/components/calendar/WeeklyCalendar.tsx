@@ -335,7 +335,7 @@ export function WeeklyCalendar({
       <div className="flex flex-col gap-3 sm:gap-4 pb-2 border-b border-slate-100 dark:border-white/5">
         {/* Top Row: Title and Prev/Next (Mobile only) */}
         <div className="flex items-center justify-between sm:hidden px-1">
-          <h3 className="text-base font-bold text-slate-800 dark:text-white tracking-tight shrink-0 select-none">
+          <h3 className="type-title text-base text-slate-800 dark:text-white shrink-0 select-none">
             {calendarTitle}
           </h3>
           <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-slate-200/50 dark:border-white/5 shrink-0">
@@ -378,7 +378,7 @@ export function WeeklyCalendar({
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
-            <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-white tracking-tight shrink-0 select-none">
+            <h3 className="type-title text-sm sm:text-base text-slate-800 dark:text-white shrink-0 select-none">
               {calendarTitle}
             </h3>
           </div>

@@ -108,7 +108,7 @@ export default function RegisterPage() {
         {/* Main Card */}
         <div className="w-full bg-white dark:bg-zinc-900 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] border border-slate-100 dark:border-zinc-800 p-8 sm:p-10 relative">
           <div className="text-center mb-8">
-            <h2 className="text-[22px] font-bold text-slate-900 dark:text-zinc-100 mb-1.5">Create Account</h2>
+            <h2 className="type-title text-[22px] text-slate-900 dark:text-zinc-100 mb-1.5">Create Account</h2>
             <p className="text-slate-500 dark:text-zinc-400 text-[14px]">Join Timeora simulation workspace</p>
           </div>
 

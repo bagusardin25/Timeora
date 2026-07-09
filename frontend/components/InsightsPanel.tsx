@@ -96,7 +96,7 @@ export function InsightsPanel({ refreshKey = 0, onActionApplied }: InsightsPanel
         <div className="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/30">
           <BarChart3 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
         </div>
-        <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">
+        <h2 className="type-title text-base text-slate-800 dark:text-slate-100">
           Weekly Insights
         </h2>
       </div>

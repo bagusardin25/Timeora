@@ -151,7 +151,7 @@ export function TodayAgenda({ events, onEventClick }: TodayAgendaProps) {
             {greeting}
           </span>
         </div>
-        <h2 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight">
+        <h2 className="type-title text-lg text-slate-800 dark:text-white">
           {format(now, "EEEE, d MMMM")}
         </h2>
         <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 dark:text-slate-400">

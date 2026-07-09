@@ -393,13 +393,13 @@ export default function LandingPage() {
             <ThemeToggle className="min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0" />
             <Link
               href="/login"
-              className="hidden sm:inline-block text-sm font-medium text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 transition-colors px-4 py-2"
+              className="type-label hidden sm:inline-block text-sm text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-100 transition-colors px-4 py-2"
             >
               {t.signIn}
             </Link>
             <Link
               href="/register"
-              className="text-sm font-medium bg-zinc-950 text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl hover:bg-zinc-800 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5"
+              className="type-label text-sm bg-zinc-950 text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl hover:bg-zinc-800 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5"
             >
               {t.getStarted}
             </Link>
@@ -444,7 +444,7 @@ export default function LandingPage() {
             <ChevronRight className="w-3.5 h-3.5 opacity-60" />
           </motion.div>
 
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-[-0.025em] leading-none mb-6">
+          <h1 className="type-display text-5xl sm:text-6xl lg:text-7xl mb-6">
             {t.heroTitlePrefix}{" "}
             <span className="relative inline-block">
               <span className="bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 bg-clip-text text-transparent">
@@ -475,8 +475,8 @@ export default function LandingPage() {
             </span>
           </h1>
 
-          <p className="text-lg sm:text-xl text-slate-500 dark:text-zinc-400 max-w-2xl mx-auto mb-10 leading-[1.65] font-medium">
-            {t.heroDescStart} <span className="font-medium text-slate-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md border border-slate-200 dark:border-zinc-700 shadow-sm min-w-[280px] inline-block text-left relative after:content-['|'] after:animate-pulse after:ml-0.5">{typedText}</span> 
+          <p className="type-body text-lg sm:text-xl text-slate-500 dark:text-zinc-400 max-w-2xl mx-auto mb-10">
+            {t.heroDescStart} <span className="type-label text-slate-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 px-2 py-0.5 rounded-md border border-slate-200 dark:border-zinc-700 shadow-sm min-w-[280px] inline-block text-left relative after:content-['|'] after:animate-pulse after:ml-0.5">{typedText}</span> 
             <br className="hidden sm:block" /> {t.heroDescEnd}
           </p>
 
@@ -520,7 +520,7 @@ export default function LandingPage() {
           <div className="inline-flex items-center gap-2 text-xs uppercase tracking-[2px] font-semibold text-violet-600 dark:text-violet-400 mb-3">
             LIVE INTERACTIVE DEMO
           </div>
-          <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+          <h3 className="type-title text-2xl sm:text-3xl">
             Try it right now — <span className="text-violet-600 dark:text-violet-400">English or Indonesian</span>
           </h3>
           <p className="text-slate-500 dark:text-zinc-400 mt-2 max-w-md mx-auto leading-relaxed">
@@ -893,7 +893,7 @@ export default function LandingPage() {
                 >
                   <feature.icon className="w-7 h-7" />
                 </div>
-                <h3 className="text-2xl font-semibold tracking-tight mb-3">{t.features[idx].title}</h3>
+                <h3 className="type-title text-2xl mb-3">{t.features[idx].title}</h3>
                 <p className="text-slate-500 dark:text-zinc-400 leading-relaxed text-lg">{t.features[idx].desc}</p>
               </motion.div>
             ))}
@@ -1093,7 +1093,7 @@ export default function LandingPage() {
                   <div className="text-xs font-black text-violet-500 tracking-widest uppercase mb-1.5">
                     Step {item.step}
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-semibold tracking-tight mb-2 sm:mb-3">{t.steps[i].title}</h3>
+                  <h3 className="type-title text-xl sm:text-2xl mb-2 sm:mb-3">{t.steps[i].title}</h3>
                   <p className="text-slate-500 dark:text-zinc-400 leading-relaxed text-base sm:text-lg">{t.steps[i].desc}</p>
                 </div>
               </motion.div>

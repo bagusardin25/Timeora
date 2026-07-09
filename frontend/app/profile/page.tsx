@@ -151,7 +151,7 @@ export default function ProfilePage() {
               className="hidden dark:block w-8 h-8 object-contain"
             />
             <div>
-              <div className="font-bold tracking-tight">Profile</div>
+              <div className="type-title">Profile</div>
               <div className="text-[10px] text-slate-400 dark:text-zinc-500 -mt-0.5">Timeora</div>
             </div>
           </div>
@@ -177,7 +177,7 @@ export default function ProfilePage() {
               <User className="w-5 h-5 text-violet-600 dark:text-violet-400" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold">Account</h2>
+              <h2 className="type-title text-lg">Account</h2>
               <p className="text-sm text-slate-500 dark:text-zinc-400">Your basic account information</p>
             </div>
           </div>
@@ -210,7 +210,7 @@ export default function ProfilePage() {
               <Clock className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold">Preferences</h2>
+              <h2 className="type-title text-lg">Preferences</h2>
               <p className="text-sm text-slate-500 dark:text-zinc-400">Customize how Timeora works for you</p>
             </div>
           </div>
@@ -273,7 +273,7 @@ export default function ProfilePage() {
               <Shield className="w-5 h-5 text-rose-600 dark:text-rose-400" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold">Data & Privacy</h2>
+              <h2 className="type-title text-lg">Data & Privacy</h2>
               <p className="text-sm text-slate-500 dark:text-zinc-400">Manage your data</p>
             </div>
           </div>

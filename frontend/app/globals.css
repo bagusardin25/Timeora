@@ -49,8 +49,20 @@
 }
 
 :root {
-  --font-timeora-sans: var(--font-poppins, "Poppins", "Inter", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif);
+  /* Brand sans = Poppins (next/font --font-poppins). Keep stack aligned on landing + app. */
+  --font-timeora-sans: var(--font-poppins, "Poppins", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif);
   --font-timeora-mono: "SFMono-Regular", "Cascadia Code", "Roboto Mono", Consolas, "Liberation Mono", monospace;
+
+  /* Shared type tokens (family is always --font-sans / Poppins) */
+  --type-tracking-display: -0.025em;
+  --type-tracking-title: -0.02em;
+  --type-tracking-brand: -0.025em;
+  --type-leading-body: 1.65;
+  --type-weight-medium: 500;
+  --type-weight-semibold: 600;
+  --type-weight-bold: 700;
+  --type-weight-extrabold: 800;
+
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -125,11 +137,13 @@
   }
   html {
     @apply font-sans;
+    font-family: var(--font-sans);
     min-width: 0;
     overflow-x: hidden;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    font-family: var(--font-sans);
     position: relative;
     min-width: 0;
     overflow-x: hidden;
@@ -143,16 +157,56 @@
 
   /* Typography defaults for better readability */
   h1, h2, h3, h4 {
-    @apply tracking-tight;
+    font-family: var(--font-sans);
+    letter-spacing: var(--type-tracking-title);
   }
 
   p, li {
     @apply leading-relaxed;
   }
+}
 
-  /* Slightly tighter tracking for display text */
+/* Shared type scale utilities — same family (Poppins) on landing + dashboard */
+@layer utilities {
+  .type-display {
+    font-family: var(--font-sans);
+    font-weight: var(--type-weight-extrabold);
+    letter-spacing: var(--type-tracking-display);
+    line-height: 1;
+  }
+
+  .type-title {
+    font-family: var(--font-sans);
+    font-weight: var(--type-weight-bold);
+    letter-spacing: var(--type-tracking-title);
+  }
+
+  .type-brand {
+    font-family: var(--font-sans);
+    font-weight: var(--type-weight-extrabold);
+    letter-spacing: var(--type-tracking-brand);
+    line-height: 1;
+  }
+
+  .type-body {
+    font-family: var(--font-sans);
+    font-weight: var(--type-weight-medium);
+    line-height: var(--type-leading-body);
+  }
+
+  .type-caption {
+    font-family: var(--font-sans);
+    font-weight: var(--type-weight-semibold);
+  }
+
+  .type-label {
+    font-family: var(--font-sans);
+    font-weight: var(--type-weight-medium);
+  }
+
+  /* Legacy alias used in older markup */
   .display {
-    letter-spacing: -0.02em;
+    letter-spacing: var(--type-tracking-title);
   }
 }
 
@@ -194,11 +248,21 @@
 
 /* FullCalendar Overrides for Sleeker Look */
 .fc {
+  /* Inherit Poppins from body — do not let FC default system fonts diverge */
+  font-family: inherit;
   --fc-border-color: rgba(150, 150, 150, 0.15);
   --fc-daygrid-event-dot-width: 8px;
   --fc-event-bg-color: hsl(var(--primary));
   --fc-event-border-color: transparent;
   --fc-today-bg-color: rgba(var(--primary), 0.05);
+}
+
+.fc,
+.fc input,
+.fc button,
+.fc textarea,
+.fc select {
+  font-family: inherit;
 }
 
 .dark .fc {
@@ -326,9 +390,10 @@
 
 /* Toolbar Title Styling */
 .fc .fc-toolbar-title {
+  font-family: inherit !important;
   font-size: 1.25rem !important;
-  font-weight: 700 !important;
-  letter-spacing: -0.02em !important;
+  font-weight: var(--type-weight-bold) !important;
+  letter-spacing: var(--type-tracking-title) !important;
   color: var(--foreground) !important;
 }
 
