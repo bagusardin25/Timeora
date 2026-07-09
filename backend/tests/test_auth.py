@@ -5,12 +5,13 @@ from unittest.mock import Mock, patch
 import jwt
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
+from jwt.exceptions import PyJWKClientConnectionError
 
 from app.auth import _decode_token, verify_token
 from app.config import settings
 
 
-class TestJwtVerification(unittest.TestCase):
+class TestJwtVerification(unittest.IsolatedAsyncioTestCase):
     issuer = "https://timeora-test.supabase.co/auth/v1"
     secret = "test-secret-that-is-not-used-in-production"
 
@@ -44,7 +45,7 @@ class TestJwtVerification(unittest.TestCase):
             payload["sub"], "00000000-0000-0000-0000-000000000001"
         )
 
-    def test_rejects_token_signed_with_wrong_key(self):
+    async def test_rejects_token_signed_with_wrong_key(self):
         token = jwt.encode(
             {
                 "aud": "authenticated",
@@ -57,25 +58,25 @@ class TestJwtVerification(unittest.TestCase):
         )
 
         with self._settings_patch(), self.assertRaises(HTTPException) as caught:
-            verify_token(self._credentials(token))
+            await verify_token(self._credentials(token))
 
         self.assertEqual(caught.exception.status_code, 401)
 
-    def test_rejects_expired_token(self):
+    async def test_rejects_expired_token(self):
         with self._settings_patch(), self.assertRaises(HTTPException) as caught:
-            verify_token(self._credentials(self._token(exp=int(time.time()) - 1)))
+            await verify_token(self._credentials(self._token(exp=int(time.time()) - 1)))
 
         self.assertEqual(caught.exception.status_code, 401)
 
-    def test_rejects_wrong_audience(self):
+    async def test_rejects_wrong_audience(self):
         with self._settings_patch(), self.assertRaises(HTTPException) as caught:
-            verify_token(self._credentials(self._token(aud="service_role")))
+            await verify_token(self._credentials(self._token(aud="service_role")))
 
         self.assertEqual(caught.exception.status_code, 401)
 
-    def test_rejects_wrong_issuer(self):
+    async def test_rejects_wrong_issuer(self):
         with self._settings_patch(), self.assertRaises(HTTPException) as caught:
-            verify_token(
+            await verify_token(
                 self._credentials(
                     self._token(iss="https://attacker.invalid/auth/v1")
                 )
@@ -83,7 +84,7 @@ class TestJwtVerification(unittest.TestCase):
 
         self.assertEqual(caught.exception.status_code, 401)
 
-    def test_rejects_unsigned_token(self):
+    async def test_rejects_unsigned_token(self):
         token = jwt.encode(
             {
                 "aud": "authenticated",
@@ -96,9 +97,21 @@ class TestJwtVerification(unittest.TestCase):
         )
 
         with self._settings_patch(), self.assertRaises(HTTPException) as caught:
-            verify_token(self._credentials(token))
+            await verify_token(self._credentials(token))
 
         self.assertEqual(caught.exception.status_code, 401)
+
+    async def test_jwks_connection_error_returns_503(self):
+        with (
+            patch(
+                "app.auth._decode_token",
+                side_effect=PyJWKClientConnectionError("jwks down"),
+            ),
+            self.assertRaises(HTTPException) as caught,
+        ):
+            await verify_token(self._credentials("any.token.value"))
+
+        self.assertEqual(caught.exception.status_code, 503)
 
     @patch("app.auth._jwks_client")
     def test_uses_jwks_for_asymmetric_tokens(self, jwks_client):

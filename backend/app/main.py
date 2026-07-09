@@ -20,6 +20,11 @@ from app.routers import (
 @asynccontextmanager
 async def lifespan(_app):
     await init_pool()
+    # Prefetch Supabase JWKS off the request path (ES256 verify uses blocking I/O).
+    from app.auth import warm_jwks_cache
+    import asyncio
+
+    await asyncio.to_thread(warm_jwks_cache)
     yield
     await close_pool()
 
