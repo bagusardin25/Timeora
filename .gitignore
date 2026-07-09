@@ -43,3 +43,7 @@ mcps/
 
 # Terminals
 terminals/
+
+# TestSprite temp files
+.testsprite/**/*.tmp*
+
