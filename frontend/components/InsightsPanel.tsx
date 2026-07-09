@@ -11,6 +11,7 @@ import {
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { useI18n } from "@/components/i18n-provider";
 
 const DAY_ORDER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -20,6 +21,7 @@ interface InsightsPanelProps {
 }
 
 export function InsightsPanel({ refreshKey = 0, onActionApplied }: InsightsPanelProps) {
+  const { t } = useI18n();
   const [insights, setInsights] = useState<WeeklyInsight | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,11 +35,11 @@ export function InsightsPanel({ refreshKey = 0, onActionApplied }: InsightsPanel
       const data = await fetchWeeklyInsights();
       setInsights(data);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load insights");
+      setError(err instanceof Error ? err.message : t("insights.loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,7 +52,7 @@ export function InsightsPanel({ refreshKey = 0, onActionApplied }: InsightsPanel
         if (!cancelled) setInsights(data);
       } catch (err: unknown) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load insights");
+          setError(err instanceof Error ? err.message : t("insights.loadFailed"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -60,7 +62,7 @@ export function InsightsPanel({ refreshKey = 0, onActionApplied }: InsightsPanel
     return () => {
       cancelled = true;
     };
-  }, [refreshKey]);
+  }, [refreshKey, t]);
 
   const handleAction = async (action: InsightAction) => {
     setApplying(action.type);
@@ -74,7 +76,7 @@ export function InsightsPanel({ refreshKey = 0, onActionApplied }: InsightsPanel
       onActionApplied?.(result.message);
       await loadInsights();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to apply action";
+      const message = err instanceof Error ? err.message : t("insights.applyFailed");
       setActionMessage(message);
     } finally {
       setApplying(null);
@@ -97,14 +99,14 @@ export function InsightsPanel({ refreshKey = 0, onActionApplied }: InsightsPanel
           <BarChart3 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
         </div>
         <h2 className="type-title text-base text-slate-800 dark:text-slate-100">
-          Weekly Insights
+          {t("insights.title")}
         </h2>
       </div>
 
       {loading && (
         <div className="flex items-center justify-center py-12 text-slate-400">
           <Loader2 className="w-5 h-5 animate-spin mr-2" />
-          <span className="text-sm">Analyzing your week…</span>
+          <span className="text-sm">{t("insights.analyzing")}</span>
         </div>
       )}
 
@@ -118,7 +120,7 @@ export function InsightsPanel({ refreshKey = 0, onActionApplied }: InsightsPanel
             <div className="rounded-2xl bg-slate-50 dark:bg-zinc-800/50 p-3 border border-slate-100 dark:border-white/5">
               <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">
                 <Clock className="w-3 h-3" />
-                Total hours
+                {t("insights.totalHours")}
               </div>
               <p className="text-2xl font-extrabold text-slate-900 dark:text-white">
                 {insights.total_hours}
@@ -128,7 +130,7 @@ export function InsightsPanel({ refreshKey = 0, onActionApplied }: InsightsPanel
             <div className="rounded-2xl bg-slate-50 dark:bg-zinc-800/50 p-3 border border-slate-100 dark:border-white/5">
               <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mb-1">
                 <Brain className="w-3 h-3" />
-                Fragmentation
+                {t("insights.fragmentation")}
               </div>
               <p className="text-2xl font-extrabold text-slate-900 dark:text-white">
                 {insights.fragmentation_score}
@@ -169,7 +171,7 @@ export function InsightsPanel({ refreshKey = 0, onActionApplied }: InsightsPanel
           {insights.deep_work_blocks.length > 0 && (
             <div>
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                Deep work blocks
+                {t("insights.deepWork")}
               </p>
               <ul className="space-y-1.5">
                 {insights.deep_work_blocks.slice(0, 3).map((block, i) => (

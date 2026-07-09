@@ -31,6 +31,8 @@ import {
   type IntegrationStatus,
   type WebhookSubscription,
 } from "@/lib/api";
+import { useI18n } from "@/components/i18n-provider";
+import { LanguageToggle } from "@/components/language-toggle";
 
 const PROVIDER_NAMES: Record<string, string> = {
   google: "Google Calendar",
@@ -40,12 +42,13 @@ const PROVIDER_NAMES: Record<string, string> = {
   notion: "Notion",
 };
 
-function messageFrom(error: unknown): string {
-  return error instanceof Error ? error.message : "Unexpected integration error";
-}
-
 export default function IntegrationsPage() {
   const router = useRouter();
+  const { t } = useI18n();
+
+  function messageFrom(error: unknown): string {
+    return error instanceof Error ? error.message : t("integrations.unexpected");
+  }
   const [statuses, setStatuses] = useState<IntegrationStatus[]>([]);
   const [webhooks, setWebhooks] = useState<WebhookSubscription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -182,21 +185,22 @@ export default function IntegrationsPage() {
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Back to dashboard"
+            aria-label={t("integrations.back")}
             onClick={() => router.push("/dashboard")}
             className="rounded-xl"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-600">
               Settings
             </p>
-            <h1 className="text-3xl font-bold tracking-tight">Integrations</h1>
+            <h1 className="text-3xl font-bold tracking-tight">{t("integrations.title")}</h1>
             <p className="mt-1 text-sm text-slate-500 dark:text-zinc-400">
-              Move calendar data and connect Timeora to external workflows.
+              {t("integrations.emailNoticesHint")}
             </p>
           </div>
+          <LanguageToggle compact />
         </div>
 
         {error && (
@@ -215,7 +219,7 @@ export default function IntegrationsPage() {
             </CardHeader>
             <CardContent className="space-y-5">
               <div>
-                <Label htmlFor="ics-file">Import an .ics file</Label>
+                <Label htmlFor="ics-file">{t("integrations.icsImport")}</Label>
                 <Input
                   id="ics-file"
                   type="file"
@@ -223,18 +227,15 @@ export default function IntegrationsPage() {
                   className="mt-2"
                   onChange={(event) => setFile(event.target.files?.[0] || null)}
                 />
-                <p className="mt-2 text-xs text-slate-500 dark:text-zinc-400">
-                  Maximum 1 MB. Duplicate UIDs and conflicting events are skipped.
-                </p>
               </div>
               <div className="flex flex-wrap gap-3">
                 <Button onClick={uploadCalendar} disabled={!file || working}>
                   <Upload className="mr-2 h-4 w-4" />
-                  Import calendar
+                  {t("integrations.icsImport")}
                 </Button>
                 <Button variant="outline" onClick={downloadCalendar} disabled={working}>
                   <Download className="mr-2 h-4 w-4" />
-                  Export calendar
+                  {t("integrations.icsExport")}
                 </Button>
               </div>
               {importResult && (
@@ -256,7 +257,7 @@ export default function IntegrationsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Mail className="h-5 w-5 text-violet-600" />
-                Email notifications
+                {t("integrations.emailNotices")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -264,7 +265,7 @@ export default function IntegrationsPage() {
                 <div>
                   <p className="font-semibold">Resend</p>
                   <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
-                    Sends create, update, and cancellation notices to participant emails.
+                    {t("integrations.emailNoticesHint")}
                   </p>
                 </div>
                 <span
@@ -274,7 +275,7 @@ export default function IntegrationsPage() {
                       : "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
                   }`}
                 >
-                  {resend?.connected ? "Active" : "Needs server config"}
+                  {resend?.connected ? t("integrations.connected") : t("integrations.notConnected")}
                 </span>
               </div>
               <div className="mt-4 flex items-start gap-2 text-xs text-slate-500 dark:text-zinc-400">

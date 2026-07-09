@@ -84,21 +84,21 @@ export default function ProfilePage() {
         a.remove();
         URL.revokeObjectURL(url);
       }
-      setMessage("Data exported successfully!");
+      setMessage(t("profilePage.exportOk"));
     } catch {
-      setMessage("Export failed. Please try again.");
+      setMessage(t("profilePage.exportFail"));
     }
   };
 
   const handleDeleteAccount = () => {
-    if (!confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+    if (!confirm(t("profilePage.deleteConfirm"))) {
       return;
     }
     // Placeholder - in real app would call backend
     localStorage.removeItem("token");
     localStorage.removeItem("refresh_token");
     localStorage.removeItem("timeora_preferences");
-    alert("Account deletion simulated. You have been logged out.");
+    alert(t("profilePage.deleteSimulated"));
     router.push("/");
   };
 
@@ -113,7 +113,7 @@ export default function ProfilePage() {
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={handleBack} className="rounded-xl">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
+            {t("profilePage.backDashboard")}
           </Button>
           <div className="flex items-center gap-2">
             <Image
@@ -131,7 +131,7 @@ export default function ProfilePage() {
               className="hidden dark:block w-8 h-8 object-contain"
             />
             <div>
-              <div className="type-title">Profile</div>
+              <div className="type-title">{t("profilePage.title")}</div>
               <div className="text-[10px] text-slate-400 dark:text-zinc-500 -mt-0.5">Timeora</div>
             </div>
           </div>
@@ -139,7 +139,7 @@ export default function ProfilePage() {
 
         <Button onClick={handleSave} disabled={isSaving} className="rounded-xl bg-violet-600 hover:bg-violet-700 text-white">
           <Save className="w-4 h-4 mr-2" />
-          {isSaving ? "Saving..." : "Save Changes"}
+          {isSaving ? t("profilePage.saving") : t("profilePage.saveChanges")}
         </Button>
       </header>
 
@@ -157,14 +157,14 @@ export default function ProfilePage() {
               <User className="w-5 h-5 text-violet-600 dark:text-violet-400" />
             </div>
             <div>
-              <h2 className="type-title text-lg">Account</h2>
-              <p className="text-sm text-slate-500 dark:text-zinc-400">Your basic account information</p>
+              <h2 className="type-title text-lg">{t("profilePage.account")}</h2>
+              <p className="text-sm text-slate-500 dark:text-zinc-400">{t("profilePage.accountHint")}</p>
             </div>
           </div>
 
           <div className="space-y-4">
             <div>
-              <Label className="text-xs uppercase tracking-wider text-slate-500 dark:text-zinc-400">Email</Label>
+              <Label className="text-xs uppercase tracking-wider text-slate-500 dark:text-zinc-400">{t("profilePage.email")}</Label>
               <div className="mt-1.5 px-4 py-3 rounded-xl border bg-slate-50 dark:bg-zinc-800/50 text-sm font-medium">
                 {userEmail || "user@example.com"}
               </div>
@@ -172,13 +172,13 @@ export default function ProfilePage() {
 
             <div>
               <Label htmlFor="password" className="text-xs uppercase tracking-wider text-slate-500 dark:text-zinc-400">
-                Change Password
+                {t("profilePage.changePassword")}
               </Label>
               <div className="flex gap-3 mt-1.5">
-                <Input id="password" type="password" placeholder="New password" className="flex-1" />
-                <Button variant="outline" className="rounded-xl">Update</Button>
+                <Input id="password" type="password" placeholder={t("profilePage.newPassword")} className="flex-1" />
+                <Button variant="outline" className="rounded-xl">{t("profilePage.update")}</Button>
               </div>
-              <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">Password change will be sent to your email (demo).</p>
+              <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">{t("profilePage.passwordHint")}</p>
             </div>
           </div>
         </section>
@@ -190,8 +190,8 @@ export default function ProfilePage() {
               <Clock className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             </div>
             <div>
-              <h2 className="type-title text-lg">Preferences</h2>
-              <p className="text-sm text-slate-500 dark:text-zinc-400">Customize how Timeora works for you</p>
+              <h2 className="type-title text-lg">{t("profilePage.preferences")}</h2>
+              <p className="text-sm text-slate-500 dark:text-zinc-400">{t("profilePage.preferencesHint")}</p>
             </div>
           </div>
 
@@ -208,19 +208,19 @@ export default function ProfilePage() {
           <div className="grid gap-6">
             {/* Timezone */}
             <div>
-              <Label className="text-xs uppercase tracking-wider text-slate-500 dark:text-zinc-400">Timezone</Label>
+              <Label className="text-xs uppercase tracking-wider text-slate-500 dark:text-zinc-400">{t("profilePage.timezone")}</Label>
               <Input
                 value={preferences.timezone}
                 onChange={(e) => handleChange("timezone", e.target.value)}
                 className="mt-1.5"
-                placeholder="e.g. Asia/Jakarta"
+                placeholder={t("profilePage.timezonePlaceholder")}
               />
-              <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">Leave empty to use your browser&apos;s timezone.</p>
+              <p className="text-[11px] text-slate-400 dark:text-zinc-500 mt-1">{t("profilePage.timezoneHint")}</p>
             </div>
 
             {/* Default Duration */}
             <div>
-              <Label className="text-xs uppercase tracking-wider text-slate-500 dark:text-zinc-400">Default Event Duration (minutes)</Label>
+              <Label className="text-xs uppercase tracking-wider text-slate-500 dark:text-zinc-400">{t("profilePage.defaultDuration")}</Label>
               <Input
                 type="number"
                 value={preferences.defaultDuration}
@@ -234,7 +234,7 @@ export default function ProfilePage() {
             {/* Working Hours */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label className="text-xs uppercase tracking-wider text-slate-500 dark:text-zinc-400">Working Hours Start</Label>
+                <Label className="text-xs uppercase tracking-wider text-slate-500 dark:text-zinc-400">{t("profilePage.workStart")}</Label>
                 <Input
                   type="time"
                   value={preferences.workingHoursStart}
@@ -243,7 +243,7 @@ export default function ProfilePage() {
                 />
               </div>
               <div>
-                <Label className="text-xs uppercase tracking-wider text-slate-500 dark:text-zinc-400">Working Hours End</Label>
+                <Label className="text-xs uppercase tracking-wider text-slate-500 dark:text-zinc-400">{t("profilePage.workEnd")}</Label>
                 <Input
                   type="time"
                   value={preferences.workingHoursEnd}
@@ -252,7 +252,7 @@ export default function ProfilePage() {
                 />
               </div>
             </div>
-            <p className="text-[11px] text-slate-400 dark:text-zinc-500 -mt-3">These are used for availability analysis and recommendations.</p>
+            <p className="text-[11px] text-slate-400 dark:text-zinc-500 -mt-3">{t("profilePage.workHint")}</p>
           </div>
         </section>
 
@@ -263,20 +263,20 @@ export default function ProfilePage() {
               <Shield className="w-5 h-5 text-rose-600 dark:text-rose-400" />
             </div>
             <div>
-              <h2 className="type-title text-lg">Data & Privacy</h2>
-              <p className="text-sm text-slate-500 dark:text-zinc-400">Manage your data</p>
+              <h2 className="type-title text-lg">{t("profilePage.dataPrivacy")}</h2>
+              <p className="text-sm text-slate-500 dark:text-zinc-400">{t("profilePage.dataPrivacyHint")}</p>
             </div>
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between rounded-xl border p-4">
               <div>
-                <div className="font-medium">Export All Data</div>
-                <div className="text-sm text-slate-500 dark:text-zinc-400">Download your events as .ics file</div>
+                <div className="font-medium">{t("profilePage.exportAll")}</div>
+                <div className="text-sm text-slate-500 dark:text-zinc-400">{t("profilePage.exportAllHint")}</div>
               </div>
               <Button variant="outline" onClick={handleExportData} className="rounded-xl">
                 <Download className="w-4 h-4 mr-2" />
-                Export
+                {t("profilePage.export")}
               </Button>
             </div>
 

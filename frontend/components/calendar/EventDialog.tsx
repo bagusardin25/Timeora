@@ -199,7 +199,7 @@ export function EventDialog({
           {!formData.id && (
             <div className="mb-4">
               <Label className="text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5 mb-2">
-                <Bookmark className="w-3.5 h-3.5" /> Quick Template
+                <Bookmark className="w-3.5 h-3.5" /> {t("calendar.quickTemplate")}
               </Label>
               <div className="flex flex-wrap gap-1.5">
                 {templates.map((tpl) => {
@@ -236,15 +236,15 @@ export function EventDialog({
                       <AlertTriangle className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                     </div>
                     <div>
-                      <strong className="block font-semibold text-orange-800 dark:text-orange-300 mb-1">Jadwal Bentrok!</strong>
-                      <p className="opacity-90">Waktu ini bertabrakan dengan: <span className="font-medium bg-orange-500/10 px-1 py-0.5 rounded">&ldquo;{conflictData.conflicting_event}&rdquo;</span></p>
+                      <strong className="block font-semibold text-orange-800 dark:text-orange-300 mb-1">{t("calendar.conflictTitle")}</strong>
+                      <p className="opacity-90">{t("calendar.conflictWith", { title: conflictData.conflicting_event })}</p>
                     </div>
                   </div>
                   
                   {conflictData.alternatives && conflictData.alternatives.length > 0 && (
                     <div className="pt-3 mt-1 border-t border-orange-500/20">
                       <p className="font-medium mb-2 flex items-center gap-1.5 opacity-90">
-                        <Sparkles className="w-3.5 h-3.5" /> Saran AI (Slot Kosong):
+                        <Sparkles className="w-3.5 h-3.5" /> {t("calendar.aiSuggestions")}
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {conflictData.alternatives.map((alt, idx) => (
@@ -275,30 +275,30 @@ export function EventDialog({
 
           <div className="grid gap-5">
             <div className="grid gap-2">
-              <Label htmlFor="title" className="text-zinc-600 dark:text-zinc-400">Judul Event</Label>
+              <Label htmlFor="title" className="text-zinc-600 dark:text-zinc-400">{t("calendar.eventTitle")}</Label>
               <Input
                 id="title"
                 value={formData.title || ""}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Meeting with team"
+                placeholder={t("calendar.titlePlaceholder")}
                 className="bg-zinc-50 dark:bg-black/20 border-zinc-200 dark:border-white/10 focus-visible:ring-primary shadow-sm"
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="description">Deskripsi</Label>
+              <Label htmlFor="description">{t("calendar.description")}</Label>
               <Textarea
                 id="description"
                 value={formData.description || ""}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Agenda, context, or preparation notes"
+                placeholder={t("calendar.descriptionPlaceholder")}
                 rows={3}
               />
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="locationUrl" className="flex items-center gap-1.5">
-                <Link className="size-4" /> Meeting link
+                <Link className="size-4" /> {t("calendar.meetingLink")}
               </Label>
               <Input
                 id="locationUrl"
@@ -310,7 +310,7 @@ export function EventDialog({
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="date" className="text-zinc-600 dark:text-zinc-400">Tanggal</Label>
+              <Label htmlFor="date" className="text-zinc-600 dark:text-zinc-400">{t("calendar.date")}</Label>
               <Input
                 id="date"
                 type="date"
@@ -322,7 +322,7 @@ export function EventDialog({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="startTime" className="text-zinc-600 dark:text-zinc-400">Mulai</Label>
+                <Label htmlFor="startTime" className="text-zinc-600 dark:text-zinc-400">{t("calendar.start")}</Label>
                 <div className="relative">
                   <Input
                     id="startTime"
@@ -346,7 +346,7 @@ export function EventDialog({
                 </div>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="endTime" className="text-zinc-600 dark:text-zinc-400">Selesai</Label>
+                <Label htmlFor="endTime" className="text-zinc-600 dark:text-zinc-400">{t("calendar.end")}</Label>
                 <Input
                   id="endTime"
                   type="time"
@@ -367,7 +367,7 @@ export function EventDialog({
             
             <div className="grid gap-2">
               <Label htmlFor="category" className="text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
-                <Tag className="w-3.5 h-3.5" /> Kategori
+                <Tag className="w-3.5 h-3.5" /> {t("calendar.category")}
               </Label>
               <select
                 id="category"
@@ -375,7 +375,7 @@ export function EventDialog({
                 onChange={(e) => setFormData({ ...formData, category: e.target.value || null })}
                   className="min-h-11 w-full rounded-md border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/20 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:min-h-10"
               >
-                <option value="">— No category —</option>
+                <option value="">{t("calendar.noCategory")}</option>
                 {CATEGORY_OPTIONS.map((cat) => (
                   <option key={cat.key} value={cat.key}>
                     {cat.emoji} {cat.label}
@@ -387,7 +387,7 @@ export function EventDialog({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label htmlFor="priority" className="flex items-center gap-1.5">
-                  <Flag className="size-4" /> Priority
+                  <Flag className="size-4" /> {t("calendar.priority")}
                 </Label>
                 <select
                   id="priority"
@@ -398,14 +398,14 @@ export function EventDialog({
                   })}
                   className="min-h-11 rounded-md border border-input bg-background px-3 text-sm sm:min-h-10"
                 >
-                  <option value="low">Low</option>
-                  <option value="normal">Normal</option>
-                  <option value="important">Important</option>
+                  <option value="low">{t("calendar.priorityLow")}</option>
+                  <option value="normal">{t("calendar.priorityNormal")}</option>
+                  <option value="important">{t("calendar.priorityImportant")}</option>
                 </select>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="reminder" className="flex items-center gap-1.5">
-                  <Bell className="size-4" /> Reminder
+                  <Bell className="size-4" /> {t("calendar.reminder")}
                 </Label>
                 <select
                   id="reminder"
@@ -416,20 +416,20 @@ export function EventDialog({
                   })}
                   className="min-h-11 rounded-md border border-input bg-background px-3 text-sm sm:min-h-10"
                 >
-                  <option value="">None</option>
-                  <option value="0">At start time</option>
-                  <option value="5">5 minutes before</option>
-                  <option value="15">15 minutes before</option>
-                  <option value="30">30 minutes before</option>
-                  <option value="60">1 hour before</option>
-                  <option value="1440">1 day before</option>
+                  <option value="">{t("calendar.reminderNone")}</option>
+                  <option value="0">{t("calendar.reminderAtStart")}</option>
+                  <option value="5">{t("calendar.reminder5")}</option>
+                  <option value="15">{t("calendar.reminder15")}</option>
+                  <option value="30">{t("calendar.reminder30")}</option>
+                  <option value="60">{t("calendar.reminder60")}</option>
+                  <option value="1440">{t("calendar.reminderDay")}</option>
                 </select>
               </div>
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="tags" className="flex items-center gap-1.5">
-                <Tag className="size-4" /> Tags
+                <Tag className="size-4" /> {t("calendar.tags")}
               </Label>
               <Input
                 id="tags"
@@ -438,19 +438,19 @@ export function EventDialog({
                   ...formData,
                   tags: e.target.value.split(",").map((tag) => tag.trim()).filter(Boolean),
                 })}
-                placeholder="planning, client, deep-work"
+                placeholder={t("calendar.tagsPlaceholder")}
               />
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="participants" className="text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5" /> Partisipan (Opsional)
+                <Users className="w-3.5 h-3.5" /> {t("calendar.participantsOptional")}
               </Label>
               <Input
                 id="participants"
                 value={formData.participants || ""}
                 onChange={(e) => setFormData({ ...formData, participants: e.target.value })}
-                placeholder="Comma separated emails"
+                placeholder={t("calendar.participantsPlaceholder")}
                 className="bg-zinc-50 dark:bg-black/20 border-zinc-200 dark:border-white/10 focus-visible:ring-primary shadow-sm"
               />
             </div>
