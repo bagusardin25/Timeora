@@ -1,0 +1,48 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Coverage: Assistant query schedule in docked chat",
+  "description": "User opens docked AI chat and asks what is on the calendar; receives a schedule-related assistant reply.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click Sign in and wait for the dashboard"
+    },
+    {
+      "type": "action",
+      "description": "Ensure language is English (en)"
+    },
+    {
+      "type": "action",
+      "description": "Open AI chat via Open AI chat button or Control+K"
+    },
+    {
+      "type": "action",
+      "description": "Wait 2 seconds for Ask your calendar panel"
+    },
+    {
+      "type": "action",
+      "description": "Type What do I have this week? into the assistant input and click Send"
+    },
+    {
+      "type": "action",
+      "description": "Wait up to 8 seconds for the assistant response"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the assistant replies with schedule content in English (preferred): event list, empty-day message such as No events found, structured cards, or a clear calendar summary. Indonesian copy alone is not required when UI language is English."
+    }
+  ]
+}

@@ -8,12 +8,42 @@ Locale = Literal["en", "id"]
 
 
 def resolve_locale(accept_language: str | None = None, explicit: str | None = None) -> Locale:
+    """Pick en/id from an Accept-Language header (highest q-value wins).
+
+    Important: do not substring-match ``,id`` — English headers from the app look like
+    ``en-US,en;q=0.9,id;q=0.8`` and must resolve to English.
+    """
     if explicit in ("en", "id"):
         return explicit  # type: ignore[return-value]
-    header = (accept_language or "").lower()
-    if header.startswith("id") or ",id" in header or "id-id" in header:
-        return "id"
-    return "en"
+
+    header = (accept_language or "").strip()
+    if not header:
+        return "en"
+
+    best_lang: Locale = "en"
+    best_q = -1.0
+    for part in header.split(","):
+        token = part.strip()
+        if not token:
+            continue
+        lower = token.lower()
+        if ";q=" in lower:
+            lang_part, q_part = token.split(";", 1)
+            q_raw = q_part.split("=", 1)[-1].strip()
+            try:
+                q = float(q_raw)
+            except ValueError:
+                q = 0.0
+        else:
+            lang_part, q = token, 1.0
+        primary = lang_part.strip().lower().split("-", 1)[0]
+        if primary not in ("en", "id"):
+            continue
+        if q > best_q:
+            best_q = q
+            best_lang = primary  # type: ignore[assignment]
+    return best_lang
+
 
 
 MESSAGES: dict[str, dict[Locale, str]] = {
