@@ -232,7 +232,66 @@ class TestAssistantClarification(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertEqual(response.intent, "find_slot")
-        self.assertGreater(len(response.result), 0)
+        self.assertIsInstance(response.result, dict)
+        self.assertGreater(len(response.result["slots"]), 0)
+
+    async def test_help_intent_lists_capabilities(self):
+        response = assistant._handle_help()
+        self.assertEqual(response.intent, "help")
+        self.assertIn("asisten kalender", response.message.lower())
+        self.assertIn("find_free_slot", response.suggested_actions)
+
+    async def test_conflict_recovery_returns_alternative_slots(self):
+        body = AssistantRequest(
+            confirm=True,
+            action="create",
+            event_data={
+                "title": "Meeting",
+                "date": "2026-07-10",
+                "start_time": "09:00:00",
+                "duration_minutes": 60,
+            },
+        )
+        response = assistant._conflict_recovery_response(
+            body,
+            {
+                "message": "Time slot conflicts with existing event",
+                "conflicting_event": "Standup",
+                "alternatives": [
+                    {"start_time": "10:00", "duration_minutes": 60, "reason": "Same day, 60 min later"},
+                    {"start_time": "10:30", "duration_minutes": 60, "reason": "Same day, 90 min later"},
+                ],
+            },
+        )
+        self.assertEqual(response.intent, "conflict")
+        self.assertIn("Standup", response.message)
+        self.assertEqual(len(response.result["slots"]), 2)
+        self.assertEqual(response.result["slots"][0]["start_time"], "10:00")
+
+    async def test_create_auto_picks_free_slot_when_default_time_conflicts(self):
+        busy = [event_on("busy", "Standup", date(2026, 7, 10), time(9, 0), 60)]
+        with patch.object(assistant.data_access, "list_events_window", AsyncMock(return_value=busy)):
+            response = await assistant._handle_create(
+                {"id": "user-1"},
+                {
+                    "title": "Meeting",
+                    "date": "2026-07-10",
+                    "start_time": "09:00",
+                    "duration_minutes": 60,
+                    "time_explicit": False,
+                    "prefer_free_slot": True,
+                    "participants": "",
+                    "warnings": ["No time found — defaulting to 09:00"],
+                },
+            )
+
+        self.assertTrue(response.requires_confirmation)
+        self.assertEqual(response.result["event_data"]["title"], "Meeting")
+        self.assertEqual(response.result["event_data"]["date"], "2026-07-10")
+        # 09:00 is busy → must not propose the conflicting default.
+        self.assertNotEqual(response.result["event_data"]["start_time"][:5], "09:00")
+        self.assertTrue(response.result["auto_adjusted"])
+        self.assertGreater(len(response.result["alternatives"]), 0)
 
 
 class TestAssistantNativeTools(unittest.IsolatedAsyncioTestCase):

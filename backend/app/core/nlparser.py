@@ -52,6 +52,16 @@ _MONTHS.update(_MONTH_SHORT)
 # ---------------------------------------------------------------------------
 
 _INTENT_PATTERNS: list[tuple[str, list[str]]] = [
+    ("help", [
+        r"^\s*(hai|halo|hello|hi|hey)\s*[!.?]*\s*$",
+        r"^\s*(help|bantuan|tolong)\s*[!.?]*\s*$",
+        r"\bapa yang (bisa|dapat) (kamu|anda|kau)\b",
+        r"\b(kamu|anda) bisa apa\b",
+        r"\bwhat can you (do|help)\b",
+        r"^\s*how can you help\b",
+        r"\bfitur\s+(apa|tersedia)\b",
+        r"\bcapabilities?\b",
+    ]),
     ("reschedule", [
         r"\bpindahkan\b", r"\breschedule\b", r"\bmove\b",
         r"\bubah jadwal\b", r"\bganti jadwal\b", r"\bgeser\b",
@@ -232,6 +242,44 @@ def _safe_time(hour: int, minute: int) -> time | None:
     if not 0 <= minute <= 59:
         return None
     return time(hour, minute)
+
+
+def _parse_day_period_preference(text: str, today: date) -> tuple[time | None, date | None, str]:
+    """Extract day-part preferences like 'malam ini' / 'tonight'.
+
+    Returns (preferred_time, forced_date_or_None, cleaned_text).
+    """
+    low = text.lower()
+    patterns: list[tuple[str, time, date | None]] = [
+        (r"\bmalam\s+ini\b", time(19, 0), today),
+        (r"\btonight\b", time(19, 0), today),
+        (r"\bthis\s+evening\b", time(19, 0), today),
+        (r"\bsore\s+ini\b", time(16, 0), today),
+        (r"\bthis\s+afternoon\b", time(15, 0), today),
+        (r"\bsiang\s+ini\b", time(13, 0), today),
+        (r"\bpagi\s+ini\b", time(9, 0), today),
+        (r"\bthis\s+morning\b", time(9, 0), today),
+        (r"\bmalam\s+besok\b", time(19, 0), today + timedelta(days=1)),
+        (r"\btomorrow\s+night\b", time(19, 0), today + timedelta(days=1)),
+        (r"\bsore\s+besok\b", time(16, 0), today + timedelta(days=1)),
+        (r"\bmalam\b", time(19, 0), None),
+        (r"\bsore\b", time(16, 0), None),
+        (r"\bsiang\b", time(13, 0), None),
+        (r"\bevening\b", time(19, 0), None),
+        (r"\bafternoon\b", time(15, 0), None),
+    ]
+    for pattern, preferred, forced_date in patterns:
+        m = re.search(pattern, low)
+        if not m:
+            continue
+        # Skip bare "malam/sore" when it is TOD after a clock hour ("jam 12 malam").
+        if pattern in {r"\bmalam\b", r"\bsore\b", r"\bsiang\b"}:
+            before = low[: m.start()].strip()
+            if re.search(r"\bjam\s+\d{1,2}(:\d{2})?\s*$", before):
+                continue
+        cleaned = text[: m.start()] + text[m.end() :]
+        return preferred, forced_date, cleaned.strip()
+    return None, None, text
 
 
 def _parse_time(text: str) -> tuple[time | None, str]:
@@ -485,32 +533,111 @@ def _parse_update_data(text: str) -> tuple[dict[str, Any], str]:
     return event_data, remaining
 
 
+_EVENT_TYPE_NOUNS = (
+    r"standup|stand\s*up|1\s*:\s*1|one\s*on\s*one|one-on-one|"
+    r"meeting|rapat|sync|call|demo|review|interview|planning|"
+    r"workshop|brainstorm|retro|retrospective|kickoff|focus|"
+    r"deployment|maintenance|check-?in|huddle"
+)
+
+_FREE_SLOT_PATTERNS = (
+    r"\bjam\s+yang\s+kosong\b",
+    r"\bwaktu\s+yang\s+kosong\b",
+    r"\bslot\s+yang\s+kosong\b",
+    r"\bjam\s+kosong\b",
+    r"\bwaktu\s+kosong\b",
+    r"\bslot\s+kosong\b",
+    r"\bfree\s+slot\b",
+    r"\bavailable\s+slot\b",
+    r"\bdi\s+jam\s+kosong\b",
+    r"\bpada\s+jam\s+kosong\b",
+)
+
+
+def _mentions_free_slot(text: str) -> bool:
+    low = text.lower()
+    return any(re.search(pattern, low) for pattern in _FREE_SLOT_PATTERNS)
+
+
+def _strip_free_slot_phrases(text: str) -> str:
+    result = text
+    for pattern in _FREE_SLOT_PATTERNS:
+        result = re.sub(pattern, " ", result, flags=re.I)
+    return result
+
+
+def _title_case_phrase(value: str) -> str:
+    cleaned = re.sub(r"\s+", " ", value).strip(".,;:-–—\"' ")
+    if not cleaned:
+        return "Meeting"
+    # Keep short acronyms; otherwise capitalize first letter only (natural titles).
+    if cleaned.isupper() and len(cleaned) <= 4:
+        return cleaned
+    return cleaned[:1].upper() + cleaned[1:]
+
+
 def _extract_title(text: str) -> str:
     """Clean up remaining text to use as event title."""
-    # Remove common prefixes
+    result = _strip_free_slot_phrases(text)
+
+    # Drop relative/absolute date & time phrases that often leak into titles
+    temporal_patterns = [
+        r"\bhari\s+ini\b", r"\bbesok\b", r"\blusa\b",
+        r"\btoday\b", r"\btomorrow\b", r"\bday\s+after\s+tomorrow\b",
+        r"\bnext\s+\w+\b", r"\bthis\s+\w+\b",
+        r"\b\d{1,2}[:.]\d{2}\b", r"\bjam\s+\d{1,2}([:.]\d{2})?\b",
+        r"\b\d{1,2}\s*(am|pm)\b", r"\b\d{4}-\d{2}-\d{2}\b",
+        r"\bselama\s+\d+\s*(menit|jam|hours?|minutes?)\b",
+        r"\bfor\s+\d+\s*(menit|jam|hours?|minutes?)\b",
+        r"\b\d+\s*(menit|jam|hours?|minutes?)\b",
+    ]
+    for pattern in temporal_patterns:
+        result = re.sub(pattern, " ", result, flags=re.I)
+
+    # Remove common prefixes / conversational create verbs
     prefixes = [
-        r"\bjadwalkan\b", r"\bschedule\b", r"\bbuat\b", r"\bcreate\b",
-        r"\badd\b", r"\btambah\b", r"\bset\b", r"\bbook\b",
+        r"\bjadwalkan\b", r"\bschedule\b", r"\bbuatin\b", r"\bbuatkan\b",
+        r"\bbuatlah\b", r"\bbuat\b", r"\bcreate\b",
+        r"\badd\b", r"\btambah(?:kan)?\b", r"\bset\b", r"\bbook\b",
         r"\bpindahkan\b", r"\breschedule\b", r"\bmove\b",
         r"\bbatalkan\b", r"\bcancel\b", r"\bhapus\b",
         r"\bupdate\b", r"\bedit\b", r"\bjadikan\b", r"\btandai\b",
+        r"\bjadwal(?:kan)?\b",
     ]
-    result = text
     for p in prefixes:
-        result = re.sub(p, "", result, flags=re.I).strip()
+        result = re.sub(p, " ", result, flags=re.I)
 
-    # Remove filler words
-    fillers = [r"\bdengan\b", r"\buntuk\b", r"\bke\b", r"\bdi\b", r"\bpada\b"]
+    # Conversational fillers common in Indo/English chat
+    fillers = [
+        r"\boke+\b", r"\bok\b", r"\bokey\b", r"\balright\b", r"\bsure\b",
+        r"\bkalo\b", r"\bkalau\b", r"\bgitu\b", r"\bdeh\b",
+        r"\bdong\b", r"\bsih\b", r"\bya+\b", r"\byuk\b", r"\bmohon\b",
+        r"\btolong\b", r"\bplease\b", r"\bsaya\b", r"\bkita\b", r"\baku\b",
+        r"\bdengan\b", r"\buntuk\b", r"\bke\b", r"\bdi\b", r"\bpada\b",
+        r"\byang\b", r"\bthen\b", r"\bso\b", r"\bjust\b",
+        r"\bthe\b", r"\bmy\b", r"\bme\b",
+    ]
     for f in fillers:
-        result = re.sub(f, "", result, count=1, flags=re.I).strip()
+        result = re.sub(f, " ", result, flags=re.I)
 
-    # Collapse whitespace
-    result = re.sub(r"\s+", " ", result).strip()
+    result = re.sub(r"\s+", " ", result).strip(".,;:-–—\"' ")
 
-    # Remove leading/trailing punctuation
-    result = result.strip(".,;:-–— ")
+    if result.lower() in {"", "event", "acara", "kegiatan"}:
+        return "Meeting"
 
-    return result if result else "Untitled Event"
+    # If cleanup still left a long chatty phrase, fall back to event-type noun.
+    word_count = len(result.split())
+    if word_count > 6:
+        noun_match = re.search(rf"\b({_EVENT_TYPE_NOUNS})\b", result, flags=re.I)
+        if noun_match:
+            return _title_case_phrase(noun_match.group(1))
+
+    # Prefer a known event noun if that is essentially all that remains.
+    noun_only = re.fullmatch(rf"({_EVENT_TYPE_NOUNS})", result, flags=re.I)
+    if noun_only:
+        return _title_case_phrase(noun_only.group(1))
+
+    return result if result else "Meeting"
 
 
 # ---------------------------------------------------------------------------
@@ -542,29 +669,46 @@ def parse(text: str, today: date | None = None) -> dict[str, Any]:
         parsed_date = today
         warnings.append("No date found — defaulting to today")
 
-    # 4. Time
+    # 3b. Day-part preference ("malam ini", "tonight") — influences date + preferred clock
+    period_time, period_date, remaining = _parse_day_period_preference(remaining, today)
+    if period_date is not None and parsed_date is None:
+        parsed_date = period_date
+    if parsed_date is None and intent in {"find_slot", "query"} and period_time is not None:
+        parsed_date = today
+
+    # 4. Free-slot preference (before time/title cleanup so phrases are detected)
+    prefer_free_slot = _mentions_free_slot(remaining)
+    if prefer_free_slot:
+        remaining = _strip_free_slot_phrases(remaining)
+
+    # 5. Time (clock first; day-part is a softer preference for ranking free slots)
     parsed_time, remaining = _parse_time(remaining)
+    time_explicit = parsed_time is not None
+    if parsed_time is None and period_time is not None:
+        parsed_time = period_time
+        # Day-part is explicit enough for slot ranking ("malam" → prefer evening).
+        time_explicit = intent == "find_slot"
     if parsed_time is None:
         parsed_time = time(9, 0)
         if intent == "create":
             warnings.append("No time found — defaulting to 09:00")
 
-    # 5. Update data
+    # 6. Update data
     event_data: dict[str, Any] = {}
     if intent == "update":
         event_data, remaining = _parse_update_data(remaining)
 
-    # 6. Duration
+    # 7. Duration
     duration, remaining = _parse_duration(remaining)
     if duration is None:
         duration = 60
         if intent == "create":
             warnings.append("No duration found — defaulting to 60 minutes")
 
-    # 7. Title from remaining text
+    # 8. Title from remaining text
     title = _extract_title(remaining)
 
-    # 8. Compute ISO datetimes for convenience
+    # 9. Compute ISO datetimes for convenience
     if parsed_date is not None:
         start_dt = datetime.combine(parsed_date, parsed_time)
         end_dt = start_dt + timedelta(minutes=duration)
@@ -588,6 +732,8 @@ def parse(text: str, today: date | None = None) -> dict[str, Any]:
         "source": "fallback",
         "start_at": start_at,
         "end_at": end_at,
+        "time_explicit": time_explicit,
+        "prefer_free_slot": prefer_free_slot,
     }
     if event_data:
         result["event_data"] = event_data

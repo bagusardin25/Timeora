@@ -42,7 +42,7 @@ class TestNaturalLanguageParser(unittest.TestCase):
         )
 
         self.assertEqual(result["intent"], "create")
-        self.assertEqual(result["title"], "deployment")
+        self.assertEqual(result["title"], "Deployment")
         self.assertEqual(result["start_time"], "09:00")
         self.assertIn("No time found — defaulting to 09:00", result["warnings"])
 
@@ -60,7 +60,7 @@ class TestNaturalLanguageParser(unittest.TestCase):
 
         self.assertEqual(result["date"], "2027-01-01")
         self.assertEqual(result["start_time"], "09:00")
-        self.assertEqual(result["title"], "kickoff")
+        self.assertEqual(result["title"], "Kickoff")
 
     def test_parses_english_day_after_tomorrow_before_tomorrow(self):
         result = parse("review day after tomorrow at 11am", self.today)
@@ -80,6 +80,34 @@ class TestNaturalLanguageParser(unittest.TestCase):
         self.assertEqual(result["intent"], "find_slot")
         self.assertEqual(result["duration_minutes"], 120)
         self.assertEqual(result["date"], "2026-07-05")
+
+    def test_conversational_create_prefers_meeting_title_and_free_slot(self):
+        result = parse(
+            "oke kalo gitu buatin saya jadwal meeting besok, di jam yang kosong",
+            self.today,
+        )
+
+        self.assertEqual(result["intent"], "create")
+        self.assertEqual(result["title"], "Meeting")
+        self.assertEqual(result["date"], "2026-07-05")
+        self.assertTrue(result["prefer_free_slot"])
+        self.assertFalse(result["time_explicit"])
+
+    def test_find_slot_malam_ini_prefers_evening(self):
+        result = parse("cari waktu kosong malam ini", self.today)
+
+        self.assertEqual(result["intent"], "find_slot")
+        self.assertEqual(result["date"], "2026-07-04")
+        self.assertEqual(result["start_time"], "19:00")
+        self.assertTrue(result["time_explicit"])
+
+    def test_help_greeting_does_not_create_event(self):
+        result = parse("hai", self.today)
+        self.assertEqual(result["intent"], "help")
+
+    def test_help_does_not_steal_create_with_hai_prefix(self):
+        result = parse("hai buatkan meeting besok jam 10", self.today)
+        self.assertEqual(result["intent"], "create")
 
     def test_extracts_weekly_recurrence(self):
         result = parse("standup setiap senin jam 9 pagi", self.today)

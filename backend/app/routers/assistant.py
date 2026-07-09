@@ -13,7 +13,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.auth import get_current_user
 from app import data_access
-from app.core import assistant_tools, nlparser, conflicts as conflicts_engine
+from app.core import assistant_tools, conflicts as conflicts_engine
+from app.core.ai_parse import parse_assistant_command
 from app.event_ids import base_event_id
 from app.models import AssistantRequest, AssistantResponse
 
@@ -100,17 +101,15 @@ async def assistant(body: AssistantRequest, user: dict = Depends(get_current_use
             detail="text is required unless confirm=true",
         )
 
-    parsed = nlparser.parse(body.text, today=datetime.now().date())
+    # Prefer strengthened AI multi-intent parse; falls back to deterministic nlparser.
+    parsed = await parse_assistant_command(body.text, today=datetime.now().date())
     intent = parsed["intent"]
 
+    if intent == "help":
+        return _handle_help()
+
     if intent == "create":
-        return AssistantResponse(
-            intent="create",
-            result={"tool": "create", "event_data": parsed},
-            message=f"Create \"{parsed.get('title', 'Event')}\"? Confirm to add it to your calendar.",
-            requires_confirmation=True,
-            suggested_actions=["confirm", "edit"],
-        )
+        return await _handle_create(user, parsed)
 
     if intent == "query":
         return await _handle_query(user, parsed)
@@ -130,26 +129,113 @@ async def assistant(body: AssistantRequest, user: dict = Depends(get_current_use
     return AssistantResponse(
         intent=intent,
         result=None,
-        message=f"Unknown intent: {intent}",
+        message=(
+            f"Saya belum mengerti permintaan itu ({intent}). "
+            "Coba: cek jadwal, cari slot kosong, buat/pindah/batalkan event, atau tanya “kamu bisa apa?”."
+        ),
+        suggested_actions=["help", "find_free_slot", "query"],
+    )
+
+
+def _handle_help() -> AssistantResponse:
+    return AssistantResponse(
+        intent="help",
+        result={
+            "capabilities": [
+                "query",
+                "find_slot",
+                "create",
+                "reschedule",
+                "cancel",
+                "update",
+            ]
+        },
+        message=(
+            "Saya asisten kalender Timeora. Saya bisa:\n"
+            "• Cek jadwal (“Apa jadwal saya hari ini?”)\n"
+            "• Cari slot kosong (“Cari waktu kosong malam ini”)\n"
+            "• Buat event (“Jadwalkan meeting besok jam 10”)\n"
+            "• Pindahkan atau batalkan event\n"
+            "• Ubah detail (prioritas, catatan, tag)\n\n"
+            "Semua perubahan penting tetap minta konfirmasi dulu. "
+            "Coba ketuk contoh di bawah atau ketik/ucapkan permintaan Anda."
+        ),
+        suggested_actions=["query", "find_free_slot", "create"],
     )
 
 
 async def _execute_confirmed(user: dict, body: AssistantRequest) -> AssistantResponse:
-    intent, result = await assistant_tools.execute_calendar_tool(user["id"], body)
+    try:
+        intent, result = await assistant_tools.execute_calendar_tool(user["id"], body)
+    except HTTPException as exc:
+        # Surface calendar conflicts as recoverable chat UI (alternatives), not a hard crash.
+        if exc.status_code == status.HTTP_409_CONFLICT:
+            return _conflict_recovery_response(body, exc.detail)
+        raise
+
     serialized = _event_to_dict(result)
     messages = {
-        "create": "Event added to your calendar.",
-        "cancel": "Event cancelled.",
-        "reschedule": f"Event rescheduled to {body.new_date} {body.new_time}.",
-        "update": "Event updated.",
+        "create": "Event berhasil ditambahkan ke kalender.",
+        "cancel": "Event berhasil dibatalkan.",
+        "reschedule": f"Event berhasil dipindah ke {body.new_date} {body.new_time}.",
+        "update": "Event berhasil diperbarui.",
     }
     return AssistantResponse(
         intent=intent,
         result=serialized,
-        message=messages[intent],
+        message=messages.get(intent, "Aksi berhasil."),
         executed=True,
         events=[serialized] if isinstance(serialized, dict) and not serialized.get("deleted") else [],
         suggested_actions=["open_event"] if intent != "cancel" else [],
+    )
+
+
+def _conflict_recovery_response(body: AssistantRequest, detail: object) -> AssistantResponse:
+    data = detail if isinstance(detail, dict) else {"message": str(detail)}
+    conflicting = data.get("conflicting_event") or "event lain"
+    alternatives = data.get("alternatives") if isinstance(data.get("alternatives"), list) else []
+    event_data = body.event_data if isinstance(body.event_data, dict) else {}
+    target_date = event_data.get("date")
+    duration = event_data.get("duration_minutes") or 60
+    title = event_data.get("title") or "Meeting"
+
+    slots = []
+    for alt in alternatives:
+        if not isinstance(alt, dict):
+            continue
+        start = alt.get("start_time") or alt.get("start")
+        if not start:
+            continue
+        slots.append(
+            {
+                "start_time": str(start)[:5] if len(str(start)) >= 5 else str(start),
+                "duration_minutes": alt.get("duration_minutes") or duration,
+                "reason": alt.get("reason") or "Slot alternatif",
+            }
+        )
+
+    message = (
+        f'Jam bentrok dengan “{conflicting}”. '
+        + (
+            "Pilih slot alternatif di bawah, lalu konfirmasi lagi."
+            if slots
+            else "Coba cari slot kosong atau pilih jam lain."
+        )
+    )
+    return AssistantResponse(
+        intent="conflict",
+        result={
+            "conflict": True,
+            "conflicting_event": conflicting,
+            "date": target_date,
+            "duration_minutes": duration,
+            "title": title,
+            "event_data": event_data,
+            "slots": slots,
+            "alternatives": alternatives,
+        },
+        message=message,
+        suggested_actions=["pick_slot", "find_free_slot", "edit"],
     )
 
 
@@ -185,37 +271,205 @@ async def _handle_query(user: dict, parsed: dict) -> AssistantResponse:
     )
 
 
-async def _handle_find_slot(user: dict, parsed: dict) -> AssistantResponse:
-    target_date = _parse_date_value(parsed.get("date"))
-    if target_date is None:
-        target_date = datetime.now().date()
+def _normalize_start_time(value: str | time | None, default: time = time(9, 0)) -> time:
+    if isinstance(value, time):
+        return value
+    return _parse_time_value(value if isinstance(value, str) else None) or default
 
-    duration = parsed.get("duration_minutes", 60)
+
+def _build_create_event_data(
+    *,
+    title: str,
+    target_date: date,
+    start_time: time,
+    duration: int,
+    participants: str = "",
+    recurrence: str | None = None,
+) -> dict:
+    """Clean EventCreate-compatible payload (no parser metadata)."""
+    payload: dict = {
+        "title": title,
+        "date": target_date.isoformat(),
+        "start_time": start_time.strftime("%H:%M:%S"),
+        "duration_minutes": duration,
+        "participants": participants or "",
+    }
+    if recurrence:
+        payload["recurrence_rule"] = recurrence
+    return payload
+
+
+async def _free_slots_for_day(
+    user_id: str,
+    target_date: date,
+    duration: int,
+    requested_time: time,
+    count: int = 5,
+) -> list[dict]:
+    all_events = await data_access.list_events_window(
+        user_id,
+        target_date - timedelta(days=1),
+        target_date,
+    )
+    event_dicts = [_event_to_dict(ev) for ev in all_events]
+    return conflicts_engine.find_alternatives(
+        event_dicts,
+        target_date,
+        requested_time,
+        duration,
+        count=count,
+    )
+
+
+async def _handle_create(user: dict, parsed: dict) -> AssistantResponse:
+    """Preview a create action with cleaned title and a conflict-safe slot."""
+    target_date = _parse_date_value(parsed.get("date")) or datetime.now().date()
+    duration = int(parsed.get("duration_minutes") or 60)
+    if duration < 5:
+        duration = 60
+    requested_time = _normalize_start_time(parsed.get("start_time"))
+    title = (parsed.get("title") or "Meeting").strip() or "Meeting"
+
+    prefer_free = bool(parsed.get("prefer_free_slot"))
+    time_explicit = bool(parsed.get("time_explicit"))
+    # If the user did not name a clock time, or asked for a free slot, auto-place.
+    needs_free = prefer_free or not time_explicit
+
     all_events = await data_access.list_events_window(
         user["id"],
         target_date - timedelta(days=1),
         target_date,
     )
     event_dicts = [_event_to_dict(ev) for ev in all_events]
+    has_conflict = bool(
+        conflicts_engine.check_conflicts(
+            event_dicts,
+            target_date,
+            requested_time,
+            duration,
+        )
+    )
 
-    requested_time_str = parsed.get("start_time", "09:00")
-    requested_time = _parse_time_value(requested_time_str) or time(9, 0)
-
+    auto_adjusted = False
+    adjustment_note = ""
     alternatives = conflicts_engine.find_alternatives(
-        event_dicts, target_date, requested_time, duration, count=5
+        event_dicts,
+        target_date,
+        requested_time,
+        duration,
+        count=5,
+    )
+
+    chosen_time = requested_time
+    if needs_free or has_conflict:
+        if not alternatives:
+            return AssistantResponse(
+                intent="create",
+                result={
+                    "tool": "create",
+                    "requested": {
+                        "title": title,
+                        "date": target_date.isoformat(),
+                        "start_time": requested_time.strftime("%H:%M:%S"),
+                        "duration_minutes": duration,
+                    },
+                    "alternatives": [],
+                },
+                message=(
+                    f'Tidak ada slot kosong {duration} menit pada {target_date.isoformat()} '
+                    f'untuk "{title}". Coba hari atau durasi lain.'
+                ),
+                suggested_actions=["find_free_slot", "edit"],
+            )
+
+        first = alternatives[0]
+        chosen_time = _normalize_start_time(first.get("start_time"), requested_time)
+        if chosen_time != requested_time or needs_free or has_conflict:
+            auto_adjusted = True
+            if has_conflict and time_explicit:
+                adjustment_note = (
+                    f"Jam {requested_time.strftime('%H:%M')} bentrok. "
+                    f"Saya usulkan {chosen_time.strftime('%H:%M')} yang kosong. "
+                )
+            elif prefer_free or not time_explicit:
+                adjustment_note = (
+                    f"Saya pilih slot kosong {chosen_time.strftime('%H:%M')}. "
+                )
+
+    event_data = _build_create_event_data(
+        title=title,
+        target_date=target_date,
+        start_time=chosen_time,
+        duration=duration,
+        participants=str(parsed.get("participants") or ""),
+        recurrence=parsed.get("recurrence"),
+    )
+
+    warnings = list(parsed.get("warnings") or [])
+    if auto_adjusted:
+        warnings.append("Slot adjusted to avoid conflicts / honor free-slot request")
+
+    message = (
+        f'{adjustment_note}Buat "{title}" pada {target_date.isoformat()} '
+        f'jam {chosen_time.strftime("%H:%M")} ({duration} menit)? '
+        f"Konfirmasi untuk menambah ke kalender."
+    )
+
+    return AssistantResponse(
+        intent="create",
+        result={
+            "tool": "create",
+            "event_data": event_data,
+            "alternatives": alternatives,
+            "auto_adjusted": auto_adjusted,
+            "warnings": warnings,
+        },
+        message=message,
+        requires_confirmation=True,
+        suggested_actions=["confirm", "edit", "pick_slot"],
+    )
+
+
+async def _handle_find_slot(user: dict, parsed: dict) -> AssistantResponse:
+    target_date = _parse_date_value(parsed.get("date"))
+    if target_date is None:
+        target_date = datetime.now().date()
+
+    duration = int(parsed.get("duration_minutes") or 60)
+    requested_time = _normalize_start_time(parsed.get("start_time"))
+
+    alternatives = await _free_slots_for_day(
+        user["id"],
+        target_date,
+        duration,
+        requested_time,
+        count=5,
     )
 
     if not alternatives:
         return AssistantResponse(
             intent="find_slot",
-            result=[],
-            message=f"No free {duration}-minute slots found on {target_date.isoformat()}.",
+            result={"date": target_date.isoformat(), "duration_minutes": duration, "slots": []},
+            message=f"Tidak ada slot kosong {duration} menit pada {target_date.isoformat()}.",
+            suggested_actions=["edit"],
         )
 
+    slot_lines = ", ".join(
+        str(slot.get("start_time", ""))[:5] for slot in alternatives[:5] if slot.get("start_time")
+    )
     return AssistantResponse(
         intent="find_slot",
-        result=alternatives,
-        message=f"Found {len(alternatives)} free slot(s) for {duration} minutes on {target_date.isoformat()}.",
+        result={
+            "date": target_date.isoformat(),
+            "duration_minutes": duration,
+            "slots": alternatives,
+        },
+        message=(
+            f"Ditemukan {len(alternatives)} slot kosong ({duration} menit) "
+            f"pada {target_date.isoformat()}: {slot_lines}. "
+            f"Ketuk slot untuk menjadwalkan meeting."
+        ),
+        suggested_actions=["create", "pick_slot"],
     )
 
 
