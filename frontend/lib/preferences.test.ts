@@ -28,6 +28,7 @@ describe("preferences", () => {
       defaultDuration: DEFAULT_PREFERENCES.defaultDuration,
       workingHoursStart: DEFAULT_PREFERENCES.workingHoursStart,
       workingHoursEnd: DEFAULT_PREFERENCES.workingHoursEnd,
+      locale: DEFAULT_PREFERENCES.locale,
     });
   });
 

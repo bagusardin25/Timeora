@@ -38,7 +38,7 @@ describe("AssistantPanel", () => {
     });
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
 
-    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Apa jadwal saya hari ini?");
+    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Apa jadwal saya hari ini?");
     await user.click(screen.getByRole("button", { name: "Send" }));
 
     expect(callAssistantMock).toHaveBeenCalledWith("Apa jadwal saya hari ini?", undefined);
@@ -57,7 +57,7 @@ describe("AssistantPanel", () => {
     });
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
 
-    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Apa jadwal saya?");
+    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Apa jadwal saya?");
     await user.click(screen.getByRole("button", { name: "Send" }));
 
     expect(callAssistantMock).toHaveBeenCalledWith("Apa jadwal saya?", undefined);
@@ -88,7 +88,7 @@ describe("AssistantPanel", () => {
       });
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
 
-    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Batalkan team sync");
+    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Batalkan team sync");
     await user.click(screen.getByRole("button", { name: "Send" }));
     expect(await screen.findByText("2026-07-10 · 14:00")).toBeVisible();
     await user.click(await screen.findByRole("button", { name: /Product Sync/ }));
@@ -96,7 +96,7 @@ describe("AssistantPanel", () => {
     expect(callAssistantMock).toHaveBeenLastCalledWith("Batalkan team sync", {
       selected_event_id: "two",
     });
-    expect(await screen.findByRole("button", { name: "Batalkan event" })).toBeVisible();
+    expect(await screen.findByRole("button", { name: "Yes, cancel" })).toBeVisible();
   });
 
   it("confirms native update tool results with event data", async () => {
@@ -120,10 +120,10 @@ describe("AssistantPanel", () => {
     });
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={onEventsChanged} />);
 
-    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Make Product Sync important");
+    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Make Product Sync important");
     await user.click(screen.getByRole("button", { name: "Send" }));
     expect(await screen.findByText("description: Updated prep notes")).toBeVisible();
-    await user.click(await screen.findByRole("button", { name: "Perbarui event" }));
+    await user.click(await screen.findByRole("button", { name: "Update" }));
 
     expect(executeAssistantMock).toHaveBeenCalledWith({
       action: "update",
@@ -131,8 +131,8 @@ describe("AssistantPanel", () => {
       event_data: { description: "Updated prep notes", priority: "important" },
     });
     expect(onEventsChanged).toHaveBeenCalled();
-    expect(await screen.findByText("Berhasil diterapkan")).toBeVisible();
-    expect(screen.getByText("Aksi sudah dikonfirmasi.")).toBeVisible();
+    expect(await screen.findByText("Applied successfully")).toBeVisible();
+    expect(screen.getByText("Action already confirmed.")).toBeVisible();
   });
 
   it("confirms create with executeAssistant and event_data", async () => {
@@ -158,13 +158,13 @@ describe("AssistantPanel", () => {
     });
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={onEventsChanged} />);
 
-    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Jadwalkan Team Standup besok jam 9");
+    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Jadwalkan Team Standup besok jam 9");
     await user.click(screen.getByRole("button", { name: "Send" }));
 
     expect(callAssistantMock).toHaveBeenCalledWith("Jadwalkan Team Standup besok jam 9", undefined);
     expect(await screen.findByText("2026-07-10 · 09:00")).toBeVisible();
-    expect(screen.getByText("30 menit")).toBeVisible();
-    await user.click(await screen.findByRole("button", { name: "Buat event" }));
+    expect(screen.getByText("30 min")).toBeVisible();
+    await user.click(await screen.findByRole("button", { name: "Create event" }));
 
     expect(executeAssistantMock).toHaveBeenCalledWith({
       action: "create",
@@ -195,10 +195,10 @@ describe("AssistantPanel", () => {
     });
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={onEventsChanged} />);
 
-    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Pindahkan Product Sync ke jam 3");
+    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Pindahkan Product Sync ke jam 3");
     await user.click(screen.getByRole("button", { name: "Send" }));
-    expect(await screen.findByText("Ke 2026-07-11 · 15:00")).toBeVisible();
-    await user.click(await screen.findByRole("button", { name: "Pindahkan event" }));
+    expect(await screen.findByText("To 2026-07-11 · 15:00")).toBeVisible();
+    await user.click(await screen.findByRole("button", { name: "Reschedule" }));
 
     expect(executeAssistantMock).toHaveBeenCalledWith({
       action: "reschedule",
@@ -229,9 +229,9 @@ describe("AssistantPanel", () => {
     });
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={onEventsChanged} />);
 
-    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Batalkan Marketing Sync");
+    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Batalkan Marketing Sync");
     await user.click(screen.getByRole("button", { name: "Send" }));
-    await user.click(await screen.findByRole("button", { name: "Batalkan event" }));
+    await user.click(await screen.findByRole("button", { name: "Yes, cancel" }));
 
     expect(executeAssistantMock).toHaveBeenCalledWith({
       action: "cancel",
@@ -259,12 +259,12 @@ describe("AssistantPanel", () => {
     });
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
 
-    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Batalkan Marketing Sync");
+    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Batalkan Marketing Sync");
     await user.click(screen.getByRole("button", { name: "Send" }));
-    await user.click(await screen.findByRole("button", { name: "Batalkan event" }));
+    await user.click(await screen.findByRole("button", { name: "Yes, cancel" }));
 
-    expect(await screen.findByText("Aksi sudah dikonfirmasi.")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Batalkan event" })).not.toBeInTheDocument();
+    expect(await screen.findByText("Action already confirmed.")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Yes, cancel" })).not.toBeInTheDocument();
     expect(executeAssistantMock).toHaveBeenCalledTimes(1);
   });
 
@@ -294,16 +294,16 @@ describe("AssistantPanel", () => {
       });
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={onEventsChanged} />);
 
-    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Jadwalkan standup");
+    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Jadwalkan standup");
     await user.click(screen.getByRole("button", { name: "Send" }));
-    await user.click(await screen.findByRole("button", { name: "Buat event" }));
+    await user.click(await screen.findByRole("button", { name: "Create event" }));
 
     expect(await screen.findByText("Network down")).toBeVisible();
-    await user.click(screen.getByRole("button", { name: /Coba lagi aksi kalender/ }));
+    await user.click(screen.getByRole("button", { name: /Retry calendar action/ }));
 
     expect(executeAssistantMock).toHaveBeenCalledTimes(2);
     expect(onEventsChanged).toHaveBeenCalled();
-    expect(await screen.findByText("Berhasil diterapkan")).toBeVisible();
+    expect(await screen.findByText("Applied successfully")).toBeVisible();
   });
 
   it("shows context event chip and clears it", async () => {
@@ -329,11 +329,11 @@ describe("AssistantPanel", () => {
       />,
     );
 
-    expect(screen.getByText("Konteks event")).toBeVisible();
+    expect(screen.getByText("Event context")).toBeVisible();
     expect(screen.getByText("Product Sync")).toBeVisible();
     expect(screen.getByText("2026-07-10 · 14:00")).toBeVisible();
 
-    await user.click(screen.getByRole("button", { name: "Hapus konteks event" }));
+    await user.click(screen.getByRole("button", { name: "Clear event context" }));
     expect(onClearContext).toHaveBeenCalled();
   });
 
@@ -387,7 +387,7 @@ describe("AssistantPanel", () => {
     const recognition = getRecognition();
     expect(SpeechRecognitionMock).toHaveBeenCalled();
     expect(recognition).not.toBeNull();
-    expect(recognition!.lang).toBe("id-ID");
+    expect(recognition!.lang).toBe("en-US");
     expect(recognition!.start).toHaveBeenCalled();
 
     await act(async () => {
@@ -398,7 +398,7 @@ describe("AssistantPanel", () => {
       recognition!.onend?.();
     });
 
-    expect(screen.getByPlaceholderText("Tanya atau ketik pesan…")).toHaveValue("Apa jadwal saya hari ini");
+    expect(screen.getByPlaceholderText("Ask or type a message…")).toHaveValue("Apa jadwal saya hari ini");
     expect(callAssistantMock).not.toHaveBeenCalled();
   });
 
@@ -407,7 +407,7 @@ describe("AssistantPanel", () => {
     const { getRecognition } = createSpeechRecognitionMock();
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
 
-    const input = screen.getByPlaceholderText("Tanya atau ketik pesan…");
+    const input = screen.getByPlaceholderText("Ask or type a message…");
     await user.type(input, "Catatan:");
     await user.click(screen.getByRole("button", { name: "Start voice input" }));
 
@@ -474,11 +474,11 @@ describe("AssistantPanel", () => {
 
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
 
-    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Cari slot");
+    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Cari slot");
     await user.click(screen.getByRole("button", { name: "Send" }));
     expect(await screen.findByText("14:00")).toBeVisible();
 
-    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "pakai yang kedua");
+    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "pakai yang kedua");
     await user.click(screen.getByRole("button", { name: "Send" }));
 
     expect(callAssistantMock).toHaveBeenLastCalledWith(
@@ -519,13 +519,13 @@ describe("AssistantPanel", () => {
     });
 
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
-    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Jadwalkan meeting");
+    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Jadwalkan meeting");
     await user.click(screen.getByRole("button", { name: "Send" }));
-    await user.click(await screen.findByRole("button", { name: "Buat event" }));
+    await user.click(await screen.findByRole("button", { name: "Create event" }));
 
-    expect(await screen.findByText("Bentrok jadwal")).toBeVisible();
+    expect(await screen.findByText("Schedule conflict")).toBeVisible();
     expect(screen.getByText("10:00")).toBeVisible();
-    expect(screen.queryByText("Aksi sudah dikonfirmasi.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Action already confirmed.")).not.toBeInTheDocument();
   });
 
   it("shows help capabilities and view-calendar after success", async () => {
@@ -568,15 +568,15 @@ describe("AssistantPanel", () => {
       />,
     );
 
-    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "hai");
+    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "hai");
     await user.click(screen.getByRole("button", { name: "Send" }));
-    expect(await screen.findByText(/asisten kalender/i)).toBeVisible();
-    expect(screen.getByRole("button", { name: "Apa jadwal saya hari ini?" })).toBeVisible();
+    expect(await screen.findByText(/Saya asisten kalender/i)).toBeVisible();
+    expect(screen.getByRole("button", { name: "What is on my calendar today?" })).toBeVisible();
 
-    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "buat meeting");
+    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "buat meeting");
     await user.click(screen.getByRole("button", { name: "Send" }));
-    await user.click(await screen.findByRole("button", { name: "Buat event" }));
-    await user.click(await screen.findByRole("button", { name: /Lihat di kalender/i }));
+    await user.click(await screen.findByRole("button", { name: "Create event" }));
+    await user.click(await screen.findByRole("button", { name: /View in calendar/i }));
     expect(onViewCalendar).toHaveBeenCalled();
   });
 
@@ -588,7 +588,7 @@ describe("AssistantPanel", () => {
 
     await user.click(screen.getByRole("button", { name: "Start voice input" }));
 
-    expect(screen.getByRole("alert")).toHaveTextContent("Browser tidak mendukung input suara.");
+    expect(screen.getByRole("alert")).toHaveTextContent("Browser does not support voice input.");
   });
 
   it("does not offer confirmation when the assistant action payload is incomplete", async () => {
@@ -601,11 +601,11 @@ describe("AssistantPanel", () => {
     });
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
 
-    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Jadwalkan sesuatu");
+    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Jadwalkan sesuatu");
     await user.click(screen.getByRole("button", { name: "Send" }));
 
     expect(await screen.findByText("Create this event?")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Buat event" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create event" })).not.toBeInTheDocument();
   });
 
   it("supports older Android WebView media query listeners", () => {

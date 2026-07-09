@@ -9,9 +9,13 @@ import { Label } from '@/components/ui/label';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { persistAuthTokens } from '@/lib/session';
+import { LanguageToggle } from '@/components/language-toggle';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { useI18n } from '@/components/i18n-provider';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -83,6 +87,11 @@ export default function RegisterPage() {
       
       {/* Soft radial glow */}
       <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-indigo-100/40 dark:from-indigo-900/20 via-transparent to-transparent pointer-events-none" />
+
+      <div className="absolute right-4 top-4 z-20 flex items-center gap-1">
+        <LanguageToggle compact />
+        <ThemeToggle />
+      </div>
 
       <div className="z-10 flex flex-col items-center w-full max-w-[420px] px-4">
         {/* Brand Logo Header */}

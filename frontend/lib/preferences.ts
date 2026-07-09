@@ -1,8 +1,11 @@
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/types";
+
 export type UserPreferences = {
   timezone: string;
   defaultDuration: number;
   workingHoursStart: string;
   workingHoursEnd: string;
+  locale: Locale;
 };
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
@@ -10,6 +13,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   defaultDuration: 60,
   workingHoursStart: "09:00",
   workingHoursEnd: "17:00",
+  locale: DEFAULT_LOCALE,
 };
 
 const STORAGE_KEY = "timeora_preferences";
@@ -67,6 +71,7 @@ export function normalizePreferences(
       preferences.workingHoursEnd,
       DEFAULT_PREFERENCES.workingHoursEnd,
     ),
+    locale: isLocale(preferences.locale) ? preferences.locale : DEFAULT_LOCALE,
   };
 }
 
@@ -92,5 +97,11 @@ export function readStoredPreferences(
 export function savePreferences(preferences: UserPreferences): UserPreferences {
   const normalized = normalizePreferences(preferences);
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+  // Keep dedicated locale key in sync for non-React readers (api headers).
+  try {
+    window.localStorage.setItem("timeora_locale", normalized.locale);
+  } catch {
+    /* ignore */
+  }
   return normalized;
 }

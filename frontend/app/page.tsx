@@ -26,6 +26,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageToggle } from "@/components/language-toggle";
+import { useI18n } from "@/components/i18n-provider";
 
 function GithubIcon({ className }: { className?: string }) {
   return (
@@ -226,7 +228,7 @@ export default function LandingPage() {
   const { resolvedTheme } = useTheme();
   const [scrollYValue, setScrollYValue] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const [lang, setLang] = useState<'en' | 'id'>('en');
+  const { locale: lang } = useI18n();
   const [demoInput, setDemoInput] = useState("");
   const [isParsing, setIsParsing] = useState(false);
   const [demoMode, setDemoMode] = useState<'create' | 'reschedule'>('create');
@@ -382,14 +384,7 @@ export default function LandingPage() {
             />
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
-            <button 
-              onClick={() => setLang(lang === 'en' ? 'id' : 'en')}
-              className="p-2 sm:p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 text-slate-600 dark:text-zinc-400"
-              aria-label="Toggle language"
-            >
-              <Globe className="w-5 h-5" />
-              <span className="ml-1.5 text-xs font-bold uppercase w-5 text-center inline-block">{lang}</span>
-            </button>
+            <LanguageToggle compact className="min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0" />
             <ThemeToggle className="min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0" />
             <Link
               href="/login"

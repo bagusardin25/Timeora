@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { LocaleProvider } from "@/components/i18n-provider";
 import { AuthSessionWatcher } from "@/components/AuthSessionWatcher";
 
 const poppins = Poppins({
@@ -69,8 +70,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthSessionWatcher />
-          {children}
+          <LocaleProvider>
+            <AuthSessionWatcher />
+            {children}
+          </LocaleProvider>
         </ThemeProvider>
       </body>
     </html>

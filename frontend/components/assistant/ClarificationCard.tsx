@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import type { AssistantResult } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/components/i18n-provider";
 
 type Clarification = NonNullable<AssistantResult["clarification"]>;
 
@@ -26,6 +27,7 @@ export function ClarificationCard({
   /** When set, that choice is marked selected and further picks are blocked. */
   resolvedChoiceId?: string | null;
 }) {
+  const { t } = useI18n();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const selectedId = resolvedChoiceId ?? pendingId;
   const locked = Boolean(resolvedChoiceId) || disabled;
@@ -57,7 +59,9 @@ export function ClarificationCard({
             <span className="block text-sm font-medium">{choice.title}</span>
             {meta ? <span className="text-xs text-muted-foreground">{meta}</span> : null}
             {isSelected ? (
-              <span className="mt-0.5 block text-[11px] font-medium text-primary">Dipilih</span>
+              <span className="mt-0.5 block text-[11px] font-medium text-primary">
+                {t("assistant.selected")}
+              </span>
             ) : null}
           </button>
         );

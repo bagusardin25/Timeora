@@ -1,30 +1,36 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { persistAuthTokens } from "./session";
+import { getAccountInitials, getTokenEmail } from "./session";
 
-describe("persistAuthTokens", () => {
-  beforeEach(() => {
+function encodeJwtPayload(payload: Record<string, unknown>): string {
+  const json = JSON.stringify(payload);
+  const base64 = btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  return `header.${base64}.signature`;
+}
+
+describe("getAccountInitials", () => {
+  afterEach(() => {
     localStorage.clear();
   });
 
-  it("clears stale refresh tokens when a new login response omits refresh_token", () => {
-    localStorage.setItem("refresh_token", "old-refresh");
-
-    persistAuthTokens({ access_token: "new-access" });
-
-    expect(localStorage.getItem("token")).toBe("new-access");
-    expect(localStorage.getItem("refresh_token")).toBeNull();
+  it("uses first two letters of a single-name email local part", () => {
+    expect(getAccountInitials("ellisa@example.com")).toBe("EL");
   });
 
-  it("can preserve the existing refresh token for refresh responses that only rotate access_token", () => {
-    localStorage.setItem("refresh_token", "existing-refresh");
+  it("uses first letters of dotted email local parts", () => {
+    expect(getAccountInitials("john.doe@example.com")).toBe("JD");
+  });
 
-    persistAuthTokens(
-      { access_token: "fresh-access" },
-      { preserveRefreshToken: true },
+  it("uses name words when a display name is provided", () => {
+    expect(getAccountInitials("Ellisa Putri")).toBe("EP");
+  });
+
+  it("reads initials from the access token email claim", () => {
+    localStorage.setItem(
+      "token",
+      encodeJwtPayload({ email: "ellisa@timeora.app" }),
     );
-
-    expect(localStorage.getItem("token")).toBe("fresh-access");
-    expect(localStorage.getItem("refresh_token")).toBe("existing-refresh");
+    expect(getAccountInitials()).toBe("EL");
+    expect(getTokenEmail()).toBe("ellisa@timeora.app");
   });
 });

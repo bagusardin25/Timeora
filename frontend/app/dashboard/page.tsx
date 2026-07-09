@@ -20,7 +20,7 @@ import {
   API_CLIENT_BUILD,
   isUnauthorizedError,
 } from "@/lib/api";
-import { hasAuthSession } from "@/lib/session";
+import { getAccountInitials, getTokenDisplayName, getTokenEmail, hasAuthSession } from "@/lib/session";
 import { format } from "date-fns";
 import { callAssistant } from "@/lib/api";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
@@ -31,6 +31,8 @@ import { AvailabilityHeatmap } from "@/components/AvailabilityHeatmap";
 import { TodayAgenda } from "@/components/TodayAgenda";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageToggle } from "@/components/language-toggle";
+import { useI18n } from "@/components/i18n-provider";
 import { baseEventId } from "@/lib/eventIds";
 import { readStoredPreferences } from "@/lib/preferences";
 import { motion, AnimatePresence } from "framer-motion";
@@ -114,6 +116,7 @@ function isConflictData(value: unknown): value is ConflictData {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [events, setEvents] = useState<EventInput[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Partial<EventData> | null>(null);
@@ -131,6 +134,8 @@ export default function DashboardPage() {
   const [defaultDuration, setDefaultDuration] = useState(60);
   const [timezone, setTimezone] = useState<string>("");
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [accountInitials, setAccountInitials] = useState("?");
+  const [accountLabel, setAccountLabel] = useState<string | null>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
   // Live clock for Right Now context (client-only to avoid hydration mismatch)
@@ -148,7 +153,7 @@ export default function DashboardPage() {
     setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
   }, []);
 
-  // Load user preferences from localStorage
+  // Load user preferences + account identity for avatar initials
   useEffect(() => {
     const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const preferences = readStoredPreferences(detectedTimezone);
@@ -157,6 +162,11 @@ export default function DashboardPage() {
     if (preferences.timezone) {
       setTimezone(preferences.timezone);
     }
+
+    const email = getTokenEmail();
+    const displayName = getTokenDisplayName();
+    setAccountLabel(displayName ?? email);
+    setAccountInitials(getAccountInitials(displayName ?? email));
   }, []);
 
   // Close profile dropdown on outside click
@@ -184,9 +194,9 @@ export default function DashboardPage() {
         return;
       }
       console.error("Failed to load events", err);
-      toast.error(errorMessage(err, "Failed to load events. Please try again."));
+      toast.error(errorMessage(err, t("dashboard.loadEventsFailed")));
     }
-  }, [dateRange.from, dateRange.to, router]);
+  }, [dateRange.from, dateRange.to, router, t]);
 
   const refreshAll = useCallback((from?: string, to?: string) => {
     void loadEvents(from, to);
@@ -244,9 +254,9 @@ export default function DashboardPage() {
       a.click();
       a.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 0);
-      setAssistantToast("Calendar exported — timeora.ics downloaded.");
+      setAssistantToast(t("dashboard.exportSuccess"));
     } catch (err: unknown) {
-      toast.error(errorMessage(err, "Failed to export calendar"));
+      toast.error(errorMessage(err, t("dashboard.exportFailed")));
     } finally {
       setExporting(false);
     }
@@ -546,11 +556,11 @@ export default function DashboardPage() {
           type="button"
           onClick={() => openAssistant()}
           className="hidden md:flex min-w-0 flex-1 max-w-xl mx-auto items-center gap-2.5 rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 px-3.5 py-2 text-left shadow-sm transition-all hover:border-violet-400/60 hover:shadow-md"
-          aria-label="Open AI calendar chat (⌘K)"
+          aria-label={t("nav.openAiChat")}
         >
           <Brain className="w-4 h-4 shrink-0 text-violet-600 dark:text-violet-400" />
           <span className="truncate text-sm text-slate-500 dark:text-zinc-400">
-            Tanya kalender atau jadwalkan…
+            {t("nav.askCalendar")}
           </span>
           <kbd className="ml-auto hidden shrink-0 rounded-md border border-violet-200 bg-violet-50 px-1.5 py-0.5 font-mono text-[10px] text-violet-600 dark:border-violet-800/60 dark:bg-violet-950/60 dark:text-violet-400 sm:inline">
             ⌘K
@@ -564,26 +574,34 @@ export default function DashboardPage() {
             size="icon"
             onClick={() => openAssistant()}
             className="md:hidden size-10 rounded-xl"
-            aria-label="Open AI chat"
+            aria-label={t("nav.openAiChatShort")}
           >
             <Brain className="w-4 h-4 text-violet-500" />
           </Button>
 
+          <LanguageToggle compact />
           <ThemeToggle />
 
           <div className="relative" ref={profileRef}>
             <button
               type="button"
               onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-              className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 text-xs font-bold text-white shadow-sm transition-transform hover:scale-105"
-              aria-label="Account menu"
+              className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 text-xs font-bold uppercase text-white shadow-sm transition-transform hover:scale-105"
+              aria-label={accountLabel ? `${t("nav.accountMenu")}: ${accountLabel}` : t("nav.accountMenu")}
+              title={accountLabel ?? t("nav.accountMenu")}
               aria-expanded={profileDropdownOpen}
             >
-              BA
+              {accountInitials}
             </button>
 
             {profileDropdownOpen && (
-              <div className="absolute right-0 z-50 mt-2 w-48 rounded-xl border border-slate-200 bg-white/95 py-1 text-sm shadow-xl backdrop-blur-sm dark:border-white/10 dark:bg-zinc-900/95">
+              <div className="absolute right-0 z-50 mt-2 w-52 rounded-xl border border-slate-200 bg-white/95 py-1 text-sm shadow-xl backdrop-blur-sm dark:border-white/10 dark:bg-zinc-900/95">
+                {accountLabel ? (
+                  <div className="border-b border-slate-200 px-4 py-2 dark:border-white/10">
+                    <p className="truncate text-xs font-medium text-foreground">{accountLabel}</p>
+                    <p className="text-[10px] text-muted-foreground">{t("nav.signedIn")}</p>
+                  </div>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => {
@@ -592,7 +610,7 @@ export default function DashboardPage() {
                   }}
                   className="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-slate-100 dark:hover:bg-zinc-800"
                 >
-                  <User className="w-4 h-4" /> Profile
+                  <User className="w-4 h-4" /> {t("nav.profile")}
                 </button>
                 <button
                   type="button"
@@ -602,7 +620,7 @@ export default function DashboardPage() {
                   }}
                   className="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-slate-100 dark:hover:bg-zinc-800"
                 >
-                  <Settings className="w-4 h-4" /> Integrations
+                  <Settings className="w-4 h-4" /> {t("nav.integrations")}
                 </button>
                 <button
                   type="button"
@@ -614,7 +632,7 @@ export default function DashboardPage() {
                   }}
                   className="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-zinc-800"
                 >
-                  <Download className="w-4 h-4" /> Export .ics
+                  <Download className="w-4 h-4" /> {t("nav.exportIcs")}
                 </button>
                 <div className="my-1 border-t border-slate-200 dark:border-white/10" />
                 <button
@@ -625,7 +643,7 @@ export default function DashboardPage() {
                   }}
                   className="flex w-full items-center gap-2 px-4 py-2 text-left text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
                 >
-                  <LogOut className="w-4 h-4" /> Logout
+                  <LogOut className="w-4 h-4" /> {t("common.logout")}
                 </button>
               </div>
             )}
@@ -688,7 +706,7 @@ export default function DashboardPage() {
                 onClick={handleAddEventClick}
                 className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700 text-xs"
               >
-                + Add Event
+                {t("dashboard.addEvent")}
               </Button>
               <Button
                 variant="outline"
@@ -696,7 +714,7 @@ export default function DashboardPage() {
                 onClick={handleBlockFocus}
                 className="rounded-xl text-xs"
               >
-                Block Focus Time
+                {t("dashboard.blockFocus")}
               </Button>
               <Button
                 variant="outline"
@@ -704,7 +722,7 @@ export default function DashboardPage() {
                 onClick={handleFindFreeSlot}
                 className="rounded-xl text-xs"
               >
-                Find Free Slot
+                {t("dashboard.findFreeSlot")}
               </Button>
               <Button
                 variant="outline"
@@ -712,7 +730,7 @@ export default function DashboardPage() {
                 onClick={handleSpreadLoad}
                 className="rounded-xl text-xs"
               >
-                Spread Load
+                {t("dashboard.spreadLoad")}
               </Button>
             </div>
 
@@ -720,7 +738,7 @@ export default function DashboardPage() {
             {events.length === 0 && (
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/70 bg-slate-50/80 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900/50">
                 <p className="text-xs text-muted-foreground sm:text-sm">
-                  Belum ada event. Tambah manual atau lewat AI.
+                  {t("empty.noEvents")}
                 </p>
                 <div className="flex items-center gap-1.5">
                   <Button
@@ -730,7 +748,7 @@ export default function DashboardPage() {
                     className="h-8 rounded-lg text-xs"
                     onClick={handleAddEventClick}
                   >
-                    + Event
+                    {t("empty.addEvent")}
                   </Button>
                   <Button
                     type="button"
@@ -740,7 +758,7 @@ export default function DashboardPage() {
                     onClick={() => openAssistant()}
                   >
                     <Brain className="mr-1 h-3.5 w-3.5" />
-                    AI
+                    {t("empty.ai")}
                     <kbd className="ml-1.5 hidden rounded border border-violet-200/80 px-1 font-mono text-[10px] opacity-70 sm:inline dark:border-violet-800">
                       ⌘K
                     </kbd>
@@ -775,7 +793,7 @@ export default function DashboardPage() {
             {/* Persistent "Right Now" Context + Sidebar Tabs */}
             <div className="rounded-2xl border border-slate-200/60 dark:border-white/10 bg-white/70 dark:bg-zinc-900/60 p-3 text-sm">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-semibold tracking-widest text-violet-600 dark:text-violet-400">RIGHT NOW</span>
+                <span className="text-[10px] font-semibold tracking-widest text-violet-600 dark:text-violet-400">{t("dashboard.rightNow")}</span>
                 <span className="text-[10px] tabular-nums text-slate-400 dark:text-slate-500">
                   {currentTime 
                     ? currentTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) 
@@ -788,7 +806,7 @@ export default function DashboardPage() {
                 </div>
               )}
               <div className="text-xs text-slate-500 dark:text-slate-400">
-                Tanya AI di panel kanan, atau klik event di kalender.
+                {t("dashboard.rightNowHint")}
               </div>
             </div>
 
@@ -797,9 +815,9 @@ export default function DashboardPage() {
             {/* Sidebar Tab Control */}
             <div className="flex bg-slate-100 dark:bg-zinc-800 p-0.5 rounded-2xl border border-slate-200/50 dark:border-white/5 relative">
               {[
-                { id: "agenda", label: "Today" },
-                { id: "insights", label: "Insights" },
-                { id: "availability", label: "Availability" },
+                { id: "agenda", label: t("dashboard.today") },
+                { id: "insights", label: t("dashboard.insights") },
+                { id: "availability", label: t("dashboard.availability") },
               ].map((tab) => {
                 const isActive = activeTab === tab.id;
                 return (

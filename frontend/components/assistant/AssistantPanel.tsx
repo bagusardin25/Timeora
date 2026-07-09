@@ -32,6 +32,8 @@ import {
 } from "@/lib/api";
 import type { EventData } from "@/components/calendar/EventDialog";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/components/i18n-provider";
+import { speechLocale } from "@/lib/i18n/types";
 import { ClarificationCard } from "./ClarificationCard";
 
 type Message = {
@@ -68,19 +70,13 @@ type SlotMemory = {
   titleHint: string;
 };
 
-const QUICK_PROMPTS = [
-  "Apa jadwal saya hari ini?",
-  "Cari waktu kosong malam ini",
-  "Jadwalkan meeting besok jam 10",
-] as const;
-
-const SUGGESTED_PROMPT: Record<string, string> = {
-  query: "Apa jadwal saya hari ini?",
-  find_free_slot: "Cari waktu kosong 1 jam besok",
-  find_slot: "Cari waktu kosong 1 jam besok",
-  create: "Jadwalkan meeting besok jam 10",
-  help: "Kamu bisa apa?",
-  edit: "Jadwalkan meeting besok jam 10",
+const SUGGESTED_KEYS: Record<string, string> = {
+  query: "assistant.promptToday",
+  find_free_slot: "assistant.promptTonight",
+  find_slot: "assistant.promptTonight",
+  create: "assistant.promptMeeting",
+  help: "assistant.promptToday",
+  edit: "assistant.promptMeeting",
 };
 
 let fallbackMessageCounter = 0;
@@ -201,7 +197,6 @@ function extractFreeSlotGroup(result: AssistantResult): FreeSlotGroup | null {
       slots: slots.map((slot) => ({ ...slot, reason: localizeSlotReason(slot.reason) })),
       titleHint,
       isConflict,
-      headline: isConflict ? "Slot alternatif (bentrok)" : "Slot kosong",
     };
   }
 
@@ -214,7 +209,6 @@ function extractFreeSlotGroup(result: AssistantResult): FreeSlotGroup | null {
       duration: 60,
       slots: slots.map((slot) => ({ ...slot, reason: localizeSlotReason(slot.reason) })),
       titleHint: "Meeting",
-      headline: "Slot kosong",
     };
   }
 
@@ -302,10 +296,20 @@ function FreeSlotsCard({
   group,
   disabled,
   onPick,
+  minutesLabel,
+  freeLabel,
+  freeHint,
+  altLabel,
+  altHint,
 }: {
   group: FreeSlotGroup;
   disabled: boolean;
   onPick: (slot: FreeSlot) => void;
+  minutesLabel: string;
+  freeLabel: string;
+  freeHint: string;
+  altLabel: string;
+  altHint: string;
 }) {
   return (
     <div
@@ -317,14 +321,12 @@ function FreeSlotsCard({
       )}
     >
       <p className="text-sm font-medium text-foreground">
-        {group.headline || "Slot kosong"}
+        {group.isConflict ? altLabel : freeLabel}
         {group.date ? ` · ${group.date}` : ""}
-        {` · ${group.duration} menit`}
+        {` · ${minutesLabel}`}
       </p>
       <p className="text-xs text-muted-foreground">
-        {group.isConflict
-          ? `Ketuk slot untuk menjadwalkan ulang ${group.titleHint}.`
-          : `Ketuk slot untuk menjadwalkan ${group.titleHint}.`}
+        {group.isConflict ? altHint : freeHint}
       </p>
       <div className="flex flex-col gap-2">
         {group.slots.map((slot) => (
@@ -350,13 +352,18 @@ function SuggestedActionChips({
   actions,
   disabled,
   onPick,
+  t,
 }: {
   actions: string[];
   disabled: boolean;
   onPick: (prompt: string) => void;
+  t: (key: string) => string;
 }) {
   const prompts = actions
-    .map((action) => SUGGESTED_PROMPT[action])
+    .map((action) => {
+      const key = SUGGESTED_KEYS[action];
+      return key ? t(key) : null;
+    })
     .filter((value, index, all): value is string => Boolean(value) && all.indexOf(value) === index);
   if (prompts.length === 0) return null;
   return (
@@ -483,7 +490,10 @@ type ActionPreview = {
   confirmAriaLabel: string;
 };
 
-function buildActionPreview(result: AssistantResult): ActionPreview | null {
+function buildActionPreview(
+  result: AssistantResult,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): ActionPreview | null {
   const params = executionParams(result);
   if (!params || !isRecord(result.result)) return null;
   const data = result.result;
@@ -502,46 +512,46 @@ function buildActionPreview(result: AssistantResult): ActionPreview | null {
       lines.push([date, time ? formatClock(time) : null].filter(Boolean).join(" · "));
     }
     const duration = ed.duration_minutes;
-    if (typeof duration === "number") lines.push(`${duration} menit`);
+    if (typeof duration === "number") lines.push(t("assistant.minutes", { n: duration }));
     const participants = asDisplayString(ed.participants);
     if (participants) lines.push(participants);
+    const label = t("assistant.confirmCreate");
     return {
-      badge: "Buat event",
+      badge: t("assistant.createBadge"),
       title,
       lines,
       destructive: false,
-      confirmLabel: "Buat event",
-      confirmAriaLabel: "Buat event",
+      confirmLabel: label,
+      confirmAriaLabel: label,
     };
   }
 
   if (params.action === "cancel") {
     return {
-      badge: "Batalkan",
+      badge: t("assistant.cancelBadge"),
       title: primaryTitle,
-      lines: ["Event akan dibatalkan dari kalender."],
+      lines: [t("assistant.cancelLine")],
       destructive: true,
-      confirmLabel: "Ya, batalkan",
-      confirmAriaLabel: "Batalkan event",
+      confirmLabel: t("assistant.confirmCancel"),
+      confirmAriaLabel: t("assistant.confirmCancel"),
     };
   }
 
   if (params.action === "reschedule") {
     const lines: string[] = [];
     if (params.new_date || params.new_time) {
-      lines.push(
-        `Ke ${[params.new_date, params.new_time ? formatClock(params.new_time) : null]
-          .filter(Boolean)
-          .join(" · ")}`,
-      );
+      const when = [params.new_date, params.new_time ? formatClock(params.new_time) : null]
+        .filter(Boolean)
+        .join(" · ");
+      lines.push(t("assistant.toLabel", { when }));
     }
     return {
-      badge: "Pindahkan",
+      badge: t("assistant.rescheduleBadge"),
       title: primaryTitle,
       lines,
       destructive: false,
-      confirmLabel: "Pindahkan",
-      confirmAriaLabel: "Pindahkan event",
+      confirmLabel: t("assistant.confirmReschedule"),
+      confirmAriaLabel: t("assistant.confirmReschedule"),
     };
   }
 
@@ -550,12 +560,12 @@ function buildActionPreview(result: AssistantResult): ActionPreview | null {
       .slice(0, 4)
       .map(([key, value]) => `${key}: ${String(value)}`);
     return {
-      badge: "Perbarui",
+      badge: t("assistant.updateBadge"),
       title: primaryTitle,
-      lines: lines.length > 0 ? lines : ["Perubahan detail event."],
+      lines: lines.length > 0 ? lines : [t("assistant.updateFallback")],
       destructive: false,
-      confirmLabel: "Perbarui",
-      confirmAriaLabel: "Perbarui event",
+      confirmLabel: t("assistant.confirmUpdate"),
+      confirmAriaLabel: t("assistant.confirmUpdate"),
     };
   }
 
@@ -568,12 +578,18 @@ function ActionPreviewCard({
   confirmed,
   onConfirm,
   onEdit,
+  doneLabel,
+  alreadyLabel,
+  editLabel,
 }: {
   preview: ActionPreview;
   disabled: boolean;
   confirmed: boolean;
   onConfirm: () => void;
   onEdit: () => void;
+  doneLabel: string;
+  alreadyLabel: string;
+  editLabel: string;
 }) {
   return (
     <div
@@ -601,12 +617,12 @@ function ActionPreviewCard({
         {confirmed ? (
           <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="size-3.5" />
-            Selesai
+            {doneLabel}
           </span>
         ) : null}
       </div>
       {confirmed ? (
-        <p className="text-xs text-muted-foreground">Aksi sudah dikonfirmasi.</p>
+        <p className="text-xs text-muted-foreground">{alreadyLabel}</p>
       ) : (
         <div className="flex flex-wrap gap-2">
           <Button
@@ -621,7 +637,7 @@ function ActionPreviewCard({
             {preview.confirmLabel}
           </Button>
           <Button type="button" size="sm" variant="outline" disabled={disabled} onClick={onEdit}>
-            Ubah permintaan
+            {editLabel}
           </Button>
         </div>
       )}
@@ -645,6 +661,12 @@ export function AssistantPanel({
   /** Close chat and let user focus the calendar after a successful mutation. */
   onViewCalendar?: () => void;
 }) {
+  const { t, locale } = useI18n();
+  const quickPrompts = [
+    t("assistant.promptToday"),
+    t("assistant.promptTonight"),
+    t("assistant.promptMeeting"),
+  ];
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [pending, setPending] = useState(false);
@@ -732,7 +754,7 @@ export function AssistantPanel({
 
     const SpeechRecognition = getSpeechRecognition();
     if (!SpeechRecognition) {
-      setVoiceError("Browser tidak mendukung input suara.");
+      setVoiceError(t("assistant.voiceUnsupported"));
       return;
     }
 
@@ -744,7 +766,7 @@ export function AssistantPanel({
     recognition.continuous = false;
     // Live partials are fine; we rebuild the full session phrase on every event.
     recognition.interimResults = true;
-    recognition.lang = "id-ID";
+    recognition.lang = speechLocale(locale);
 
     recognition.onstart = () => {
       setIsListening(true);
@@ -762,11 +784,11 @@ export function AssistantPanel({
 
     recognition.onerror = (event) => {
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-        setVoiceError("Izin mikrofon ditolak.");
+        setVoiceError(t("assistant.voiceDenied"));
       } else if (event.error === "no-speech") {
-        setVoiceError("Tidak ada suara terdeteksi.");
+        setVoiceError(t("assistant.voiceNoSpeech"));
       } else if (event.error !== "aborted") {
-        setVoiceError("Input suara gagal.");
+        setVoiceError(t("assistant.voiceFailed"));
       }
       setIsListening(false);
     };
@@ -780,7 +802,7 @@ export function AssistantPanel({
     try {
       recognition.start();
     } catch {
-      setVoiceError("Input suara gagal.");
+      setVoiceError(t("assistant.voiceFailed"));
       setIsListening(false);
       recognitionRef.current = null;
     }
@@ -837,7 +859,7 @@ export function AssistantPanel({
       setQuery("");
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : "Timeora tidak bisa memproses permintaan itu.";
+        error instanceof Error ? error.message : t("assistant.processFailed");
       setMessages((current) => [
         ...current,
         { id: createMessageId(), role: "assistant", text: message, isError: true },
@@ -902,7 +924,7 @@ export function AssistantPanel({
       onEventsChanged();
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : "Aksi kalender gagal dijalankan.";
+        error instanceof Error ? error.message : t("assistant.actionFailed");
       setMessages((current) => [
         ...current,
         {
@@ -940,9 +962,9 @@ export function AssistantPanel({
             <Sparkles className="size-4" />
           </span>
           <div>
-            <h2 className="font-semibold">Tanya kalender</h2>
+            <h2 className="font-semibold">{t("assistant.title")}</h2>
             <p className="text-xs text-muted-foreground">
-              Cek, buat, dan ubah jadwal dengan konfirmasi
+              {t("assistant.subtitle")}
             </p>
           </div>
         </div>
@@ -950,7 +972,7 @@ export function AssistantPanel({
           type="button"
           variant="ghost"
           size="icon"
-          aria-label="Tutup chat AI"
+          aria-label={t("assistant.close")}
           onClick={() => onOpenChange(false)}
         >
           <X />
@@ -961,7 +983,7 @@ export function AssistantPanel({
         <div className="flex items-center gap-2 border-b border-border bg-accent/40 px-4 py-2">
           <div className="min-w-0 flex-1">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Konteks event
+              {t("assistant.contextEvent")}
             </p>
             <p className="truncate text-sm font-medium text-foreground">{contextEvent.title}</p>
             <p className="text-xs text-muted-foreground">
@@ -975,7 +997,7 @@ export function AssistantPanel({
               variant="ghost"
               size="icon"
               className="size-8 shrink-0"
-              aria-label="Hapus konteks event"
+              aria-label={t("assistant.clearContext")}
               onClick={onClearContext}
             >
               <X className="size-4" />
@@ -993,13 +1015,13 @@ export function AssistantPanel({
           <div className="my-auto flex flex-col items-center gap-4 text-center text-muted-foreground">
             <Bot className="size-8 text-primary" />
             <div>
-              <p className="font-medium text-foreground">Tanya langsung tentang kalender Anda</p>
+              <p className="font-medium text-foreground">{t("assistant.emptyTitle")}</p>
               <p className="mt-1 max-w-xs text-sm">
-                Coba salah satu contoh di bawah, atau ketik / ucapkan permintaan Anda.
+                {t("assistant.emptyBody")}
               </p>
             </div>
             <div className="flex max-w-sm flex-wrap justify-center gap-2">
-              {QUICK_PROMPTS.map((prompt) => (
+              {quickPrompts.map((prompt) => (
                 <button
                   key={prompt}
                   type="button"
@@ -1023,7 +1045,7 @@ export function AssistantPanel({
           {messages.map((message) => {
             const preview =
               message.role === "assistant" && message.result
-                ? buildActionPreview(message.result)
+                ? buildActionPreview(message.result, t)
                 : null;
             const freeSlots =
               message.role === "assistant" && message.result
@@ -1051,12 +1073,14 @@ export function AssistantPanel({
                 {message.isSuccess ? (
                   <p className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
                     <CheckCircle2 className="size-3.5" />
-                    Berhasil diterapkan
+                    {t("assistant.success")}
                   </p>
                 ) : null}
                 {message.isError ? (
                   <p className="text-xs font-medium text-destructive">
-                    {message.result?.intent === "conflict" ? "Bentrok jadwal" : "Gagal"}
+                    {message.result?.intent === "conflict"
+                      ? t("assistant.conflict")
+                      : t("assistant.failed")}
                   </p>
                 ) : null}
                 <p className="whitespace-pre-wrap">{message.text}</p>
@@ -1081,6 +1105,11 @@ export function AssistantPanel({
                   <FreeSlotsCard
                     group={freeSlots}
                     disabled={pending || confirmed}
+                    minutesLabel={t("assistant.minutes", { n: freeSlots.duration })}
+                    freeLabel={t("assistant.freeSlots")}
+                    freeHint={t("assistant.freeSlotsHint", { title: freeSlots.titleHint })}
+                    altLabel={t("assistant.altSlots")}
+                    altHint={t("assistant.altSlotsHint", { title: freeSlots.titleHint })}
                     onPick={(slot) => {
                       const time = formatClock(slot.start_time);
                       const dayPart = freeSlots.date ? `pada ${freeSlots.date}` : "besok";
@@ -1099,6 +1128,7 @@ export function AssistantPanel({
                   <SuggestedActionChips
                     actions={message.result.suggested_actions || ["query", "find_free_slot", "create"]}
                     disabled={pending}
+                    t={t}
                     onPick={(prompt) => void submit(prompt)}
                   />
                 ) : null}
@@ -1132,6 +1162,9 @@ export function AssistantPanel({
                     confirmed={confirmed}
                     onConfirm={() => void confirmResult(message.id, message.result as AssistantResult)}
                     onEdit={() => editRequest(message.requestText || "")}
+                    doneLabel={t("assistant.done")}
+                    alreadyLabel={t("assistant.alreadyConfirmed")}
+                    editLabel={t("assistant.editRequest")}
                   />
                 ) : null}
 
@@ -1144,7 +1177,7 @@ export function AssistantPanel({
                     className="w-fit"
                   >
                     <CalendarDays data-icon="inline-start" />
-                    Lihat di kalender
+                    {t("assistant.viewCalendar")}
                   </Button>
                 ) : null}
               </motion.div>
@@ -1155,7 +1188,7 @@ export function AssistantPanel({
         {pending ? (
           <div
             className="mr-auto flex items-center gap-1 rounded-2xl rounded-bl-md border border-border bg-card px-4 py-3"
-            aria-label="AI sedang berpikir"
+            aria-label={t("assistant.thinking")}
           >
             {[0, 1, 2].map((dot) => (
               <motion.span
@@ -1181,7 +1214,7 @@ export function AssistantPanel({
             className="mb-1"
             onClick={() => void submit(retryText)}
           >
-            <RotateCcw data-icon="inline-start" /> Coba lagi permintaan
+            <RotateCcw data-icon="inline-start" /> {t("assistant.retryRequest")}
           </Button>
         ) : null}
         {pendingExecute ? (
@@ -1195,12 +1228,12 @@ export function AssistantPanel({
               void confirmResult(pendingExecute.messageId, pendingExecute.result)
             }
           >
-            <RotateCcw data-icon="inline-start" /> Coba lagi aksi kalender
+            <RotateCcw data-icon="inline-start" /> {t("assistant.retryAction")}
           </Button>
         ) : null}
         {isListening ? (
           <p className="mb-2 px-1 text-xs font-medium text-destructive" aria-live="polite">
-            ● Mendengarkan… (id-ID)
+            {t("assistant.listening")} ({speechLocale(locale)})
           </p>
         ) : null}
         {voiceError ? (
@@ -1219,7 +1252,7 @@ export function AssistantPanel({
                 event.currentTarget.form?.requestSubmit();
               }
             }}
-            placeholder="Tanya atau ketik pesan…"
+            placeholder={t("assistant.placeholder")}
             rows={1}
             disabled={pending}
             className="max-h-32 min-h-11 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0"
@@ -1228,7 +1261,7 @@ export function AssistantPanel({
             type="button"
             size="icon"
             variant={isListening ? "destructive" : "ghost"}
-            aria-label={isListening ? "Stop voice input" : "Start voice input"}
+            aria-label={isListening ? t("assistant.stopVoice") : t("assistant.startVoice")}
             aria-pressed={isListening}
             disabled={pending}
             onClick={toggleListening}
@@ -1239,7 +1272,7 @@ export function AssistantPanel({
           <Button
             type="submit"
             size="icon"
-            aria-label="Send"
+            aria-label={t("assistant.send")}
             disabled={pending || !query.trim()}
             className="size-11 shrink-0 rounded-xl"
           >
@@ -1255,9 +1288,9 @@ export function AssistantPanel({
       <Drawer open={open} onOpenChange={onOpenChange} showSwipeHandle snapPoints={[0.58, 0.94]}>
         <DrawerContent className="h-[94dvh]">
           <DrawerHeader className="sr-only">
-            <DrawerTitle>Tanya kalender</DrawerTitle>
+            <DrawerTitle>{t("assistant.title")}</DrawerTitle>
             <DrawerDescription>
-              Gunakan AI untuk menanyakan dan mengubah event Timeora.
+              {t("assistant.subtitle")}
             </DrawerDescription>
           </DrawerHeader>
           {content}
@@ -1272,7 +1305,7 @@ export function AssistantPanel({
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 32, opacity: 0 }}
       className="fixed inset-y-0 right-0 z-50 flex w-[var(--assistant-dock-width,min(400px,38vw))] min-w-0 max-w-full border-l border-border bg-popover shadow-2xl md:shadow-[-12px_0_40px_-20px_rgba(0,0,0,0.25)]"
-      aria-label="Tanya kalender"
+      aria-label={t("assistant.title")}
       style={{ ["--assistant-dock-width" as string]: "min(400px, 38vw)" }}
     >
       {content}

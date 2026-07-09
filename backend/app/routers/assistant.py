@@ -9,12 +9,13 @@ from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 
 from app.auth import get_current_user
 from app import data_access
 from app.core import assistant_tools, conflicts as conflicts_engine
 from app.core.ai_parse import parse_assistant_command
+from app.core.i18n_messages import msg, resolve_locale
 from app.event_ids import base_event_id
 from app.models import AssistantRequest, AssistantResponse
 
@@ -90,10 +91,15 @@ def _find_matches(all_events, parsed: dict, *, use_date_filter: bool = True) -> 
 
 
 @router.post("/assistant", response_model=AssistantResponse)
-async def assistant(body: AssistantRequest, user: dict = Depends(get_current_user)):
+async def assistant(
+    body: AssistantRequest,
+    user: dict = Depends(get_current_user),
+    accept_language: str | None = Header(default=None, alias="Accept-Language"),
+):
     """Execute or preview a multi-intent command from the Command Bar."""
+    locale = resolve_locale(accept_language)
     if body.confirm:
-        return await _execute_confirmed(user, body)
+        return await _execute_confirmed(user, body, locale=locale)
 
     if not body.text or not body.text.strip():
         raise HTTPException(
@@ -164,35 +170,50 @@ def _handle_help() -> AssistantResponse:
     )
 
 
-async def _execute_confirmed(user: dict, body: AssistantRequest) -> AssistantResponse:
+async def _execute_confirmed(
+    user: dict,
+    body: AssistantRequest,
+    locale: str = "en",
+) -> AssistantResponse:
+    loc = resolve_locale(explicit=locale)
     try:
         intent, result = await assistant_tools.execute_calendar_tool(user["id"], body)
     except HTTPException as exc:
         # Surface calendar conflicts as recoverable chat UI (alternatives), not a hard crash.
         if exc.status_code == status.HTTP_409_CONFLICT:
-            return _conflict_recovery_response(body, exc.detail)
+            return _conflict_recovery_response(body, exc.detail, locale=loc)
         raise
 
     serialized = _event_to_dict(result)
     messages = {
-        "create": "Event berhasil ditambahkan ke kalender.",
-        "cancel": "Event berhasil dibatalkan.",
-        "reschedule": f"Event berhasil dipindah ke {body.new_date} {body.new_time}.",
-        "update": "Event berhasil diperbarui.",
+        "create": msg("create_ok", loc),
+        "cancel": msg("cancel_ok", loc),
+        "reschedule": msg(
+            "reschedule_ok",
+            loc,
+            date=body.new_date or "",
+            time=body.new_time or "",
+        ),
+        "update": msg("update_ok", loc),
     }
     return AssistantResponse(
         intent=intent,
         result=serialized,
-        message=messages.get(intent, "Aksi berhasil."),
+        message=messages.get(intent, msg("create_ok", loc)),
         executed=True,
         events=[serialized] if isinstance(serialized, dict) and not serialized.get("deleted") else [],
         suggested_actions=["open_event"] if intent != "cancel" else [],
     )
 
 
-def _conflict_recovery_response(body: AssistantRequest, detail: object) -> AssistantResponse:
+def _conflict_recovery_response(
+    body: AssistantRequest,
+    detail: object,
+    locale: str = "en",
+) -> AssistantResponse:
+    loc = resolve_locale(explicit=locale)
     data = detail if isinstance(detail, dict) else {"message": str(detail)}
-    conflicting = data.get("conflicting_event") or "event lain"
+    conflicting = data.get("conflicting_event") or ("another event" if loc == "en" else "event lain")
     alternatives = data.get("alternatives") if isinstance(data.get("alternatives"), list) else []
     event_data = body.event_data if isinstance(body.event_data, dict) else {}
     target_date = event_data.get("date")
@@ -210,17 +231,14 @@ def _conflict_recovery_response(body: AssistantRequest, detail: object) -> Assis
             {
                 "start_time": str(start)[:5] if len(str(start)) >= 5 else str(start),
                 "duration_minutes": alt.get("duration_minutes") or duration,
-                "reason": alt.get("reason") or "Slot alternatif",
+                "reason": alt.get("reason") or ("Alternative slot" if loc == "en" else "Slot alternatif"),
             }
         )
 
     message = (
-        f'Jam bentrok dengan “{conflicting}”. '
-        + (
-            "Pilih slot alternatif di bawah, lalu konfirmasi lagi."
-            if slots
-            else "Coba cari slot kosong atau pilih jam lain."
-        )
+        msg("conflict", loc, title=conflicting)
+        if slots
+        else msg("conflict_no_slots", loc, title=conflicting)
     )
     return AssistantResponse(
         intent="conflict",

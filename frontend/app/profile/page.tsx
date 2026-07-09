@@ -14,37 +14,14 @@ import {
   type UserPreferences,
 } from "@/lib/preferences";
 import { exportIcs } from "@/lib/api";
-
-function decodeBase64Url(value: string): string {
-  const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
-  const binary = atob(padded);
-  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-}
-
-function getTokenEmail(): string | null {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) return null;
-    const payloadSegment = token.split(".")[1];
-    if (!payloadSegment) return null;
-
-    // Simple JWT payload decode (no validation)
-    const payload = JSON.parse(decodeBase64Url(payloadSegment)) as {
-      email?: unknown;
-      user_metadata?: { email?: unknown };
-    };
-    if (typeof payload.email === "string") return payload.email;
-    if (typeof payload.user_metadata?.email === "string") return payload.user_metadata.email;
-    return null;
-  } catch {
-    return null;
-  }
-}
+import { getTokenEmail } from "@/lib/session";
+import { LanguageToggle } from "@/components/language-toggle";
+import { useI18n } from "@/components/i18n-provider";
+import { setStoredLocale } from "@/lib/i18n/storage";
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { t, locale, setLocale } = useI18n();
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -64,8 +41,9 @@ export default function ProfilePage() {
     setUserEmail(email);
 
     const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    setPreferences(readStoredPreferences(detected));
-  }, [router]);
+    const stored = readStoredPreferences(detected);
+    setPreferences({ ...stored, locale });
+  }, [router, locale]);
 
   const handleChange = (key: keyof UserPreferences, value: string | number) => {
     setPreferences((prev) => ({ ...prev, [key]: value }));
@@ -76,14 +54,16 @@ export default function ProfilePage() {
     setMessage(null);
 
     try {
-      const normalized = savePreferences(preferences);
+      const normalized = savePreferences({ ...preferences, locale });
       setPreferences(normalized);
+      setStoredLocale(normalized.locale);
+      setLocale(normalized.locale);
 
       // Optional: sync to backend later
-      setMessage("Preferences saved successfully!");
+      setMessage(t("profile.saved"));
       setTimeout(() => setMessage(null), 2500);
     } catch {
-      setMessage("Failed to save preferences.");
+      setMessage(t("profile.saveFailed"));
     } finally {
       setIsSaving(false);
     }
@@ -213,6 +193,16 @@ export default function ProfilePage() {
               <h2 className="type-title text-lg">Preferences</h2>
               <p className="text-sm text-slate-500 dark:text-zinc-400">Customize how Timeora works for you</p>
             </div>
+          </div>
+
+          <div className="mb-6 rounded-xl border border-slate-200/70 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-zinc-800/40">
+            <Label className="text-xs uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+              {t("profile.language")}
+            </Label>
+            <p className="mt-1 mb-3 text-[11px] text-slate-400 dark:text-zinc-500">
+              {t("profile.languageHint")}
+            </p>
+            <LanguageToggle />
           </div>
 
           <div className="grid gap-6">

@@ -1,4 +1,6 @@
 import { persistAuthTokens } from './session';
+import { acceptLanguage } from './i18n/types';
+import { getStoredLocale } from './i18n/storage';
 
 /**
  * Prefer same-origin `/backend-api` (see app/backend-api/[...path]/route.ts).
@@ -196,6 +198,9 @@ export async function fetchApi<T = unknown>(
     headers.set('Content-Type', 'application/json');
   }
   if (token) headers.set('Authorization', `Bearer ${token}`);
+  if (!headers.has('Accept-Language')) {
+    headers.set('Accept-Language', acceptLanguage(getStoredLocale()));
+  }
 
   const url = `${API_BASE_URL}${endpoint}`;
   const timeout = requestSignal(options.signal);
