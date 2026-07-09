@@ -17,6 +17,7 @@ import { AlertTriangle, Bell, Clock, CalendarIcon, Flag, Link, Users, Sparkles, 
 import { motion, AnimatePresence } from "framer-motion";
 import { CATEGORY_OPTIONS, getCategoryConfig } from "@/lib/categories";
 import { getTemplates, saveTemplate, applyTemplate, type EventTemplate } from "@/lib/templates";
+import { useI18n } from "@/components/i18n-provider";
 
 export type ConflictData = {
   message: string;
@@ -89,6 +90,7 @@ export function EventDialog({
   conflictData,
   onClearConflict,
 }: EventDialogProps) {
+  const { t } = useI18n();
   const initialFormData = defaultEventData(initialData);
   const [formData, setFormData] =
     useState<Partial<EventData>>(initialFormData);
@@ -183,7 +185,7 @@ export function EventDialog({
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
               <CalendarIcon className="w-4 h-4 text-primary" />
             </div>
-            {formData.id ? "Edit Event" : "New Event"}
+            {formData.id ? t("calendar.editEvent") : t("calendar.newEvent")}
           </DialogTitle>
         </DialogHeader>
         
@@ -465,7 +467,7 @@ export function EventDialog({
                 disabled={isSaving}
                 className="min-h-11 bg-red-500/10 text-red-600 hover:bg-red-500/20 hover:text-red-700 border-none shadow-none"
               >
-                Hapus
+                {t("calendar.delete")}
               </Button>
             )}
             {!formData.id && formData.title?.trim() && (
@@ -478,7 +480,7 @@ export function EventDialog({
                 className="text-xs text-slate-500 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/30"
               >
                 <Bookmark className="w-3.5 h-3.5 mr-1" />
-                {savedTemplate ? "Saved!" : "Save as Template"}
+                {savedTemplate ? t("calendar.templateSaved") : t("calendar.saveAsTemplate")}
               </Button>
             )}
           </div>
@@ -489,7 +491,7 @@ export function EventDialog({
               disabled={isSaving} 
               className="min-h-11 bg-slate-100 hover:bg-slate-200 text-slate-700 border-transparent dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300 shadow-sm transition-all font-medium rounded-xl px-5"
             >
-              Batal
+              {t("common.cancel")}
             </Button>
             <Button 
               onClick={handleSave} 
@@ -501,7 +503,7 @@ export function EventDialog({
                   <Clock className="w-4 h-4 mr-2" />
                 </motion.div>
               ) : null}
-              {isSaving ? "Menyimpan..." : "Simpan Event"}
+              {isSaving ? t("calendar.saving") : t("calendar.saveEvent")}
             </Button>
           </div>
         </DialogFooter>

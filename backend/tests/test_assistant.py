@@ -182,7 +182,7 @@ class TestAssistantClarification(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(response.requires_confirmation)
         self.assertEqual(response.intent, "reschedule")
-        self.assertIn("valid new date and time", response.message)
+        self.assertIn("new date and time", response.message)
         self.assertIn("edit", response.suggested_actions)
 
     async def test_reschedule_matches_event_by_title_not_new_target_date(self):
@@ -238,7 +238,7 @@ class TestAssistantClarification(unittest.IsolatedAsyncioTestCase):
     async def test_help_intent_lists_capabilities(self):
         response = assistant._handle_help()
         self.assertEqual(response.intent, "help")
-        self.assertIn("asisten kalender", response.message.lower())
+        self.assertIn("calendar assistant", response.message.lower())
         self.assertIn("find_free_slot", response.suggested_actions)
 
     async def test_conflict_recovery_returns_alternative_slots(self):

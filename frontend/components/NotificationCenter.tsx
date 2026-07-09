@@ -13,6 +13,7 @@ import {
   type ReminderEvent,
   type ReminderPermissionState,
 } from "@/lib/reminders";
+import { useI18n } from "@/components/i18n-provider";
 
 function readPermission(): ReminderPermissionState {
   if (typeof Notification === "undefined") return "unsupported";
@@ -58,6 +59,7 @@ function toReminderEvent(event: EventInput): ReminderEvent | null {
 }
 
 export function NotificationCenter({ events }: { events: EventInput[] }) {
+  const { t } = useI18n();
   const [permission, setPermission] = useState<ReminderPermissionState>("default");
   const [fallbacks, setFallbacks] = useState<ReminderDelivery[]>([]);
   const schedulerRef = useRef<ReturnType<typeof createReminderScheduler> | null>(null);
@@ -99,10 +101,10 @@ export function NotificationCenter({ events }: { events: EventInput[] }) {
   };
 
   const statusLabel = permission === "granted"
-    ? "Notifications on"
+    ? t("notifications.enabled")
     : permission === "default"
-      ? "Notifications optional"
-      : "In-app reminders";
+      ? t("notifications.optional")
+      : t("notifications.denied");
 
   return (
     <section className="flex flex-col gap-3 rounded-2xl border border-slate-200/60 bg-white/70 p-3 text-sm dark:border-white/10 dark:bg-zinc-900/60">
@@ -112,13 +114,13 @@ export function NotificationCenter({ events }: { events: EventInput[] }) {
             {permission === "granted" ? <Bell /> : <BellOff />}
           </span>
           <div>
-            <p className="font-semibold text-slate-800 dark:text-zinc-100">Reminders</p>
+            <p className="font-semibold text-slate-800 dark:text-zinc-100">{t("notifications.title")}</p>
             <p className="text-xs text-muted-foreground">{statusLabel}</p>
           </div>
         </div>
         {permission === "default" ? (
           <Button type="button" size="sm" variant="outline" onClick={handleEnableNotifications}>
-            Enable
+            {t("notifications.enable")}
           </Button>
         ) : (
           <Badge variant="secondary">{reminderEvents.length}</Badge>
@@ -127,7 +129,7 @@ export function NotificationCenter({ events }: { events: EventInput[] }) {
 
       {permission !== "granted" ? (
         <p className="text-xs leading-5 text-muted-foreground">
-          Timeora will show reminders here when browser notifications are unavailable or blocked.
+          {t("notifications.unsupported")}
         </p>
       ) : null}
 

@@ -15,6 +15,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { getCategoryConfig } from "@/lib/categories";
 import type { EventInput } from "@fullcalendar/core";
+import { useI18n } from "@/components/i18n-provider";
 
 interface TodayAgendaProps {
   events: EventInput[];
@@ -30,25 +31,24 @@ type TodayEvent = {
   duration_minutes: number;
 };
 
-function getGreeting(hour: number): { text: string; icon: typeof Sun } {
-  if (hour < 6) return { text: "Selamat malam", icon: Moon };
-  if (hour < 11) return { text: "Selamat pagi", icon: Sunrise };
-  if (hour < 15) return { text: "Selamat siang", icon: Sun };
-  if (hour < 18) return { text: "Selamat sore", icon: Sunset };
-  return { text: "Selamat malam", icon: Moon };
+function getGreetingKey(hour: number): "agenda.goodNight" | "agenda.goodMorning" | "agenda.goodAfternoon" | "agenda.goodEvening" {
+  if (hour < 6) return "agenda.goodNight";
+  if (hour < 11) return "agenda.goodMorning";
+  if (hour < 15) return "agenda.goodAfternoon";
+  if (hour < 18) return "agenda.goodEvening";
+  return "agenda.goodNight";
+}
+
+function greetingIcon(hour: number): typeof Sun {
+  if (hour < 6) return Moon;
+  if (hour < 11) return Sunrise;
+  if (hour < 15) return Sun;
+  if (hour < 18) return Sunset;
+  return Moon;
 }
 
 function formatTimeRange(start: Date, end: Date): string {
   return `${format(start, "HH:mm")} – ${format(end, "HH:mm")}`;
-}
-
-function formatCountdown(minutes: number): string {
-  if (minutes < 1) return "dimulai sekarang";
-  if (minutes < 60) return `${minutes} menit lagi`;
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (mins === 0) return `${hours} jam lagi`;
-  return `${hours}j ${mins}m lagi`;
 }
 
 function dayBounds(day: Date): { start: Date; end: Date } {
@@ -65,7 +65,17 @@ function overlapsDay(start: Date, end: Date, day: Date): boolean {
 }
 
 export function TodayAgenda({ events, onEventClick }: TodayAgendaProps) {
+  const { t, locale } = useI18n();
   const [now, setNow] = useState(new Date());
+
+  const formatCountdown = (minutes: number): string => {
+    if (minutes < 1) return t("agenda.startingNow");
+    if (minutes < 60) return t("agenda.minutesLeft", { n: minutes });
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (mins === 0) return t("agenda.hoursLeft", { n: hours });
+    return t("agenda.hoursMinutesLeft", { h: hours, m: mins });
+  };
 
   // Tick every minute for countdown
   useEffect(() => {
@@ -134,7 +144,10 @@ export function TodayAgenda({ events, onEventClick }: TodayAgendaProps) {
     return todayEvents.reduce((acc, e) => acc + e.duration_minutes, 0) / 60;
   }, [todayEvents]);
 
-  const { text: greeting, icon: GreetingIcon } = getGreeting(now.getHours());
+  const hour = now.getHours();
+  const greeting = t(getGreetingKey(hour));
+  const GreetingIcon = greetingIcon(hour);
+  const dateLocale = locale === "id" ? "id-ID" : "en-US";
 
   return (
     <motion.div
@@ -152,16 +165,20 @@ export function TodayAgenda({ events, onEventClick }: TodayAgendaProps) {
           </span>
         </div>
         <h2 className="type-title text-lg text-slate-800 dark:text-white">
-          {format(now, "EEEE, d MMMM")}
+          {now.toLocaleDateString(dateLocale, {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+          })}
         </h2>
         <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
           <span className="flex items-center gap-1">
             <CalendarCheck2 className="w-3.5 h-3.5" />
-            {todayEvents.length} event{todayEvents.length !== 1 ? "s" : ""}
+            {t("agenda.eventsCount", { count: todayEvents.length })}
           </span>
           <span className="flex items-center gap-1">
             <Clock className="w-3.5 h-3.5" />
-            {totalScheduledHours.toFixed(1)}h scheduled
+            {t("agenda.hoursScheduled", { hours: totalScheduledHours.toFixed(1) })}
           </span>
         </div>
       </div>
@@ -233,8 +250,8 @@ export function TodayAgenda({ events, onEventClick }: TodayAgendaProps) {
         {todayEvents.length === 0 ? (
           <div className="text-center py-6 text-slate-400 dark:text-slate-500">
             <CalendarCheck2 className="w-8 h-8 mx-auto mb-2 opacity-40" />
-            <p className="text-sm font-medium">No events today</p>
-            <p className="text-xs mt-0.5">Use ⌘K to schedule something</p>
+            <p className="text-sm font-medium">{t("agenda.noEventsToday")}</p>
+            <p className="text-xs mt-0.5">{t("agenda.scheduleHint")}</p>
           </div>
         ) : (
           <div className="space-y-1">

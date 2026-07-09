@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { EventData } from "./EventDialog";
+import { useI18n } from "@/components/i18n-provider";
 
 type EventActionsProps = {
   event: EventData;
@@ -33,6 +34,7 @@ function stopCalendarClick(event: SyntheticEvent) {
 }
 
 export function EventActions({ event, children, onEdit, onAskAI, onDelete }: EventActionsProps) {
+  const { t } = useI18n();
   return (
     <div className="group relative h-full w-full">
       <ContextMenu>
@@ -45,19 +47,19 @@ export function EventActions({ event, children, onEdit, onAskAI, onDelete }: Eve
               stopCalendarClick(clickEvent);
               onEdit(event);
             }}>
-              <Pencil /> Edit
+              <Pencil /> {t("calendar.edit")}
             </ContextMenuItem>
             <ContextMenuItem onClick={(clickEvent) => {
               stopCalendarClick(clickEvent);
               onAskAI(event);
             }}>
-              <Sparkles /> Ask AI
+              <Sparkles /> {t("calendar.askAi")}
             </ContextMenuItem>
             <ContextMenuItem variant="destructive" onClick={(clickEvent) => {
               stopCalendarClick(clickEvent);
               onDelete(event);
             }}>
-              <Trash2 /> Delete
+              <Trash2 /> {t("calendar.delete")}
             </ContextMenuItem>
           </ContextMenuGroup>
         </ContextMenuContent>
@@ -70,7 +72,7 @@ export function EventActions({ event, children, onEdit, onAskAI, onDelete }: Eve
               type="button"
               variant="ghost"
               size="icon"
-              aria-label="Event actions"
+              aria-label={t("calendar.eventActions")}
               onClick={stopCalendarClick}
               onMouseDown={stopCalendarClick}
               onPointerDown={stopCalendarClick}
@@ -86,19 +88,19 @@ export function EventActions({ event, children, onEdit, onAskAI, onDelete }: Eve
               stopCalendarClick(clickEvent);
               onEdit(event);
             }}>
-              <Pencil /> Edit
+              <Pencil /> {t("calendar.edit")}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={(clickEvent) => {
               stopCalendarClick(clickEvent);
               onAskAI(event);
             }}>
-              <Sparkles /> Ask AI
+              <Sparkles /> {t("calendar.askAi")}
             </DropdownMenuItem>
             <DropdownMenuItem variant="destructive" onClick={(clickEvent) => {
               stopCalendarClick(clickEvent);
               onDelete(event);
             }}>
-              <Trash2 /> Delete
+              <Trash2 /> {t("calendar.delete")}
             </DropdownMenuItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>

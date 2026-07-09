@@ -112,38 +112,42 @@ async def assistant(
     intent = parsed["intent"]
 
     if intent == "help":
-        return _handle_help()
+        return _handle_help(locale)
 
     if intent == "create":
-        return await _handle_create(user, parsed)
+        return await _handle_create(user, parsed, locale=locale)
 
     if intent == "query":
-        return await _handle_query(user, parsed)
+        return await _handle_query(user, parsed, locale=locale)
 
     if intent == "find_slot":
-        return await _handle_find_slot(user, parsed)
+        return await _handle_find_slot(user, parsed, locale=locale)
 
     if intent == "cancel":
-        return await _handle_cancel(user, parsed, body.selected_event_id or body.context_event_id)
+        return await _handle_cancel(
+            user, parsed, body.selected_event_id or body.context_event_id, locale=locale
+        )
 
     if intent == "reschedule":
-        return await _handle_reschedule(user, parsed, body.selected_event_id or body.context_event_id)
+        return await _handle_reschedule(
+            user, parsed, body.selected_event_id or body.context_event_id, locale=locale
+        )
 
     if intent == "update":
-        return await _handle_update(user, parsed, body.selected_event_id or body.context_event_id)
+        return await _handle_update(
+            user, parsed, body.selected_event_id or body.context_event_id, locale=locale
+        )
 
     return AssistantResponse(
         intent=intent,
         result=None,
-        message=(
-            f"Saya belum mengerti permintaan itu ({intent}). "
-            "Coba: cek jadwal, cari slot kosong, buat/pindah/batalkan event, atau tanya “kamu bisa apa?”."
-        ),
+        message=msg("unknown_intent", locale, intent=intent),
         suggested_actions=["help", "find_free_slot", "query"],
     )
 
 
-def _handle_help() -> AssistantResponse:
+def _handle_help(locale: str = "en") -> AssistantResponse:
+    loc = resolve_locale(explicit=locale)
     return AssistantResponse(
         intent="help",
         result={
@@ -156,16 +160,7 @@ def _handle_help() -> AssistantResponse:
                 "update",
             ]
         },
-        message=(
-            "Saya asisten kalender Timeora. Saya bisa:\n"
-            "• Cek jadwal (“Apa jadwal saya hari ini?”)\n"
-            "• Cari slot kosong (“Cari waktu kosong malam ini”)\n"
-            "• Buat event (“Jadwalkan meeting besok jam 10”)\n"
-            "• Pindahkan atau batalkan event\n"
-            "• Ubah detail (prioritas, catatan, tag)\n\n"
-            "Semua perubahan penting tetap minta konfirmasi dulu. "
-            "Coba ketuk contoh di bawah atau ketik/ucapkan permintaan Anda."
-        ),
+        message=msg("help", loc),
         suggested_actions=["query", "find_free_slot", "create"],
     )
 
@@ -257,7 +252,8 @@ def _conflict_recovery_response(
     )
 
 
-async def _handle_query(user: dict, parsed: dict) -> AssistantResponse:
+async def _handle_query(user: dict, parsed: dict, locale: str = "en") -> AssistantResponse:
+    loc = resolve_locale(explicit=locale)
     target_date = _parse_date_value(parsed.get("date"))
     if target_date is None:
         target_date = datetime.now().date()
@@ -277,13 +273,13 @@ async def _handle_query(user: dict, parsed: dict) -> AssistantResponse:
         return AssistantResponse(
             intent="query",
             result=[],
-            message=f"No events found on {target_date.isoformat()}.",
+            message=msg("query_empty", loc, date=target_date.isoformat()),
         )
 
     return AssistantResponse(
         intent="query",
         result=matching,
-        message=f"Found {len(matching)} event(s) on {target_date.isoformat()}.",
+        message=msg("query_found", loc, count=len(matching), date=target_date.isoformat()),
         events=matching,
         suggested_actions=["open_event", "find_free_slot"],
     )
@@ -339,8 +335,9 @@ async def _free_slots_for_day(
     )
 
 
-async def _handle_create(user: dict, parsed: dict) -> AssistantResponse:
+async def _handle_create(user: dict, parsed: dict, locale: str = "en") -> AssistantResponse:
     """Preview a create action with cleaned title and a conflict-safe slot."""
+    loc = resolve_locale(explicit=locale)
     target_date = _parse_date_value(parsed.get("date")) or datetime.now().date()
     duration = int(parsed.get("duration_minutes") or 60)
     if duration < 5:
@@ -393,9 +390,12 @@ async def _handle_create(user: dict, parsed: dict) -> AssistantResponse:
                     },
                     "alternatives": [],
                 },
-                message=(
-                    f'Tidak ada slot kosong {duration} menit pada {target_date.isoformat()} '
-                    f'untuk "{title}". Coba hari atau durasi lain.'
+                message=msg(
+                    "create_no_slots",
+                    loc,
+                    duration=duration,
+                    date=target_date.isoformat(),
+                    title=title,
                 ),
                 suggested_actions=["find_free_slot", "edit"],
             )
@@ -405,13 +405,17 @@ async def _handle_create(user: dict, parsed: dict) -> AssistantResponse:
         if chosen_time != requested_time or needs_free or has_conflict:
             auto_adjusted = True
             if has_conflict and time_explicit:
-                adjustment_note = (
-                    f"Jam {requested_time.strftime('%H:%M')} bentrok. "
-                    f"Saya usulkan {chosen_time.strftime('%H:%M')} yang kosong. "
+                adjustment_note = msg(
+                    "create_conflict_suggest",
+                    loc,
+                    time=requested_time.strftime("%H:%M"),
+                    suggested=chosen_time.strftime("%H:%M"),
                 )
             elif prefer_free or not time_explicit:
-                adjustment_note = (
-                    f"Saya pilih slot kosong {chosen_time.strftime('%H:%M')}. "
+                adjustment_note = msg(
+                    "create_free_picked",
+                    loc,
+                    time=chosen_time.strftime("%H:%M"),
                 )
 
     event_data = _build_create_event_data(
@@ -427,10 +431,13 @@ async def _handle_create(user: dict, parsed: dict) -> AssistantResponse:
     if auto_adjusted:
         warnings.append("Slot adjusted to avoid conflicts / honor free-slot request")
 
-    message = (
-        f'{adjustment_note}Buat "{title}" pada {target_date.isoformat()} '
-        f'jam {chosen_time.strftime("%H:%M")} ({duration} menit)? '
-        f"Konfirmasi untuk menambah ke kalender."
+    message = adjustment_note + msg(
+        "create_confirm",
+        loc,
+        title=title,
+        date=target_date.isoformat(),
+        time=chosen_time.strftime("%H:%M"),
+        duration=duration,
     )
 
     return AssistantResponse(
@@ -448,7 +455,8 @@ async def _handle_create(user: dict, parsed: dict) -> AssistantResponse:
     )
 
 
-async def _handle_find_slot(user: dict, parsed: dict) -> AssistantResponse:
+async def _handle_find_slot(user: dict, parsed: dict, locale: str = "en") -> AssistantResponse:
+    loc = resolve_locale(explicit=locale)
     target_date = _parse_date_value(parsed.get("date"))
     if target_date is None:
         target_date = datetime.now().date()
@@ -468,7 +476,12 @@ async def _handle_find_slot(user: dict, parsed: dict) -> AssistantResponse:
         return AssistantResponse(
             intent="find_slot",
             result={"date": target_date.isoformat(), "duration_minutes": duration, "slots": []},
-            message=f"Tidak ada slot kosong {duration} menit pada {target_date.isoformat()}.",
+            message=msg(
+                "find_slot_empty",
+                loc,
+                duration=duration,
+                date=target_date.isoformat(),
+            ),
             suggested_actions=["edit"],
         )
 
@@ -482,16 +495,20 @@ async def _handle_find_slot(user: dict, parsed: dict) -> AssistantResponse:
             "duration_minutes": duration,
             "slots": alternatives,
         },
-        message=(
-            f"Ditemukan {len(alternatives)} slot kosong ({duration} menit) "
-            f"pada {target_date.isoformat()}: {slot_lines}. "
-            f"Ketuk slot untuk menjadwalkan meeting."
+        message=msg(
+            "find_slot_found",
+            loc,
+            count=len(alternatives),
+            duration=duration,
+            date=target_date.isoformat(),
+            slots=slot_lines,
         ),
         suggested_actions=["create", "pick_slot"],
     )
 
 
-def _clarification(matches: list[dict], action: str) -> AssistantResponse:
+def _clarification(matches: list[dict], action: str, locale: str = "en") -> AssistantResponse:
+    loc = resolve_locale(explicit=locale)
     choices = [
         {
             "id": item["id"],
@@ -504,10 +521,10 @@ def _clarification(matches: list[dict], action: str) -> AssistantResponse:
     return AssistantResponse(
         intent=action,
         result={"events": matches},
-        message="I found more than one matching event. Which one did you mean?",
+        message=msg("clarification", loc),
         clarification={
             "type": "event_selection",
-            "prompt": "Which event did you mean?",
+            "prompt": msg("clarification", loc),
             "choices": choices,
         },
         events=matches,
@@ -538,7 +555,9 @@ async def _handle_cancel(
     user: dict,
     parsed: dict,
     selected_event_id: str | None = None,
+    locale: str = "en",
 ) -> AssistantResponse:
+    loc = resolve_locale(explicit=locale)
     all_events = await data_access.list_events(user["id"])
     matches = _action_matches(all_events, parsed, selected_event_id)
 
@@ -546,11 +565,11 @@ async def _handle_cancel(
         return AssistantResponse(
             intent="cancel",
             result=[],
-            message=f"No event matching '{parsed.get('title', '')}' found to cancel.",
+            message=msg("cancel_not_found", loc, title=parsed.get("title", "")),
         )
 
     if len(matches) > 1:
-        return _clarification(matches, "cancel")
+        return _clarification(matches, "cancel", locale=loc)
 
     primary = matches[0]
     return AssistantResponse(
@@ -560,7 +579,7 @@ async def _handle_cancel(
             "primary_event_id": primary["id"],
             "primary_title": primary.get("title", "Event"),
         },
-        message=f"Cancel \"{primary.get('title', 'Event')}\"? Confirm to proceed.",
+        message=msg("cancel_confirm", loc, title=primary.get("title", "Event")),
         requires_confirmation=True,
         events=matches,
         suggested_actions=["confirm", "cancel"],
@@ -571,7 +590,9 @@ async def _handle_reschedule(
     user: dict,
     parsed: dict,
     selected_event_id: str | None = None,
+    locale: str = "en",
 ) -> AssistantResponse:
+    loc = resolve_locale(explicit=locale)
     all_events = await data_access.list_events(user["id"])
     matches = _action_matches(
         all_events,
@@ -584,11 +605,11 @@ async def _handle_reschedule(
         return AssistantResponse(
             intent="reschedule",
             result=[],
-            message=f"No event matching '{parsed.get('title', '')}' found to reschedule.",
+            message=msg("reschedule_not_found", loc, title=parsed.get("title", "")),
         )
 
     if len(matches) > 1:
-        return _clarification(matches, "reschedule")
+        return _clarification(matches, "reschedule", locale=loc)
 
     primary = matches[0]
     new_date = parsed.get("date")
@@ -597,10 +618,7 @@ async def _handle_reschedule(
         return AssistantResponse(
             intent="reschedule",
             result={"events": matches, "primary_event_id": primary["id"]},
-            message=(
-                f"I found \"{primary.get('title', 'Event')}\", but I need the new date and time "
-                "before I can reschedule it."
-            ),
+            message=msg("reschedule_need_time", loc, title=primary.get("title", "Event")),
             events=matches,
             suggested_actions=["edit"],
         )
@@ -611,10 +629,7 @@ async def _handle_reschedule(
         return AssistantResponse(
             intent="reschedule",
             result={"events": matches, "primary_event_id": primary["id"]},
-            message=(
-                f"I found \"{primary.get('title', 'Event')}\", but I need a valid new date and time "
-                "before I can reschedule it."
-            ),
+            message=msg("reschedule_need_time", loc, title=primary.get("title", "Event")),
             events=matches,
             suggested_actions=["edit"],
         )
@@ -630,9 +645,12 @@ async def _handle_reschedule(
             "new_date": new_date,
             "new_time": new_time,
         },
-        message=(
-            f"Reschedule \"{primary.get('title', 'Event')}\" to "
-            f"{new_date} {new_time}? Confirm to proceed."
+        message=msg(
+            "reschedule_confirm",
+            loc,
+            title=primary.get("title", "Event"),
+            date=new_date,
+            time=new_time,
         ),
         requires_confirmation=True,
         events=matches,
@@ -644,7 +662,9 @@ async def _handle_update(
     user: dict,
     parsed: dict,
     selected_event_id: str | None = None,
+    locale: str = "en",
 ) -> AssistantResponse:
+    loc = resolve_locale(explicit=locale)
     all_events = await data_access.list_events(user["id"])
     matches = _action_matches(all_events, parsed, selected_event_id)
 
@@ -652,18 +672,18 @@ async def _handle_update(
         return AssistantResponse(
             intent="update",
             result=[],
-            message=f"No event matching '{parsed.get('title', '')}' found to update.",
+            message=msg("update_not_found", loc, title=parsed.get("title", "")),
         )
 
     if len(matches) > 1:
-        return _clarification(matches, "update")
+        return _clarification(matches, "update", locale=loc)
 
     event_data = parsed.get("event_data") or {}
     if not isinstance(event_data, dict) or not event_data:
         return AssistantResponse(
             intent="update",
             result={"events": matches},
-            message="I found the event, but I need more detail about what to update.",
+            message=msg("update_need_detail", loc),
             events=matches,
             suggested_actions=["edit"],
         )
@@ -677,7 +697,7 @@ async def _handle_update(
             "primary_title": primary.get("title", "Event"),
             "event_data": event_data,
         },
-        message=f"Update \"{primary.get('title', 'Event')}\"? Confirm to proceed.",
+        message=msg("update_confirm", loc, title=primary.get("title", "Event")),
         requires_confirmation=True,
         events=matches,
         suggested_actions=["confirm", "edit"],
