@@ -113,7 +113,20 @@ async def list_events(
             detail="from must be on or before to",
         )
 
-    events = await data_access.list_events(user["id"])
+    # Prefer a date-bounded DB query so dashboard loads do not pull full history.
+    # Look back one day so overnight events that end after midnight are included.
+    if fd is not None and td is not None:
+        lookback_start = fd - timedelta(days=MAX_EVENT_LOOKBACK_DAYS)
+        if expand:
+            events = await data_access.list_events_for_calendar(
+                user["id"], lookback_start, td
+            )
+        else:
+            events = await data_access.list_events_window(
+                user["id"], lookback_start, td
+            )
+    else:
+        events = await data_access.list_events(user["id"])
 
     if q:
         q_lower = q.lower()

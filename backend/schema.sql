@@ -41,6 +41,9 @@ CREATE TABLE IF NOT EXISTS events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_events_user_date ON events(user_id, date);
+CREATE INDEX IF NOT EXISTS idx_events_active_user_date_time
+    ON events (user_id, date, start_time)
+    WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_events_external_ids ON events USING GIN (external_ids);
 
 CREATE TABLE IF NOT EXISTS integrations (

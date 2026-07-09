@@ -222,6 +222,33 @@ async def list_events_window(
     return [_row_to_event(row) for row in rows]
 
 
+async def list_events_for_calendar(
+    user_id: str,
+    start_date: date,
+    end_date: date,
+) -> list[EventResponse]:
+    """Events in [start, end], plus recurring masters that start on/before end.
+
+    Recurring series must be included even when the series origin is before
+    start_date so expand_recurrence can materialize instances in-range.
+    """
+    start = start_date.isoformat()
+    end = end_date.isoformat()
+    params = [
+        ("user_id", f"eq.{user_id}"),
+        ("deleted_at", "is.null"),
+        (
+            "or",
+            f"(and(date.gte.{start},date.lte.{end}),"
+            f"and(recurrence_rule.not.is.null,date.lte.{end}))",
+        ),
+        ("order", "date.asc,start_time.asc"),
+        ("select", "*"),
+    ]
+    rows = await _fetch_event_rows(params)
+    return [_row_to_event(row) for row in rows]
+
+
 async def has_external_event_id(
     user_id: str, provider: str, external_id: str
 ) -> bool:
