@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef, type CSSProperties } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -500,159 +500,130 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fafbfc] dark:bg-zinc-950 flex flex-col relative overflow-hidden">
+    <div
+      className={[
+        "min-h-screen bg-[#fafbfc] dark:bg-zinc-950 flex flex-col relative overflow-x-hidden",
+        // Desktop chat is a right dock — push content so sidebar (RIGHT NOW) is not covered.
+        "transition-[padding] duration-300 ease-out",
+        assistantOpen ? "md:pr-[var(--assistant-dock-width,400px)]" : "",
+      ].join(" ")}
+      style={
+        {
+          // Keep in sync with AssistantPanel desktop width.
+          "--assistant-dock-width": "min(400px, 38vw)",
+        } as CSSProperties
+      }
+    >
       {/* Premium Background Glows */}
       <div className="absolute top-0 left-1/4 w-[600px] h-[400px] bg-violet-200/40 dark:bg-violet-900/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
       <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-indigo-200/30 dark:bg-indigo-900/20 rounded-full blur-[120px] -z-10 pointer-events-none" />
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-slate-200/60 dark:border-white/5 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-2xl px-4 sm:px-6 py-3 flex items-center justify-between shadow-[0_4px_30px_rgba(0,0,0,0.03)] transition-all">
+      {/* Header — keep lean: brand · AI search · theme · account */}
+      <header className="sticky top-0 z-40 border-b border-slate-200/60 dark:border-white/5 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-2xl px-4 sm:px-6 py-3 flex items-center gap-3 sm:gap-4 shadow-[0_4px_30px_rgba(0,0,0,0.03)]">
         {/* Left: Brand */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 shrink-0">
           <Image
             src="/logomark_lightmode.png"
             alt="Timeora Logo"
             width={474}
             height={403}
-            className="block dark:hidden w-9 h-9 object-contain flex-shrink-0"
+            className="block dark:hidden w-8 h-8 object-contain"
           />
           <Image
             src="/logomark.png"
             alt="Timeora Logo"
             width={627}
             height={502}
-            className="hidden dark:block w-9 h-9 object-contain flex-shrink-0"
+            className="hidden dark:block w-8 h-8 object-contain"
           />
-          <div className="flex flex-col">
-            <h1 className="type-brand text-base bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-zinc-400">
-              Timeora
-            </h1>
-            <span className="type-caption text-[10px] text-slate-400 dark:text-zinc-500 mt-1">
-              Your AI Companion
-            </span>
-          </div>
+          <h1 className="type-brand text-base bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-zinc-400">
+            Timeora
+          </h1>
         </div>
 
-        {/* Center: Command Bar Trigger (Desktop) - More prominent */}
-        <div 
+        {/* Center: AI command (primary action) */}
+        <button
+          type="button"
           onClick={() => openAssistant()}
-          className="hidden md:flex items-center gap-3 bg-white dark:bg-zinc-900 border border-slate-200/70 dark:border-white/10 hover:border-violet-400/60 focus-within:border-violet-500 shadow-sm hover:shadow-md rounded-2xl px-4 py-2.5 w-full max-w-md cursor-pointer transition-all select-none group"
-          role="button"
+          className="hidden md:flex min-w-0 flex-1 max-w-xl mx-auto items-center gap-2.5 rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 px-3.5 py-2 text-left shadow-sm transition-all hover:border-violet-400/60 hover:shadow-md"
           aria-label="Open AI calendar chat (⌘K)"
         >
-          <div className="flex items-center gap-2.5 flex-1">
-            <Brain className="w-4 h-4 text-violet-600 dark:text-violet-400 group-hover:scale-110 transition-transform" />
-            <span className="text-sm text-slate-500 dark:text-zinc-400 font-medium">
-              ⌘K  Jadwalkan, tanya jadwal, atau cari waktu kosong...
-            </span>
-          </div>
-          <kbd className="hidden lg:flex text-[11px] font-mono text-violet-600 dark:text-violet-400 bg-violet-100 dark:bg-violet-950/60 px-2 py-0.5 rounded-md border border-violet-200 dark:border-violet-800/60">
+          <Brain className="w-4 h-4 shrink-0 text-violet-600 dark:text-violet-400" />
+          <span className="truncate text-sm text-slate-500 dark:text-zinc-400">
+            Tanya kalender atau jadwalkan…
+          </span>
+          <kbd className="ml-auto hidden shrink-0 rounded-md border border-violet-200 bg-violet-50 px-1.5 py-0.5 font-mono text-[10px] text-violet-600 dark:border-violet-800/60 dark:bg-violet-950/60 dark:text-violet-400 sm:inline">
             ⌘K
           </kbd>
-        </div>
+        </button>
 
-        {/* Right: Actions */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Mobile AI Trigger Icon */}
+        {/* Right: essentials only */}
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => openAssistant()}
-            className="md:hidden size-11 rounded-xl hover:bg-violet-50 hover:text-violet-600 dark:hover:bg-violet-500/10 dark:hover:text-violet-500 transition-colors"
+            className="md:hidden size-10 rounded-xl"
             aria-label="Open AI chat"
           >
             <Brain className="w-4 h-4 text-violet-500" />
           </Button>
 
-          <div className="hidden lg:flex items-center gap-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            AI Active
-          </div>
-
-          {/* Cache-bust indicator: if you do not see v6, hard-refresh the tab */}
-          <div
-            className="hidden sm:flex items-center max-w-[140px] truncate text-[10px] font-mono text-slate-400 dark:text-zinc-500"
-            title={`${API_CLIENT_BUILD} → ${API_BASE_URL}`}
-            data-timeora-api-build={API_CLIENT_BUILD}
-          >
-            {API_CLIENT_BUILD.replace("timeora-api-", "") /* expect: v7-session */}
-          </div>
-
-          {/* Better Keyboard Shortcuts Hint */}
-          <div className="hidden xl:flex items-center gap-1 text-[10px] text-slate-400 dark:text-zinc-500 bg-slate-100/60 dark:bg-zinc-800/60 px-2 py-1 rounded-lg border border-slate-200/50 dark:border-white/5">
-            <kbd className="font-mono px-1 py-0.5 bg-white dark:bg-zinc-900 rounded text-[9px] border">⌘K</kbd>
-            <span>command</span>
-            <span className="mx-0.5">•</span>
-            <kbd className="font-mono px-1 py-0.5 bg-white dark:bg-zinc-900 rounded text-[9px] border">drag</kbd>
-            <span>calendar</span>
-          </div>
-
           <ThemeToggle />
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleExportIcs}
-            disabled={exporting}
-            aria-label="Export .ics"
-            data-testid="export-ics-button"
-            className="hidden sm:flex hover:bg-violet-50 hover:text-violet-600 dark:hover:bg-violet-500/10 dark:hover:text-violet-500 transition-colors font-medium rounded-xl"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Export .ics
-          </Button>
-          
-          <Button variant="ghost" size="sm" onClick={handleLogout} className="hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-500 transition-colors font-medium rounded-xl">
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
-          </Button>
-
-          {/* Profile Avatar with Dropdown */}
           <div className="relative" ref={profileRef}>
-            <div
+            <button
+              type="button"
               onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-              className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 text-white font-bold text-xs flex items-center justify-center border border-white/10 shadow-sm cursor-pointer select-none hover:scale-105 transition-transform shrink-0"
-              title="Profile"
+              className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 text-xs font-bold text-white shadow-sm transition-transform hover:scale-105"
+              aria-label="Account menu"
+              aria-expanded={profileDropdownOpen}
             >
               BA
-            </div>
+            </button>
 
             {profileDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-44 bg-white/95 dark:bg-zinc-900/95 border border-slate-200 dark:border-white/10 rounded-xl shadow-xl backdrop-blur-sm py-1 z-50 text-sm">
+              <div className="absolute right-0 z-50 mt-2 w-48 rounded-xl border border-slate-200 bg-white/95 py-1 text-sm shadow-xl backdrop-blur-sm dark:border-white/10 dark:bg-zinc-900/95">
                 <button
+                  type="button"
                   onClick={() => {
                     router.push("/profile");
                     setProfileDropdownOpen(false);
                   }}
-                  className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2"
+                  className="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-slate-100 dark:hover:bg-zinc-800"
                 >
                   <User className="w-4 h-4" /> Profile
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     router.push("/integrations");
                     setProfileDropdownOpen(false);
                   }}
-                  className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2"
+                  className="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-slate-100 dark:hover:bg-zinc-800"
                 >
                   <Settings className="w-4 h-4" /> Integrations
                 </button>
                 <button
+                  type="button"
+                  data-testid="export-ics-button"
+                  disabled={exporting}
                   onClick={() => {
-                    handleExportIcs();
+                    void handleExportIcs();
                     setProfileDropdownOpen(false);
                   }}
-                  className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2"
+                  className="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-zinc-800"
                 >
-                  <Download className="w-4 h-4" /> Export Data
+                  <Download className="w-4 h-4" /> Export .ics
                 </button>
-                <div className="border-t border-slate-200 dark:border-white/10 my-1" />
+                <div className="my-1 border-t border-slate-200 dark:border-white/10" />
                 <button
+                  type="button"
                   onClick={() => {
                     handleLogout();
                     setProfileDropdownOpen(false);
                   }}
-                  className="w-full text-left px-4 py-2 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 transition-colors flex items-center gap-2"
+                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/30"
                 >
                   <LogOut className="w-4 h-4" /> Logout
                 </button>
@@ -694,7 +665,16 @@ export default function DashboardPage() {
           </motion.div>
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6 items-start">
+        <div
+          className={[
+            "grid grid-cols-1 gap-6 items-start",
+            // When chat is open, drop the right column below xl so calendar + chat fit;
+            // at 2xl keep sidebar beside calendar (content already padded for the dock).
+            assistantOpen
+              ? "xl:grid-cols-1 2xl:grid-cols-[1fr_300px]"
+              : "xl:grid-cols-[1fr_320px]",
+          ].join(" ")}
+        >
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -736,20 +716,36 @@ export default function DashboardPage() {
               </Button>
             </div>
 
-            {/* Empty State / First-time Guidance */}
+            {/* Compact empty state — no large promo card */}
             {events.length === 0 && (
-              <div className="mb-4 rounded-2xl border border-dashed border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20 p-5 text-center">
-                <div className="mx-auto mb-2 w-10 h-10 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-                  <Brain className="w-5 h-5 text-violet-600" />
-                </div>
-                <h3 className="font-semibold text-violet-700 dark:text-violet-300">No events yet</h3>
-                <p className="text-sm text-violet-600/80 dark:text-violet-400 mt-1 mb-3">
-                  Start by using the AI calendar chat (⌘K) or the buttons above.<br />
-                  Try: “Jadwalkan meeting besok jam 10 selama 30 menit”
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/70 bg-slate-50/80 px-3 py-2 text-sm dark:border-white/10 dark:bg-zinc-900/50">
+                <p className="text-xs text-muted-foreground sm:text-sm">
+                  Belum ada event. Tambah manual atau lewat AI.
                 </p>
-                <Button size="sm" variant="outline" onClick={() => openAssistant()}>
-                  Open AI Chat
-                </Button>
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 rounded-lg text-xs"
+                    onClick={handleAddEventClick}
+                  >
+                    + Event
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 rounded-lg text-xs text-violet-600 hover:bg-violet-50 hover:text-violet-700 dark:text-violet-400 dark:hover:bg-violet-500/10"
+                    onClick={() => openAssistant()}
+                  >
+                    <Brain className="mr-1 h-3.5 w-3.5" />
+                    AI
+                    <kbd className="ml-1.5 hidden rounded border border-violet-200/80 px-1 font-mono text-[10px] opacity-70 sm:inline dark:border-violet-800">
+                      ⌘K
+                    </kbd>
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -769,7 +765,13 @@ export default function DashboardPage() {
               onEventAskAI={(event) => openAssistant(event)}
             />
           </motion.div>
-          <div className="space-y-6">
+          <div
+            className={[
+              "space-y-6",
+              // Avoid a cramped triple column (calendar | sidebar | chat) on mid widths.
+              assistantOpen ? "hidden 2xl:block" : "",
+            ].join(" ")}
+          >
             {/* Persistent "Right Now" Context + Sidebar Tabs */}
             <div className="rounded-2xl border border-slate-200/60 dark:border-white/10 bg-white/70 dark:bg-zinc-900/60 p-3 text-sm">
               <div className="flex items-center justify-between mb-1">
@@ -786,7 +788,7 @@ export default function DashboardPage() {
                 </div>
               )}
               <div className="text-xs text-slate-500 dark:text-slate-400">
-                Gunakan ⌘K untuk jadwalkan cepat atau klik event di kalender.
+                Tanya AI di panel kanan, atau klik event di kalender.
               </div>
             </div>
 
@@ -902,6 +904,11 @@ export default function DashboardPage() {
         onOpenChange={handleAssistantOpenChange}
         onEventsChanged={() => refreshAll()}
         contextEvent={assistantContext}
+        onClearContext={() => setAssistantContext(null)}
+        onViewCalendar={() => {
+          refreshAll();
+          setAssistantOpen(false);
+        }}
       />
       <Toaster richColors closeButton />
     </div>
