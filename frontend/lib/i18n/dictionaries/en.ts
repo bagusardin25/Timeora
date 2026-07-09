@@ -263,4 +263,13 @@ export const en = {
   },
 } as const;
 
-export type Dictionary = typeof en;
+/** Same shape as `en`, but leaf strings are `string` so other locales can diverge. */
+type DeepStringify<T> = T extends string
+  ? string
+  : T extends readonly (infer U)[]
+    ? DeepStringify<U>[]
+    : T extends object
+      ? { [K in keyof T]: DeepStringify<T[K]> }
+      : T;
+
+export type Dictionary = DeepStringify<typeof en>;
