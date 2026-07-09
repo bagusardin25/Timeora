@@ -1,0 +1,68 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "P0: AssistantPanel voice control exposes listening or clear error",
+  "description": "Logged-in user opens the docked AI chat, verifies the voice mic control is present, clicks it, and either enters Listening state or sees a clear unsupported/permission/failed message. Typed input remains usable afterward. Does not require real speech transcription in the cloud browser.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click the Sign in button and wait up to 8 seconds for the dashboard weekly calendar to load"
+    },
+    {
+      "type": "action",
+      "description": "If the language toggle shows id, switch it to English (en) so labels match Start voice input / Stop voice input"
+    },
+    {
+      "type": "action",
+      "description": "Open the AI calendar chat by clicking Open AI chat or pressing Control+K / Meta+K"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 2 seconds for the Ask your calendar panel to open"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the assistant composer shows a voice button with accessible name or title Start voice input (mic control near the message input)"
+    },
+    {
+      "type": "action",
+      "description": "Click the Start voice input button and wait 3 seconds"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify either: (A) listening UI appears with Listening or Stop voice input, or (B) a clear error message is shown such as Browser does not support voice input, Microphone permission denied, No speech detected, or Voice input failed — without crashing the panel"
+    },
+    {
+      "type": "action",
+      "description": "If listening is active, click Stop voice input and wait 1 second"
+    },
+    {
+      "type": "action",
+      "description": "Click the assistant message input and type What do I have today? without submitting yet"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the typed text What do I have today? is visible in the input, proving voice interaction did not break keyboard input"
+    },
+    {
+      "type": "action",
+      "description": "Click Send or press Enter and wait up to 6 seconds for an assistant reply"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the assistant returns a schedule-related response message (events list, empty day, or help) so the chat path still works after voice interaction"
+    }
+  ]
+}

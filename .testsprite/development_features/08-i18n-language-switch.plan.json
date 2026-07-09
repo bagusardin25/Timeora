@@ -1,0 +1,76 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "P0: EN/ID language switch persists across landing and dashboard",
+  "description": "Default locale is English. User switches to Indonesian on the landing page, verifies translated UI, reloads to confirm persistence, signs in, verifies dashboard copy is Indonesian, then switches back to English.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 2 seconds for the landing page to fully load"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the page is in English by default: language control shows EN or English, and a Sign in or Get Started for Free style CTA is visible in English"
+    },
+    {
+      "type": "action",
+      "description": "Click the language toggle button titled Switch language, or click the Indonesian / ID control so the UI locale becomes Indonesian"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 1 second for the UI to re-render"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify Indonesian UI is active: language control shows ID or Bahasa/Indonesia, and auth-related copy uses Indonesian such as Masuk (not only Sign in)"
+    },
+    {
+      "type": "action",
+      "description": "Reload the page and wait for 2 seconds"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the Indonesian locale persisted after reload (ID/Bahasa still selected and Indonesian copy still visible)"
+    },
+    {
+      "type": "action",
+      "description": "Click Masuk or Sign in to open the login page"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the login page shows Indonesian auth copy such as Selamat datang kembali or Masuk, and Kata sandi for the password field when locale is Indonesian"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click the Masuk or Sign in submit button and wait up to 8 seconds for the dashboard weekly calendar to load"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the dashboard shows Indonesian navigation or empty-state copy such as Tanya kalender, + Event, or Belum ada event / Gunakan"
+    },
+    {
+      "type": "action",
+      "description": "In the dashboard navbar, click the compact language toggle (Globe with id code) titled Ganti bahasa or Switch language to switch back to English"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 1 second"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the dashboard is English again: language code shows en, and copy such as Ask your calendar or schedule, Open AI chat, Insights, or Availability is visible"
+    }
+  ]
+}

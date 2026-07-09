@@ -1,0 +1,80 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "P0: Assistant free-slot search then confirm create on calendar",
+  "description": "Logged-in user opens the docked AI calendar chat (not the legacy modal Command Bar), asks for a free slot, taps a suggested slot, confirms create, and sees the event on the weekly calendar. Cleans up by cancelling via assistant when possible.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click the Sign in button and wait up to 8 seconds for the dashboard weekly calendar to load"
+    },
+    {
+      "type": "action",
+      "description": "If a language toggle shows id, click it until the UI is English (en) so assertions use English copy"
+    },
+    {
+      "type": "action",
+      "description": "Open the AI calendar chat by clicking the button labeled Open AI chat or Open AI calendar chat, or press Control+K / Meta+K"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 2 seconds for the Ask your calendar assistant panel to open on the right"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the assistant panel is open with title Ask your calendar and a message input placeholder Ask or type a message"
+    },
+    {
+      "type": "action",
+      "description": "Type Find a free 45 minute slot tomorrow afternoon for TS FreeSlot Create into the assistant message input"
+    },
+    {
+      "type": "action",
+      "description": "Click the Send button or press Enter to submit"
+    },
+    {
+      "type": "action",
+      "description": "Wait up to 8 seconds for the assistant response with free slots"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the assistant shows a Free slots section, or a message listing available times, or a create-event preview related to free time"
+    },
+    {
+      "type": "action",
+      "description": "If free slot chips or buttons are visible, click the first free slot. If a Create event confirmation card is already shown, skip to the confirm step"
+    },
+    {
+      "type": "action",
+      "description": "Wait for 3 seconds for a create preview or confirmation controls"
+    },
+    {
+      "type": "action",
+      "description": "Click Create event or the primary confirm button on the assistant create card. If the assistant only returned slots without create, type Schedule TS FreeSlot Create tomorrow at 3pm for 45 minutes, send, wait 4 seconds, then click Create event"
+    },
+    {
+      "type": "action",
+      "description": "Wait up to 6 seconds for Applied successfully, Done, or the event to appear on the weekly calendar"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the weekly calendar or Today Agenda shows an event whose title contains TS FreeSlot Create, or the assistant shows a success / Applied successfully state for the create action"
+    },
+    {
+      "type": "action",
+      "description": "Optional cleanup: in the assistant input type Cancel TS FreeSlot Create, send, wait 3 seconds, then click Yes, cancel if a cancel confirmation appears"
+    }
+  ]
+}

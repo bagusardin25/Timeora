@@ -1,0 +1,68 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "P0: Assistant confirm-create schedules event via docked chat",
+  "description": "Logged-in user opens the docked AI chat, asks to schedule a uniquely named event, confirms Create event, and verifies the event on the calendar. Optional cancel cleanup.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click the Sign in button and wait up to 8 seconds for the dashboard to load"
+    },
+    {
+      "type": "action",
+      "description": "Ensure UI language is English (en) via the navbar language toggle if needed"
+    },
+    {
+      "type": "action",
+      "description": "Open the AI calendar chat with Open AI chat or Control+K / Meta+K and wait 2 seconds"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify Ask your calendar panel is open"
+    },
+    {
+      "type": "action",
+      "description": "Type Schedule TS Confirm Create meeting tomorrow at 4pm for 30 minutes into the assistant input"
+    },
+    {
+      "type": "action",
+      "description": "Click Send or press Enter"
+    },
+    {
+      "type": "action",
+      "description": "Wait up to 8 seconds for a create preview card with Create event confirmation"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify a create confirmation UI is shown (Create event badge/button, event title containing TS Confirm Create, or requires-confirmation style card)"
+    },
+    {
+      "type": "action",
+      "description": "Click the Create event button to confirm"
+    },
+    {
+      "type": "action",
+      "description": "Wait up to 6 seconds for success feedback"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify success messaging (Applied successfully / Done) and/or the weekly calendar shows TS Confirm Create"
+    },
+    {
+      "type": "action",
+      "description": "Cleanup: type Cancel TS Confirm Create, send, wait 3 seconds, click Yes, cancel if shown"
+    }
+  ]
+}
