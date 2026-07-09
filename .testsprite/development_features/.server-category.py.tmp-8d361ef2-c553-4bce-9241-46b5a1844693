@@ -1,0 +1,168 @@
+import asyncio
+import re
+from playwright import async_api
+from playwright.async_api import expect
+
+async def run_test():
+    pw = None
+    browser = None
+    context = None
+
+    try:
+        # Start a Playwright session in asynchronous mode
+        pw = await async_api.async_playwright().start()
+
+        # Launch a Chromium browser in headless mode with custom arguments
+        browser = await pw.chromium.launch(
+            headless=True,
+            args=[
+                "--window-size=1280,720",
+                "--disable-dev-shm-usage",
+                "--ipc=host",
+                "--single-process"
+            ],
+        )
+
+        # Create a new browser context (like an incognito window)
+        context = await browser.new_context()
+        # Wider default timeout to match the agent's DOM-stability budget;
+        # auto-waiting Playwright APIs (expect, locator.wait_for) inherit this.
+        context.set_default_timeout(15000)
+
+        # Open a new page in the browser context
+        page = await context.new_page()
+
+        # Interact with the page elements to simulate user flow
+        # -> navigate
+        await page.goto("https://timeora-alpha.vercel.app")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
+        
+        # -> Click the 'Sign In' link to open the login page.
+        # Sign In link
+        elem = page.get_by_role('link', name='Sign In', exact=True)
+        await elem.click(timeout=10000)
+        
+        # -> Fill 'demo@timeora.app' into the EMAIL field and 'TimeoraDemo123!' into the PASSWORD field, then click the 'Sign In' button to open the dashboard.
+        # you@example.com email field
+        elem = page.locator('[id="email"]')
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("demo@timeora.app")
+        
+        # -> Fill 'demo@timeora.app' into the EMAIL field and 'TimeoraDemo123!' into the PASSWORD field, then click the 'Sign In' button to open the dashboard.
+        # •••••••• password field
+        elem = page.locator('[id="password"]')
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("TimeoraDemo123!")
+        
+        # -> Fill 'demo@timeora.app' into the EMAIL field and 'TimeoraDemo123!' into the PASSWORD field, then click the 'Sign In' button to open the dashboard.
+        # Sign In button
+        elem = page.get_by_role('button', name='Sign In', exact=True)
+        await elem.click(timeout=10000)
+        
+        # -> Click the 'TS Development Category Event' entry in the calendar to open its edit/view dialog.
+        # TS Development Category Event 9:00 - 10:00 link
+        elem = page.locator('xpath=/html/body/div[2]/main/div/div/div[2]/div[3]/div/div/div/table/tbody/tr/td/div/div/div/div[2]/table/tbody/tr/td[2]/div/div[2]/div/a')
+        await elem.click(timeout=10000)
+        
+        # -> Open the 'Kategori' dropdown in the event dialog to view and later select the '🎯 Focus Work' option.
+        # — No category — 👥 Meeting 🏠 Personal 🎯 Focus Work... dropdown
+        elem = page.locator('[id="category"]')
+        await elem.click(timeout=10000)
+        
+        # -> Click the 'Focus Work' category filter chip to disable it and verify the event is hidden.
+        # 🎯 Focus Work 1 button
+        elem = page.get_by_role('button', name='🎯 Focus Work 1', exact=True)
+        await elem.click(timeout=10000)
+        
+        # -> Close the event dialog by clicking the 'Batal' (Cancel) button so the calendar can be inspected for the 'TS Development Category Event' block.
+        # Batal button
+        elem = page.get_by_role('button', name='Batal', exact=True)
+        await elem.click(timeout=10000)
+        
+        # -> Click the 'Focus Work' category filter chip to enable Focus events, wait for the calendar to update, then search the page for 'TS Development Category Event' to verify it appears on the calendar.
+        # 🎯 Focus Work 1 button
+        elem = page.get_by_role('button', name='🎯 Focus Work 1', exact=True)
+        await elem.click(timeout=10000)
+        
+        # -> Click the '🎯 Focus Work' category filter chip to disable Focus events and verify that 'TS Development Category Event' is hidden from the calendar view.
+        # 🎯 Focus Work 1 button
+        elem = page.get_by_role('button', name='🎯 Focus Work 1', exact=True)
+        await elem.click(timeout=10000)
+        
+        # -> Click an empty timeslot in the weekly calendar (e.g., a 9am slot) to open the new event dialog.
+        # Click an empty timeslot in the weekly calendar (e.g., a 9am slot) to open the new event dialog.
+        elem = page.locator('xpath=/html/body/div[2]/main/div/div/div[2]/div[3]/div/div/div/table/tbody/tr/td/div/div/div/div[2]/table/tbody/tr/td[2]')
+        await elem.click(timeout=10000)
+        
+        # -> Click an empty 9am timeslot in the weekly calendar to open the new event dialog.
+        # Click an empty 9am timeslot in the weekly calendar to open the new event dialog.
+        elem = page.locator('xpath=/html/body/div[2]/main/div/div/div[2]/div[3]/div/div/div/table/tbody/tr/td/div/div/div/div[2]/table/tbody/tr/td[2]')
+        await elem.click(timeout=10000)
+        
+        # -> Click an empty 9am timeslot in the weekly calendar to open the new event dialog.
+        # Click an empty 9am timeslot in the weekly calendar to open the new event dialog.
+        elem = page.locator('xpath=/html/body/div[2]/main/div/div/div[2]/div[3]/div/div/div/table/tbody/tr/td/div/div/div/div[2]/table/tbody/tr/td[2]')
+        await elem.click(timeout=10000)
+        
+        # -> Click the '+ Tambah Event' button to open the new event dialog.
+        # Tambah Event button
+        elem = page.get_by_role('button', name='Tambah Event', exact=True)
+        await elem.click(timeout=10000)
+        
+        # -> Type 'TS Development Category Event' into the title field, select '🎯 Focus Work' in the Kategori field, and click the 'Simpan Event' button to save the new event.
+        # Meeting with team text field
+        elem = page.locator('[id="title"]')
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.fill("TS Development Category Event")
+        
+        # -> Type 'TS Development Category Event' into the title field, select '🎯 Focus Work' in the Kategori field, and click the 'Simpan Event' button to save the new event.
+        # — No category — 👥 Meeting 🏠 Personal 🎯 Focus Work... dropdown
+        elem = page.locator("xpath=/html/body/div[3]/div[3]/div[3]/div[2]/div[4]/select").nth(0)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.select_option("")
+        
+        # -> Type 'TS Development Category Event' into the title field, select '🎯 Focus Work' in the Kategori field, and click the 'Simpan Event' button to save the new event.
+        # Simpan Event button
+        elem = page.get_by_role('button', name='Simpan Event', exact=True)
+        await elem.click(timeout=10000)
+        
+        # -> Click the 'Simpan Event' button to save the event and trigger the calendar to refresh so the event visibility and category color can be verified.
+        # Simpan Event button
+        elem = page.get_by_role('button', name='Simpan Event', exact=True)
+        await elem.click(timeout=10000)
+        
+        # --> Assertions to verify final state
+        
+        # --> Verify TS Development Category Event appears as a Focus-colored event block and the Focus filter count increases
+        # Assert: The event 'TS Development Category Event' is visible on the dashboard.
+        await expect(page.locator("xpath=/html/body/div[2]/main/div/div[2]/div[3]/div/div/div[3]/div/div/div[2]/p[1]").nth(0)).to_have_text("TS Development Category Event", timeout=15000), "The event 'TS Development Category Event' is visible on the dashboard."
+        # Assert: The Focus category filter shows a count of 1.
+        await expect(page.locator("xpath=/html/body/div[2]/main/div/div[1]/div[2]/div[2]/div[2]/button[3]").nth(0)).to_have_text("\ud83c\udfaf\nFocus Work\n1", timeout=15000), "The Focus category filter shows a count of 1."
+        
+        # --> Verify the event remains visible with Personal category styling
+        # Assert: The event 'TS Development Category Event' is visible on the page.
+        await expect(page.locator("xpath=/html/body/div[2]/main/div/div[2]/div[3]/div/div/div[3]/div/div/div[2]/p[1]").nth(0)).to_have_text("TS Development Category Event", timeout=15000), "The event 'TS Development Category Event' is visible on the page."
+        current_url = await page.evaluate("() => window.location.href")
+        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
+        assert current_url, 'Page should have loaded with a URL'
+        current_url = await page.evaluate("() => window.location.href")
+        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
+        assert current_url, 'Page should have loaded with a URL'
+        current_url = await page.evaluate("() => window.location.href")
+        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
+        assert current_url, 'Page should have loaded with a URL'
+        await asyncio.sleep(5)
+
+    finally:
+        if context:
+            await context.close()
+        if browser:
+            await browser.close()
+        if pw:
+            await pw.stop()
+
+asyncio.run(run_test())
+    

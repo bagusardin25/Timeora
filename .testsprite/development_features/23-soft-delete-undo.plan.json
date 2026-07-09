@@ -1,0 +1,56 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Coverage: Soft delete and Undo restore event",
+  "description": "Create event, delete it, click Undo, verify event returns on calendar.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click Sign in and wait for the dashboard"
+    },
+    {
+      "type": "action",
+      "description": "Ensure language is English (en)"
+    },
+    {
+      "type": "action",
+      "description": "Click + Add Event, title TS Undo Restore, Save, wait 3 seconds"
+    },
+    {
+      "type": "action",
+      "description": "Open TS Undo Restore and click Delete, confirm if prompted"
+    },
+    {
+      "type": "action",
+      "description": "Wait 2 seconds for undo banner"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify an Undo banner or deleted message for TS Undo Restore is shown"
+    },
+    {
+      "type": "action",
+      "description": "Click Undo"
+    },
+    {
+      "type": "action",
+      "description": "Wait 3 seconds"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify TS Undo Restore is visible again on the calendar"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Coverage: Register then login E2E smoke",
+  "description": "New user registers with a unique email, lands on dashboard or login, then can access the calendar area.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/register"
+    },
+    {
+      "type": "action",
+      "description": "Wait 2 seconds for the register form"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify Create account or registration form fields for name/email/password are visible"
+    },
+    {
+      "type": "action",
+      "description": "Type TestSprite User into the name field if present"
+    },
+    {
+      "type": "action",
+      "description": "Type a unique email using pattern ts.e2e.<current-timestamp>@example.com into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field and confirm-password field if present"
+    },
+    {
+      "type": "action",
+      "description": "Click Create account or Register submit"
+    },
+    {
+      "type": "action",
+      "description": "Wait up to 10 seconds for success redirect to dashboard or login"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify either the weekly calendar dashboard loaded, or a success message, or the login page is ready after registration"
+    },
+    {
+      "type": "action",
+      "description": "If still on login, sign in with the same unique email and TimeoraDemo123! and wait for dashboard"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify authenticated UI is reachable: weekly calendar, + Add Event, or Open AI chat control"
+    }
+  ]
+}

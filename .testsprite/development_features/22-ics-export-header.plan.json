@@ -1,0 +1,52 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Coverage: Export .ics from account menu",
+  "description": "Logged-in user opens the account/profile dropdown and clicks Export .ics; success toast or no error.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click Sign in and wait for the dashboard"
+    },
+    {
+      "type": "action",
+      "description": "Ensure language is English (en)"
+    },
+    {
+      "type": "action",
+      "description": "Click the account menu / avatar button labeled Account menu or Signed in in the dashboard navbar to open the dropdown"
+    },
+    {
+      "type": "action",
+      "description": "Wait 1 second for the dropdown"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the dropdown shows Profile, Integrations, and Export .ics"
+    },
+    {
+      "type": "action",
+      "description": "Click Export .ics in the account dropdown (data-testid export-ics-button if available)"
+    },
+    {
+      "type": "action",
+      "description": "Wait up to 5 seconds"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify a success toast about calendar export or timeora.ics, or the Export .ics control remains available without a failure error toast"
+    }
+  ]
+}

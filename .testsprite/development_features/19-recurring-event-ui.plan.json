@@ -1,0 +1,52 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Coverage: Weekly recurring via assistant natural language",
+  "description": "Event dialog has no Repeats control in current UI. Create a weekly recurring event via assistant NL if supported; otherwise assert dialog still supports one-off create. Backend expand is covered separately.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click Sign in and wait for the dashboard"
+    },
+    {
+      "type": "action",
+      "description": "Ensure language is English (en)"
+    },
+    {
+      "type": "action",
+      "description": "Open AI chat with Open AI chat or Control+K"
+    },
+    {
+      "type": "action",
+      "description": "Type Schedule TS Weekly Recur every Monday at 9am for 30 minutes starting next Monday and Send"
+    },
+    {
+      "type": "action",
+      "description": "Wait up to 8 seconds for an assistant response (create preview, confirmation, or clarification)"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the assistant responds with a create confirmation, recurrence-aware preview, free-slot suggestion, or a clear message about the weekly request — not a blank panel"
+    },
+    {
+      "type": "action",
+      "description": "If Create event is shown, click it and wait 4 seconds"
+    },
+    {
+      "type": "assertion",
+      "description": "If create was confirmed, verify success feedback or TS Weekly Recur appears on the calendar; if only clarification was shown, that is acceptable for this coverage pass"
+    }
+  ]
+}

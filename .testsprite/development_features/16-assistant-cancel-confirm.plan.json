@@ -1,0 +1,68 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Coverage: Assistant cancel with confirmation in docked chat",
+  "description": "Create and cancel a uniquely named event entirely inside the docked AI chat (no calendar clicks) to avoid ambiguous FullCalendar anchors.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click Sign in and wait for the dashboard"
+    },
+    {
+      "type": "action",
+      "description": "Ensure language is English (en)"
+    },
+    {
+      "type": "action",
+      "description": "Open AI chat with Open AI chat or Control+K and wait 2 seconds"
+    },
+    {
+      "type": "action",
+      "description": "In the assistant input only (do not click the calendar), type Schedule TS Cancel Only tomorrow at 11:15am for 25 minutes and click Send"
+    },
+    {
+      "type": "action",
+      "description": "Wait up to 8 seconds, then click Create event inside the assistant panel"
+    },
+    {
+      "type": "action",
+      "description": "Wait 4 seconds for Applied successfully or Done in the assistant panel"
+    },
+    {
+      "type": "action",
+      "description": "Still inside the assistant input, type Cancel TS Cancel Only and click Send"
+    },
+    {
+      "type": "action",
+      "description": "Wait up to 6 seconds for a cancel confirmation card in the assistant panel"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the assistant panel shows Yes, cancel or cancel confirmation mentioning TS Cancel Only"
+    },
+    {
+      "type": "action",
+      "description": "Click Yes, cancel inside the assistant panel (not on the calendar)"
+    },
+    {
+      "type": "action",
+      "description": "Wait up to 5 seconds"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify assistant shows Applied successfully, Done, Event cancelled, or similar success text for the cancel action"
+    }
+  ]
+}

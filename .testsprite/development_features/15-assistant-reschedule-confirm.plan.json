@@ -1,0 +1,72 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Coverage: Assistant reschedule with confirmation",
+  "description": "Create a uniquely named event, ask assistant to reschedule it, confirm, and verify success feedback.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click Sign in and wait for the dashboard"
+    },
+    {
+      "type": "action",
+      "description": "Ensure language is English (en)"
+    },
+    {
+      "type": "action",
+      "description": "Open AI chat with Open AI chat or Control+K"
+    },
+    {
+      "type": "action",
+      "description": "Type Schedule TS Reschedule Target tomorrow at 9am for 30 minutes and Send"
+    },
+    {
+      "type": "action",
+      "description": "Wait up to 8 seconds, then click Create event to confirm"
+    },
+    {
+      "type": "action",
+      "description": "Wait 4 seconds for create success"
+    },
+    {
+      "type": "action",
+      "description": "Type Reschedule TS Reschedule Target to tomorrow at 5pm and Send"
+    },
+    {
+      "type": "action",
+      "description": "Wait up to 8 seconds for a reschedule confirmation card"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify a Reschedule confirmation control or preview for TS Reschedule Target is shown"
+    },
+    {
+      "type": "action",
+      "description": "Click Reschedule or the primary confirm button"
+    },
+    {
+      "type": "action",
+      "description": "Wait up to 6 seconds"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify success feedback (Applied successfully / Done) or the event time updated toward 17:00 / 5pm on the calendar"
+    },
+    {
+      "type": "action",
+      "description": "Cleanup: type Cancel TS Reschedule Target, Send, wait 3 seconds, click Yes, cancel if shown"
+    }
+  ]
+}

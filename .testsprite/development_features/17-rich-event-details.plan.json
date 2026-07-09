@@ -1,0 +1,76 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Coverage: Rich event details description priority reminder",
+  "description": "Create an event with description and priority; reopen and verify title plus description. Skip aggressive delete cleanup that can trap native confirms.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click Sign in and wait for the dashboard"
+    },
+    {
+      "type": "action",
+      "description": "Ensure language is English (en)"
+    },
+    {
+      "type": "action",
+      "description": "Click the + Add Event button in the dashboard (not a random calendar slot)"
+    },
+    {
+      "type": "action",
+      "description": "Wait 2 seconds for the event dialog"
+    },
+    {
+      "type": "action",
+      "description": "Type TS Rich Details Event into the title field"
+    },
+    {
+      "type": "action",
+      "description": "In the Description field, type Agenda notes for TestSprite rich details"
+    },
+    {
+      "type": "action",
+      "description": "Set Priority to Important if a Priority select is visible"
+    },
+    {
+      "type": "action",
+      "description": "Click Save in the event dialog"
+    },
+    {
+      "type": "action",
+      "description": "Wait 4 seconds for the dialog to close and calendar to refresh"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify TS Rich Details Event appears on the weekly calendar or Today Agenda"
+    },
+    {
+      "type": "action",
+      "description": "Click the calendar event titled TS Rich Details Event once to reopen the edit dialog"
+    },
+    {
+      "type": "action",
+      "description": "Wait 2 seconds"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the dialog title field shows TS Rich Details Event and the Description contains Agenda notes for TestSprite rich details"
+    },
+    {
+      "type": "action",
+      "description": "Click Cancel or Close to dismiss the dialog without deleting"
+    }
+  ]
+}

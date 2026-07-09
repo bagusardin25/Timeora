@@ -1,0 +1,48 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Coverage: Availability heatmap renders on dashboard",
+  "description": "Logged-in user sees the Availability heatmap panel with a day-by-hour grid and free-percentage indicator.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click Sign in and wait up to 8 seconds for the dashboard to load"
+    },
+    {
+      "type": "action",
+      "description": "If language shows id, switch to English (en)"
+    },
+    {
+      "type": "action",
+      "description": "If the AI chat panel is open covering the sidebar, close it so Insights and Availability are visible"
+    },
+    {
+      "type": "action",
+      "description": "Scroll the sidebar to the Availability section"
+    },
+    {
+      "type": "action",
+      "description": "Wait 3 seconds for the heatmap to finish loading"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify an Availability heading and a free/availability percentage or free-window summary are visible"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify a day-by-hour color grid or heatmap cells with weekday labels are visible"
+    }
+  ]
+}

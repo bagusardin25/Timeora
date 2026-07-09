@@ -1,0 +1,60 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Coverage: Event actions menu Edit Delete Ask AI",
+  "description": "Create an event, open event actions (overflow/context), verify Edit, Delete, and Ask AI actions are available.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click Sign in and wait for the dashboard"
+    },
+    {
+      "type": "action",
+      "description": "Ensure language is English (en)"
+    },
+    {
+      "type": "action",
+      "description": "Click + Add Event, title it TS Actions Menu, and Save"
+    },
+    {
+      "type": "action",
+      "description": "Wait 4 seconds for the event to appear"
+    },
+    {
+      "type": "action",
+      "description": "Click or right-click TS Actions Menu, or open its overflow / more-actions control"
+    },
+    {
+      "type": "action",
+      "description": "Wait 1 second"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify action menu or dialog offers Edit and Delete, and preferably Ask AI / Tanya AI"
+    },
+    {
+      "type": "action",
+      "description": "If Ask AI is available, click it and wait 2 seconds"
+    },
+    {
+      "type": "assertion",
+      "description": "If Ask AI was clicked, verify the AI chat opens or receives event context; otherwise skip if only Edit/Delete were verified"
+    },
+    {
+      "type": "action",
+      "description": "Cleanup: delete TS Actions Menu if it still exists"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Coverage: Weekly Insights Block Focus Time action",
+  "description": "Logged-in user uses Block Focus Time from Weekly Insights and sees a Focus Block on the calendar or a success message.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/login"
+    },
+    {
+      "type": "action",
+      "description": "Type demo@timeora.app into the email field"
+    },
+    {
+      "type": "action",
+      "description": "Type TimeoraDemo123! into the password field"
+    },
+    {
+      "type": "action",
+      "description": "Click Sign in and wait up to 8 seconds for the dashboard"
+    },
+    {
+      "type": "action",
+      "description": "Ensure UI language is English (en)"
+    },
+    {
+      "type": "action",
+      "description": "Close the AI chat panel if it covers the Insights sidebar"
+    },
+    {
+      "type": "action",
+      "description": "Scroll to the Weekly Insights or Insights panel"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify Insights heading and workload chart or suggestion content are visible"
+    },
+    {
+      "type": "action",
+      "description": "Click Block Focus Time or Block focus time button"
+    },
+    {
+      "type": "action",
+      "description": "Wait up to 5 seconds for the action to complete"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify a success message about focus block, or a Focus Block event appears on the weekly calendar or Today Agenda"
+    }
+  ]
+}

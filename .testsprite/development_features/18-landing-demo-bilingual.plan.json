@@ -1,0 +1,44 @@
+{
+  "projectId": "fe31e397-bb11-4aae-af0f-2916b246b3f5",
+  "type": "frontend",
+  "name": "Coverage: Landing interactive demo and bilingual section",
+  "description": "Landing page shows bilingual differentiator examples and interactive demo parse preview reacts to typed natural language.",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to https://timeora-alpha.vercel.app/"
+    },
+    {
+      "type": "action",
+      "description": "Wait 2 seconds for the landing page"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify Timeora branding and a primary CTA such as Get Started or Sign in are visible"
+    },
+    {
+      "type": "action",
+      "description": "Scroll to the bilingual advantage section if present"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify Indonesian and English example scheduling phrases are both visible on the page (e.g. Rapat tim marketing and Marketing sync, or similar bilingual examples)"
+    },
+    {
+      "type": "action",
+      "description": "Scroll to the interactive demo / command input area on the landing page"
+    },
+    {
+      "type": "action",
+      "description": "Type Meeting with design team tomorrow at 2pm for 45 minutes into the demo input"
+    },
+    {
+      "type": "action",
+      "description": "Wait up to 3 seconds for the demo parse preview"
+    },
+    {
+      "type": "assertion",
+      "description": "Verify the demo shows structured parse output, calendar preview, alternative slots, or a conflict/create simulation related to the typed meeting"
+    }
+  ]
+}
