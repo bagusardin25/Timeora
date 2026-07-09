@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { Bot, Check, RotateCcw, Send, Sparkles, X } from "lucide-react";
+import { Bot, Check, Mic, MicOff, RotateCcw, Send, Sparkles, X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
@@ -70,6 +70,53 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+type SpeechRecognitionResultLike = ArrayLike<{ transcript: string }> & {
+  isFinal?: boolean;
+};
+
+type SpeechRecognitionLike = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onstart: (() => void) | null;
+  onresult: ((event: {
+    resultIndex: number;
+    results: ArrayLike<SpeechRecognitionResultLike>;
+  }) => void) | null;
+  onerror: ((event: { error: string }) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+/** Rebuild the spoken phrase for this recognition session (never append cumulative chunks). */
+function transcriptFromResults(results: ArrayLike<SpeechRecognitionResultLike>): string {
+  let spoken = "";
+  for (let i = 0; i < results.length; i += 1) {
+    spoken += results[i]?.[0]?.transcript ?? "";
+  }
+  return spoken.trim();
+}
+
+function mergeVoiceQuery(base: string, spoken: string): string {
+  const trimmedBase = base.trim();
+  const trimmedSpoken = spoken.trim();
+  if (!trimmedSpoken) return trimmedBase;
+  if (!trimmedBase) return trimmedSpoken;
+  return `${trimmedBase} ${trimmedSpoken}`;
+}
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
+function getSpeechRecognition(): SpeechRecognitionConstructor | null {
+  if (typeof window === "undefined") return null;
+  const win = window as unknown as {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  };
+  return win.SpeechRecognition ?? win.webkitSpeechRecognition ?? null;
+}
+
 function executionParams(result: AssistantResult): AssistantExecuteParams | null {
   if (!result.requires_confirmation || !isRecord(result.result)) return null;
   const data = result.result;
@@ -136,7 +183,12 @@ export function AssistantPanel({
   const [messages, setMessages] = useState<Message[]>([]);
   const [pending, setPending] = useState(false);
   const [retryText, setRetryText] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  /** Text already in the input when a voice session starts (typed text preserved once). */
+  const voiceBaseRef = useRef("");
   const isMobile = useMobile();
   const reduceMotion = useReducedMotion();
 
@@ -155,6 +207,98 @@ export function AssistantPanel({
   useEffect(() => {
     scrollRef.current?.scrollTo?.({ top: scrollRef.current.scrollHeight, behavior: reduceMotion ? "auto" : "smooth" });
   }, [messages, pending, reduceMotion]);
+
+  // Stop recognition on unmount
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop();
+      recognitionRef.current = null;
+    };
+  }, []);
+
+  // Stop recognition when panel is closed
+  useEffect(() => {
+    if (!open) {
+      recognitionRef.current?.stop();
+      recognitionRef.current = null;
+      setIsListening(false);
+    }
+  }, [open]);
+
+  // Stop recognition while a request is in flight
+  useEffect(() => {
+    if (pending && isListening) {
+      recognitionRef.current?.stop();
+      recognitionRef.current = null;
+      setIsListening(false);
+    }
+  }, [pending, isListening]);
+
+  const toggleListening = () => {
+    if (pending) return;
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      recognitionRef.current = null;
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition = getSpeechRecognition();
+    if (!SpeechRecognition) {
+      setVoiceError("Browser tidak mendukung input suara.");
+      return;
+    }
+
+    setVoiceError(null);
+    // Snapshot typed text once per session so progressive results replace speech, not stack.
+    voiceBaseRef.current = query.trim();
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    // Live partials are fine; we rebuild the full session phrase on every event.
+    recognition.interimResults = true;
+    recognition.lang = "id-ID";
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setVoiceError(null);
+    };
+
+    recognition.onresult = (event) => {
+      // Browsers often fire progressive updates where results[0] grows to the full
+      // phrase. Always rebuild from the whole results list + session base — never
+      // append each event onto the previous query state.
+      const spoken = transcriptFromResults(event.results);
+      if (!spoken) return;
+      setQuery(mergeVoiceQuery(voiceBaseRef.current, spoken));
+    };
+
+    recognition.onerror = (event) => {
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        setVoiceError("Izin mikrofon ditolak.");
+      } else if (event.error === "no-speech") {
+        setVoiceError("Tidak ada suara terdeteksi.");
+      } else if (event.error !== "aborted") {
+        setVoiceError("Input suara gagal.");
+      }
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      recognitionRef.current = null;
+    };
+
+    recognitionRef.current = recognition;
+    try {
+      recognition.start();
+    } catch {
+      setVoiceError("Input suara gagal.");
+      setIsListening(false);
+      recognitionRef.current = null;
+    }
+  };
 
   const submit = async (
     text: string,
@@ -309,6 +453,11 @@ export function AssistantPanel({
             <RotateCcw data-icon="inline-start" /> Retry last request
           </Button>
         ) : null}
+        {voiceError ? (
+          <p className="mb-2 px-1 text-xs text-destructive" role="alert">
+            {voiceError}
+          </p>
+        ) : null}
         <div className="flex items-end gap-2 rounded-2xl border border-input bg-background p-2 focus-within:ring-2 focus-within:ring-ring">
           <Textarea
             value={query}
@@ -324,6 +473,18 @@ export function AssistantPanel({
             disabled={pending}
             className="max-h-32 min-h-11 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0"
           />
+          <Button
+            type="button"
+            size="icon"
+            variant={isListening ? "destructive" : "ghost"}
+            aria-label={isListening ? "Stop voice input" : "Start voice input"}
+            aria-pressed={isListening}
+            disabled={pending}
+            onClick={toggleListening}
+            className="size-11 shrink-0 rounded-xl"
+          >
+            {isListening ? <MicOff /> : <Mic />}
+          </Button>
           <Button type="submit" size="icon" aria-label="Send" disabled={pending || !query.trim()} className="size-11 shrink-0 rounded-xl">
             <Send />
           </Button>
