@@ -1,3 +1,4 @@
+import asyncio
 from datetime import date, datetime, time, timedelta
 
 import httpx
@@ -20,6 +21,10 @@ _HEADERS = lambda: {
 }
 REST_TIMEOUT = httpx.Timeout(8.0, connect=3.0)
 EVENT_PAGE_SIZE = 500
+READ_RETRY_ATTEMPTS = 2
+READ_RETRY_BACKOFF_SECONDS = 0.2
+_RETRYABLE_READ_STATUSES = {502, 503, 504}
+_SAFE_RETRY_METHODS = {"get", "head", "options"}
 
 
 def is_configured() -> bool:
@@ -36,19 +41,43 @@ def _base() -> str:
 
 
 async def _request(method: str, url: str, **kwargs) -> httpx.Response:
-    try:
-        async with httpx.AsyncClient(timeout=REST_TIMEOUT) as client:
-            return await getattr(client, method)(url, **kwargs)
-    except httpx.TimeoutException as exc:
-        raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="Database request timed out",
-        ) from exc
-    except httpx.RequestError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Database request failed",
-        ) from exc
+    method_name = method.lower()
+    attempts = READ_RETRY_ATTEMPTS if method_name in _SAFE_RETRY_METHODS else 1
+
+    for attempt in range(attempts):
+        try:
+            async with httpx.AsyncClient(timeout=REST_TIMEOUT, trust_env=False) as client:
+                resp = await getattr(client, method_name)(url, **kwargs)
+        except httpx.TimeoutException as exc:
+            if attempt < attempts - 1:
+                await asyncio.sleep(READ_RETRY_BACKOFF_SECONDS * (2**attempt))
+                continue
+            raise HTTPException(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                detail="Database request timed out",
+            ) from exc
+        except httpx.RequestError as exc:
+            if attempt < attempts - 1:
+                await asyncio.sleep(READ_RETRY_BACKOFF_SECONDS * (2**attempt))
+                continue
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Database request failed",
+            ) from exc
+
+        if (
+            method_name in _SAFE_RETRY_METHODS
+            and resp.status_code in _RETRYABLE_READ_STATUSES
+            and attempt < attempts - 1
+        ):
+            await asyncio.sleep(READ_RETRY_BACKOFF_SECONDS * (2**attempt))
+            continue
+        return resp
+
+    raise HTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail="Database request failed",
+    )
 
 
 def _parse_time(value) -> time:

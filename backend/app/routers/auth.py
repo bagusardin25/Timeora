@@ -33,7 +33,10 @@ async def _ensure_user_row(user_id: str, email: str) -> None:
 
 async def _post_supabase(url: str, payload: dict) -> httpx.Response:
     try:
-        async with httpx.AsyncClient(timeout=AUTH_PROVIDER_TIMEOUT) as client:
+        async with httpx.AsyncClient(
+            timeout=AUTH_PROVIDER_TIMEOUT,
+            trust_env=False,
+        ) as client:
             return await client.post(
                 url,
                 json=payload,

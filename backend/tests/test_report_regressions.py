@@ -99,6 +99,93 @@ class _JsonResponse:
         return self._body
 
 
+class _TimeoutThenOkGetClient:
+    calls = 0
+
+    def __init__(self, *args, **kwargs):
+        self.timeout = kwargs.get("timeout")
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        return None
+
+    async def get(self, *args, **kwargs):
+        type(self).calls += 1
+        if type(self).calls == 1:
+            raise httpx.TimeoutException("slow upstream")
+        return _JsonResponse(200, [{"ok": True}])
+
+
+class _GatewayThenOkGetClient:
+    calls = 0
+
+    def __init__(self, *args, **kwargs):
+        self.timeout = kwargs.get("timeout")
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        return None
+
+    async def get(self, *args, **kwargs):
+        type(self).calls += 1
+        if type(self).calls == 1:
+            return _JsonResponse(504, {"message": "slow upstream"})
+        return _JsonResponse(200, [{"ok": True}])
+
+
+class _AlwaysTimeoutPostClient:
+    calls = 0
+
+    def __init__(self, *args, **kwargs):
+        self.timeout = kwargs.get("timeout")
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        return None
+
+    async def post(self, *args, **kwargs):
+        type(self).calls += 1
+        raise httpx.TimeoutException("slow upstream")
+
+
+class _CapturingOkGetClient:
+    init_kwargs = {}
+
+    def __init__(self, *args, **kwargs):
+        type(self).init_kwargs = kwargs
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        return None
+
+    async def get(self, *args, **kwargs):
+        return _JsonResponse(200, [{"ok": True}])
+
+
+class _CapturingOkPostClient:
+    init_kwargs = {}
+
+    def __init__(self, *args, **kwargs):
+        type(self).init_kwargs = kwargs
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        return None
+
+    async def post(self, *args, **kwargs):
+        return _JsonResponse(200, {"ok": True})
+
+
 def _event_row(event_id: str, title: str = "Report regression") -> dict:
     return {
         "id": event_id,
@@ -166,8 +253,76 @@ class TestAuthReportRegressions(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.access_token, "access-token")
         self.assertEqual(response.refresh_token, "refresh-token")
 
+    async def test_auth_provider_request_does_not_use_environment_proxy(self):
+        _CapturingOkPostClient.init_kwargs = {}
+
+        with patch.object(auth.httpx, "AsyncClient", _CapturingOkPostClient):
+            response = await auth._post_supabase(
+                "https://example.test/auth/v1/token",
+                {"refresh_token": "refresh-token"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIs(_CapturingOkPostClient.init_kwargs["trust_env"], False)
+
 
 class TestSupabaseStoreReportRegressions(unittest.IsolatedAsyncioTestCase):
+    async def test_supabase_read_timeout_retries_once_before_success(self):
+        _TimeoutThenOkGetClient.calls = 0
+
+        with (
+            patch.object(supabase_store.httpx, "AsyncClient", _TimeoutThenOkGetClient),
+            patch.object(supabase_store.asyncio, "sleep", AsyncMock()) as sleep,
+        ):
+            response = await supabase_store._request("get", "https://example.test/rest/v1/events")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(_TimeoutThenOkGetClient.calls, 2)
+        sleep.assert_awaited_once()
+
+    async def test_supabase_read_gateway_status_retries_once_before_success(self):
+        _GatewayThenOkGetClient.calls = 0
+
+        with (
+            patch.object(supabase_store.httpx, "AsyncClient", _GatewayThenOkGetClient),
+            patch.object(supabase_store.asyncio, "sleep", AsyncMock()) as sleep,
+        ):
+            response = await supabase_store._request("get", "https://example.test/rest/v1/events")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(_GatewayThenOkGetClient.calls, 2)
+        sleep.assert_awaited_once()
+
+    async def test_supabase_post_timeout_is_not_retried(self):
+        _AlwaysTimeoutPostClient.calls = 0
+
+        with (
+            patch.object(supabase_store.httpx, "AsyncClient", _AlwaysTimeoutPostClient),
+            patch.object(supabase_store.asyncio, "sleep", AsyncMock()) as sleep,
+        ):
+            with self.assertRaises(HTTPException) as raised:
+                await supabase_store._request(
+                    "post",
+                    "https://example.test/rest/v1/events",
+                    json={"title": "No duplicate retry"},
+                )
+
+        self.assertEqual(raised.exception.status_code, 504)
+        self.assertEqual(_AlwaysTimeoutPostClient.calls, 1)
+        sleep.assert_not_awaited()
+
+    async def test_supabase_rest_request_does_not_use_environment_proxy(self):
+        _CapturingOkGetClient.init_kwargs = {}
+
+        with patch.object(supabase_store.httpx, "AsyncClient", _CapturingOkGetClient):
+            response = await supabase_store._request(
+                "get",
+                "https://example.test/rest/v1/events",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIs(_CapturingOkGetClient.init_kwargs["trust_env"], False)
+
     async def test_list_events_paginates_past_default_supabase_page(self):
         with (
             patch.object(supabase_store, "_base", return_value="https://example.test/rest/v1"),
