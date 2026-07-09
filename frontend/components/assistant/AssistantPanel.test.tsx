@@ -38,7 +38,7 @@ describe("AssistantPanel", () => {
     });
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
 
-    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Apa jadwal saya hari ini?");
+    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Apa jadwal saya hari ini?");
     await user.click(screen.getByRole("button", { name: "Send" }));
 
     expect(callAssistantMock).toHaveBeenCalledWith("Apa jadwal saya hari ini?", undefined);
@@ -57,7 +57,7 @@ describe("AssistantPanel", () => {
     });
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
 
-    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Apa jadwal saya?");
+    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Apa jadwal saya?");
     await user.click(screen.getByRole("button", { name: "Send" }));
 
     expect(callAssistantMock).toHaveBeenCalledWith("Apa jadwal saya?", undefined);
@@ -75,8 +75,8 @@ describe("AssistantPanel", () => {
           type: "event_selection",
           prompt: "Which team meeting did you mean?",
           choices: [
-            { id: "one", title: "Marketing Sync", start_time: "10:00:00" },
-            { id: "two", title: "Product Sync", start_time: "14:00:00" },
+            { id: "one", title: "Marketing Sync", start_time: "10:00:00", date: "2026-07-10" },
+            { id: "two", title: "Product Sync", start_time: "14:00:00", date: "2026-07-10" },
           ],
         },
       })
@@ -88,14 +88,15 @@ describe("AssistantPanel", () => {
       });
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
 
-    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Batalkan team sync");
+    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Batalkan team sync");
     await user.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByText("2026-07-10 · 14:00")).toBeVisible();
     await user.click(await screen.findByRole("button", { name: /Product Sync/ }));
 
     expect(callAssistantMock).toHaveBeenLastCalledWith("Batalkan team sync", {
       selected_event_id: "two",
     });
-    expect(await screen.findByRole("button", { name: "Confirm action" })).toBeVisible();
+    expect(await screen.findByRole("button", { name: "Batalkan event" })).toBeVisible();
   });
 
   it("confirms native update tool results with event data", async () => {
@@ -105,6 +106,7 @@ describe("AssistantPanel", () => {
       intent: "update",
       result: {
         primary_event_id: "event-1",
+        primary_title: "Product Sync",
         event_data: { description: "Updated prep notes", priority: "important" },
       },
       message: "Update Product Sync?",
@@ -118,9 +120,10 @@ describe("AssistantPanel", () => {
     });
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={onEventsChanged} />);
 
-    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Make Product Sync important");
+    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Make Product Sync important");
     await user.click(screen.getByRole("button", { name: "Send" }));
-    await user.click(await screen.findByRole("button", { name: "Confirm action" }));
+    expect(await screen.findByText("description: Updated prep notes")).toBeVisible();
+    await user.click(await screen.findByRole("button", { name: "Perbarui event" }));
 
     expect(executeAssistantMock).toHaveBeenCalledWith({
       action: "update",
@@ -128,6 +131,8 @@ describe("AssistantPanel", () => {
       event_data: { description: "Updated prep notes", priority: "important" },
     });
     expect(onEventsChanged).toHaveBeenCalled();
+    expect(await screen.findByText("Berhasil diterapkan")).toBeVisible();
+    expect(screen.getByText("Aksi sudah dikonfirmasi.")).toBeVisible();
   });
 
   it("confirms create with executeAssistant and event_data", async () => {
@@ -153,11 +158,13 @@ describe("AssistantPanel", () => {
     });
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={onEventsChanged} />);
 
-    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Jadwalkan Team Standup besok jam 9");
+    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Jadwalkan Team Standup besok jam 9");
     await user.click(screen.getByRole("button", { name: "Send" }));
 
     expect(callAssistantMock).toHaveBeenCalledWith("Jadwalkan Team Standup besok jam 9", undefined);
-    await user.click(await screen.findByRole("button", { name: "Confirm action" }));
+    expect(await screen.findByText("2026-07-10 · 09:00")).toBeVisible();
+    expect(screen.getByText("30 menit")).toBeVisible();
+    await user.click(await screen.findByRole("button", { name: "Buat event" }));
 
     expect(executeAssistantMock).toHaveBeenCalledWith({
       action: "create",
@@ -173,6 +180,7 @@ describe("AssistantPanel", () => {
       intent: "reschedule",
       result: {
         primary_event_id: "event-rs",
+        primary_title: "Product Sync",
         new_date: "2026-07-11",
         new_time: "15:00:00",
       },
@@ -187,9 +195,10 @@ describe("AssistantPanel", () => {
     });
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={onEventsChanged} />);
 
-    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Pindahkan Product Sync ke jam 3");
+    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Pindahkan Product Sync ke jam 3");
     await user.click(screen.getByRole("button", { name: "Send" }));
-    await user.click(await screen.findByRole("button", { name: "Confirm action" }));
+    expect(await screen.findByText("Ke 2026-07-11 · 15:00")).toBeVisible();
+    await user.click(await screen.findByRole("button", { name: "Pindahkan event" }));
 
     expect(executeAssistantMock).toHaveBeenCalledWith({
       action: "reschedule",
@@ -220,15 +229,112 @@ describe("AssistantPanel", () => {
     });
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={onEventsChanged} />);
 
-    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Batalkan Marketing Sync");
+    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Batalkan Marketing Sync");
     await user.click(screen.getByRole("button", { name: "Send" }));
-    await user.click(await screen.findByRole("button", { name: "Confirm action" }));
+    await user.click(await screen.findByRole("button", { name: "Batalkan event" }));
 
     expect(executeAssistantMock).toHaveBeenCalledWith({
       action: "cancel",
       event_id: "event-cancel",
     });
     expect(onEventsChanged).toHaveBeenCalled();
+  });
+
+  it("does not allow confirming the same action twice", async () => {
+    const user = userEvent.setup();
+    callAssistantMock.mockResolvedValueOnce({
+      intent: "cancel",
+      result: {
+        primary_event_id: "event-cancel",
+        primary_title: "Marketing Sync",
+      },
+      message: "Cancel Marketing Sync?",
+      requires_confirmation: true,
+    });
+    executeAssistantMock.mockResolvedValueOnce({
+      intent: "cancel",
+      result: { id: "event-cancel", title: "Marketing Sync" },
+      message: "Event cancelled.",
+      executed: true,
+    });
+    render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
+
+    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Batalkan Marketing Sync");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await user.click(await screen.findByRole("button", { name: "Batalkan event" }));
+
+    expect(await screen.findByText("Aksi sudah dikonfirmasi.")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Batalkan event" })).not.toBeInTheDocument();
+    expect(executeAssistantMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries a failed calendar execute action", async () => {
+    const user = userEvent.setup();
+    const onEventsChanged = vi.fn();
+    callAssistantMock.mockResolvedValueOnce({
+      intent: "create",
+      result: {
+        event_data: {
+          title: "Team Standup",
+          date: "2026-07-10",
+          start_time: "09:00:00",
+          duration_minutes: 30,
+        },
+      },
+      message: "Create Team Standup?",
+      requires_confirmation: true,
+    });
+    executeAssistantMock
+      .mockRejectedValueOnce(new Error("Network down"))
+      .mockResolvedValueOnce({
+        intent: "create",
+        result: { id: "new-1", title: "Team Standup" },
+        message: "Event created.",
+        executed: true,
+      });
+    render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={onEventsChanged} />);
+
+    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Jadwalkan standup");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await user.click(await screen.findByRole("button", { name: "Buat event" }));
+
+    expect(await screen.findByText("Network down")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: /Coba lagi aksi kalender/ }));
+
+    expect(executeAssistantMock).toHaveBeenCalledTimes(2);
+    expect(onEventsChanged).toHaveBeenCalled();
+    expect(await screen.findByText("Berhasil diterapkan")).toBeVisible();
+  });
+
+  it("shows context event chip and clears it", async () => {
+    const user = userEvent.setup();
+    const onClearContext = vi.fn();
+    render(
+      <AssistantPanel
+        open
+        onOpenChange={vi.fn()}
+        onEventsChanged={vi.fn()}
+        onClearContext={onClearContext}
+        contextEvent={{
+          id: "ctx-1",
+          title: "Product Sync",
+          date: "2026-07-10",
+          start_time: "14:00:00",
+          duration_minutes: 30,
+          participants: "",
+          description: "",
+          priority: "normal",
+          tags: [],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Konteks event")).toBeVisible();
+    expect(screen.getByText("Product Sync")).toBeVisible();
+    expect(screen.getByText("2026-07-10 · 14:00")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Hapus konteks event" }));
+    expect(onClearContext).toHaveBeenCalled();
   });
 
   type RecognitionHandlers = {
@@ -292,7 +398,7 @@ describe("AssistantPanel", () => {
       recognition!.onend?.();
     });
 
-    expect(screen.getByPlaceholderText("Ask or type a message…")).toHaveValue("Apa jadwal saya hari ini");
+    expect(screen.getByPlaceholderText("Tanya atau ketik pesan…")).toHaveValue("Apa jadwal saya hari ini");
     expect(callAssistantMock).not.toHaveBeenCalled();
   });
 
@@ -301,7 +407,7 @@ describe("AssistantPanel", () => {
     const { getRecognition } = createSpeechRecognitionMock();
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
 
-    const input = screen.getByPlaceholderText("Ask or type a message…");
+    const input = screen.getByPlaceholderText("Tanya atau ketik pesan…");
     await user.type(input, "Catatan:");
     await user.click(screen.getByRole("button", { name: "Start voice input" }));
 
@@ -337,6 +443,143 @@ describe("AssistantPanel", () => {
     expect(callAssistantMock).not.toHaveBeenCalled();
   });
 
+  it("resolves short slot follow-ups from the last find_slot result", async () => {
+    const user = userEvent.setup();
+    callAssistantMock
+      .mockResolvedValueOnce({
+        intent: "find_slot",
+        result: {
+          date: "2026-07-10",
+          duration_minutes: 60,
+          slots: [
+            { start_time: "14:00", reason: "After lunch" },
+            { start_time: "15:00", reason: "Later" },
+          ],
+        },
+        message: "Ditemukan 2 slot kosong.",
+      })
+      .mockResolvedValueOnce({
+        intent: "create",
+        result: {
+          event_data: {
+            title: "Meeting",
+            date: "2026-07-10",
+            start_time: "15:00:00",
+            duration_minutes: 60,
+          },
+        },
+        message: 'Buat "Meeting" pada 2026-07-10 jam 15:00?',
+        requires_confirmation: true,
+      });
+
+    render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
+
+    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Cari slot");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByText("14:00")).toBeVisible();
+
+    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "pakai yang kedua");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    expect(callAssistantMock).toHaveBeenLastCalledWith(
+      "Jadwalkan Meeting pada 2026-07-10 jam 15:00",
+      undefined,
+    );
+  });
+
+  it("shows conflict recovery slots when create confirm conflicts", async () => {
+    const user = userEvent.setup();
+    callAssistantMock.mockResolvedValueOnce({
+      intent: "create",
+      result: {
+        event_data: {
+          title: "Meeting",
+          date: "2026-07-10",
+          start_time: "09:00:00",
+          duration_minutes: 60,
+        },
+      },
+      message: "Buat Meeting?",
+      requires_confirmation: true,
+    });
+    executeAssistantMock.mockResolvedValueOnce({
+      intent: "conflict",
+      message: 'Jam bentrok dengan "Standup". Pilih slot alternatif.',
+      result: {
+        conflict: true,
+        conflicting_event: "Standup",
+        date: "2026-07-10",
+        duration_minutes: 60,
+        title: "Meeting",
+        slots: [
+          { start_time: "10:00", reason: "Same day, 60 min later" },
+          { start_time: "11:00", reason: "Same day, 120 min later" },
+        ],
+      },
+    });
+
+    render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
+    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Jadwalkan meeting");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await user.click(await screen.findByRole("button", { name: "Buat event" }));
+
+    expect(await screen.findByText("Bentrok jadwal")).toBeVisible();
+    expect(screen.getByText("10:00")).toBeVisible();
+    expect(screen.queryByText("Aksi sudah dikonfirmasi.")).not.toBeInTheDocument();
+  });
+
+  it("shows help capabilities and view-calendar after success", async () => {
+    const user = userEvent.setup();
+    const onViewCalendar = vi.fn();
+    callAssistantMock
+      .mockResolvedValueOnce({
+        intent: "help",
+        message: "Saya asisten kalender Timeora. Saya bisa bantu.",
+        result: { capabilities: ["query"] },
+        suggested_actions: ["query", "find_free_slot", "create"],
+      })
+      .mockResolvedValueOnce({
+        intent: "create",
+        result: {
+          event_data: {
+            title: "Meeting",
+            date: "2026-07-10",
+            start_time: "10:00:00",
+            duration_minutes: 60,
+          },
+        },
+        message: "Buat Meeting?",
+        requires_confirmation: true,
+      });
+    executeAssistantMock.mockResolvedValueOnce({
+      intent: "create",
+      message: "Event berhasil ditambahkan ke kalender.",
+      executed: true,
+      result: { id: "1", title: "Meeting", date: "2026-07-10", start_time: "10:00:00" },
+      events: [{ id: "1", title: "Meeting", date: "2026-07-10", start_time: "10:00:00" } as never],
+    });
+
+    render(
+      <AssistantPanel
+        open
+        onOpenChange={vi.fn()}
+        onEventsChanged={vi.fn()}
+        onViewCalendar={onViewCalendar}
+      />,
+    );
+
+    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "hai");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByText(/asisten kalender/i)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Apa jadwal saya hari ini?" })).toBeVisible();
+
+    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "buat meeting");
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    await user.click(await screen.findByRole("button", { name: "Buat event" }));
+    await user.click(await screen.findByRole("button", { name: /Lihat di kalender/i }));
+    expect(onViewCalendar).toHaveBeenCalled();
+  });
+
   it("shows a short error when the browser lacks speech recognition", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("SpeechRecognition", undefined);
@@ -358,11 +601,11 @@ describe("AssistantPanel", () => {
     });
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
 
-    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Jadwalkan sesuatu");
+    await user.type(screen.getByPlaceholderText("Tanya atau ketik pesan…"), "Jadwalkan sesuatu");
     await user.click(screen.getByRole("button", { name: "Send" }));
 
     expect(await screen.findByText("Create this event?")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Confirm action" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Buat event" })).not.toBeInTheDocument();
   });
 
   it("supports older Android WebView media query listeners", () => {
