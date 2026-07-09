@@ -360,6 +360,218 @@
   color: var(--muted-foreground) !important;
 }
 
+/* =========================================
+   FullCalendar DayGrid Month View Fixes
+   - Constrain events inside cells
+   - Prevent overflow, cutoffs, bad stacking
+   - Proper truncation + ellipsis
+   - Stable +N more
+   ========================================= */
+.fc-daygrid-day-frame {
+  overflow: hidden !important;
+  position: relative !important;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.fc-daygrid-day-top {
+  position: relative !important;
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px;
+  min-height: 28px; /* Force a reserved area for the date number */
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.fc-daygrid-day-events {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 4px 4px 4px;
+  /* Removed margin-top, natural flow will place events below top area */
+  z-index: 1;
+}
+
+.fc-daygrid-event-harness {
+  flex: 0 0 auto;
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.fc-daygrid-event {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box;
+  border-radius: 3px !important;
+}
+
+.fc-daygrid-event .fc-event-main {
+  padding: 1px 3px !important;
+  overflow: hidden !important;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.fc-daygrid-event .fc-event-main-frame {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.fc-daygrid-event .fc-event-title-container {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 10px;
+  line-height: 1.15;
+}
+
+.fc-daygrid-event .fc-event-title {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  display: inline-block;
+}
+
+/* +N more indicator - stable inside cell */
+.fc-daygrid-more-link {
+  display: block;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 4px;
+  margin: 1px 0 0;
+  background-color: rgba(0, 0, 0, 0.06);
+  color: var(--muted-foreground);
+  border-radius: 2px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.dark .fc-daygrid-more-link {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* FullCalendar "More" Events Popover styling */
+.fc .fc-popover {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  overflow: hidden;
+  z-index: 100 !important;
+}
+
+.fc .fc-popover-header {
+  background-color: #f9fafb !important;
+  color: #111827 !important;
+  padding: 8px 12px !important;
+  font-weight: 600 !important;
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+.fc .fc-popover-header .fc-popover-title {
+  color: #111827 !important;
+  font-size: 13px !important;
+}
+
+.fc .fc-popover-header .fc-popover-close {
+  color: #6b7280 !important;
+  opacity: 0.8;
+  padding: 4px !important;
+  border-radius: var(--radius-sm) !important;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.fc .fc-popover-header .fc-popover-close:hover {
+  color: #111827 !important;
+  background-color: #f3f4f6 !important;
+  opacity: 1;
+}
+
+.fc .fc-popover-body {
+  background-color: #ffffff !important;
+  color: #374151 !important;
+  padding: 8px !important;
+}
+
+/* Dark mode overrides for FullCalendar Popover */
+.dark .fc .fc-popover {
+  background-color: #18181b !important;
+  border-color: #2a2a2e !important;
+}
+
+.dark .fc .fc-popover-header {
+  background-color: #202024 !important;
+  color: #f3f4f6 !important;
+  border-bottom-color: #2a2a2e !important;
+}
+
+.dark .fc .fc-popover-header .fc-popover-title {
+  color: #f3f4f6 !important;
+}
+
+.dark .fc .fc-popover-header .fc-popover-close {
+  color: #9ca3af !important;
+}
+
+.dark .fc .fc-popover-header .fc-popover-close:hover {
+  color: #ffffff !important;
+  background-color: #2a2a2e !important;
+}
+
+.dark .fc .fc-popover-body {
+  background-color: #18181b !important;
+  color: #e5e7eb !important;
+}
+
+/* Ensure no cell overflow on edges (esp Sat/Sun) */
+.fc-daygrid-day {
+  overflow: hidden !important;
+}
+
+.fc-daygrid-day-frame {
+  border: 0 !important; /* let theme handle */
+}
+
+/* Fix drag and drop width expansion in month view */
+.fc-event-mirror,
+.fc-event-dragging,
+.fc-daygrid-event-harness.fc-event-mirror,
+.fc-daygrid-event-harness.fc-event-dragging,
+.fc-daygrid-event.fc-event-mirror,
+.fc-daygrid-event.fc-event-dragging,
+.fc-event-mirror .fc-daygrid-event,
+.fc-event-dragging .fc-daygrid-event,
+.fc-event-mirror .fc-daygrid-event-harness,
+.fc-event-dragging .fc-daygrid-event-harness {
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  width: var(--dragged-event-width, auto) !important;
+  height: var(--dragged-event-height, auto) !important;
+  max-width: var(--dragged-event-width, 100%) !important;
+}
+
 /* Accent Color Override - Violet/Indigo Vibe */
 :root {
   --primary: 260 100% 65%; /* Indigo/Violet */

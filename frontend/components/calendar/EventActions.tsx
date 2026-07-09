@@ -34,9 +34,9 @@ function stopCalendarClick(event: SyntheticEvent) {
 
 export function EventActions({ event, children, onEdit, onAskAI, onDelete }: EventActionsProps) {
   return (
-    <div className="group/event relative h-full">
+    <div className="group relative h-full w-full">
       <ContextMenu>
-        <ContextMenuTrigger className="block h-full" onContextMenu={stopCalendarClick}>
+        <ContextMenuTrigger className="block h-full w-full" onContextMenu={stopCalendarClick}>
           {children}
         </ContextMenuTrigger>
         <ContextMenuContent onClick={stopCalendarClick} onPointerDown={stopCalendarClick}>
@@ -74,11 +74,11 @@ export function EventActions({ event, children, onEdit, onAskAI, onDelete }: Eve
               onClick={stopCalendarClick}
               onMouseDown={stopCalendarClick}
               onPointerDown={stopCalendarClick}
-              className="absolute right-1 top-1 size-11 bg-background/80 opacity-100 shadow-sm md:size-8 md:opacity-0 md:group-hover/event:opacity-100 md:group-focus-within/event:opacity-100"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded bg-background/80 opacity-0 group-hover:opacity-100 focus:opacity-100 focus-within:opacity-100 transition-opacity z-20 shadow-sm"
             />
           }
         >
-          <MoreVertical />
+          <MoreVertical className="w-4 h-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" onClick={stopCalendarClick} onPointerDown={stopCalendarClick}>
           <DropdownMenuGroup>

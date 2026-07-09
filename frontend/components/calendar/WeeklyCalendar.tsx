@@ -146,27 +146,39 @@ export function WeeklyCalendar({
     };
 
     const handleDragStart = (e: React.DragEvent) => {
+      const target = e.currentTarget as HTMLElement;
+      const width = target.getBoundingClientRect().width;
+      const height = target.getBoundingClientRect().height;
+      document.documentElement.style.setProperty('--dragged-event-width', `${width}px`);
+      document.documentElement.style.setProperty('--dragged-event-height', `${height}px`);
+
       e.dataTransfer.setData("text/plain", eventId);
       e.dataTransfer.effectAllowed = "move";
       // Fallback: FullCalendar may consume dataTransfer, so persist in ref
       categoryDragEventIdRef.current = eventId;
     };
 
+    const handleDragEnd = () => {
+      document.documentElement.style.removeProperty('--dragged-event-width');
+      document.documentElement.style.removeProperty('--dragged-event-height');
+    };
+
     const content = isDayGrid ? (
         <div
           draggable
           onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
           data-timeora-event-id={eventId}
           data-timeora-category={categoryKey}
-          className="flex items-center gap-1.5 px-1.5 py-0.5 overflow-hidden w-full cursor-grab active:cursor-grabbing"
+          className="relative group flex items-center gap-1.5 px-1.5 py-0.5 overflow-hidden w-full min-w-0 max-w-full rounded cursor-grab active:cursor-grabbing"
         >
           <span
-            className="w-2 h-2 rounded-full flex-shrink-0"
+            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
             style={{ backgroundColor: cat.calendarBg }}
           />
-          <span className="text-xs font-medium truncate">
+          <span className="text-xs font-semibold block min-w-0 flex-1 truncate whitespace-nowrap overflow-hidden text-ellipsis text-left pr-7 leading-tight">
             {arg.timeText && (
-              <span className="font-semibold mr-1">{arg.timeText}</span>
+              <span className="mr-1 opacity-80">{arg.timeText}</span>
             )}
             {arg.event.title}
           </span>
@@ -175,6 +187,7 @@ export function WeeklyCalendar({
       <div
         draggable
         onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
         data-timeora-event-id={eventId}
         data-timeora-category={categoryKey}
         className="flex items-start gap-1.5 px-1.5 py-1 overflow-hidden h-full cursor-grab active:cursor-grabbing"
@@ -196,7 +209,7 @@ export function WeeklyCalendar({
 
     return (
       <HoverCard>
-        <HoverCardTrigger render={<div className="h-full" />}>
+        <HoverCardTrigger render={<div className="h-full w-full" />}>
           <EventActions
             event={eventData}
             onEdit={(event) => onEventEdit?.(event.id || "")}
@@ -319,72 +332,109 @@ export function WeeklyCalendar({
   return (
     <div className="w-full flex flex-col h-full gap-5" data-testid="weekly-calendar">
       {/* Custom Premium Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100 dark:border-white/5">
-        {/* Left side: Navigation & Title */}
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:gap-4 pb-2 border-b border-slate-100 dark:border-white/5">
+        {/* Top Row: Title and Prev/Next (Mobile only) */}
+        <div className="flex items-center justify-between sm:hidden px-1">
+          <h3 className="text-base font-bold text-slate-800 dark:text-white tracking-tight shrink-0 select-none">
+            {calendarTitle}
+          </h3>
           <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-slate-200/50 dark:border-white/5 shrink-0">
             <button
               type="button"
               onClick={handlePrev}
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg hover:bg-white dark:hover:bg-zinc-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer sm:min-h-8 sm:min-w-8"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg hover:bg-white dark:hover:bg-zinc-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
               aria-label="Previous calendar range"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               type="button"
-              onClick={handleToday}
-              aria-label="Go to today"
-              className="min-h-11 px-3 text-xs font-semibold rounded-lg hover:bg-white dark:hover:bg-zinc-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer sm:min-h-8"
-            >
-              Today
-            </button>
-            <button
-              type="button"
               onClick={handleNext}
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg hover:bg-white dark:hover:bg-zinc-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer sm:min-h-8 sm:min-w-8"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg hover:bg-white dark:hover:bg-zinc-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
               aria-label="Next calendar range"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-          
-          <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-white tracking-tight shrink-0 select-none">
-            {calendarTitle}
-          </h3>
         </div>
 
-        {/* Right side: View selector */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <div className="flex bg-slate-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-slate-200/50 dark:border-white/5 relative">
-            {views.map((v) => {
-              const isActive = currentView === v.id;
-              return (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => handleViewChange(v.id)}
-                  aria-label={`Switch calendar to ${v.label.toLowerCase()} view`}
-                  className="relative min-h-11 px-3.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer select-none sm:min-h-8"
-                  style={{ color: isActive ? "var(--foreground)" : "var(--muted-foreground)" }}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeViewIndicator"
-                      className="absolute inset-0 bg-white dark:bg-zinc-700 rounded-lg shadow-sm z-0"
-                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    />
-                  )}
-                  <span className="relative z-10">{v.label}</span>
-                </button>
-              );
-            })}
+        {/* Action Row: Today, View Selector, Add Event */}
+        <div className="flex flex-row items-center justify-between sm:justify-start gap-2 w-full">
+          {/* Desktop Title & Prev/Next (Hidden on mobile) */}
+          <div className="hidden sm:flex items-center gap-3 mr-auto">
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-slate-200/50 dark:border-white/5 shrink-0">
+              <button
+                type="button"
+                onClick={handlePrev}
+                className="flex min-h-8 min-w-8 items-center justify-center rounded-lg hover:bg-white dark:hover:bg-zinc-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={handleNext}
+                className="flex min-h-8 min-w-8 items-center justify-center rounded-lg hover:bg-white dark:hover:bg-zinc-700 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+            <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-white tracking-tight shrink-0 select-none">
+              {calendarTitle}
+            </h3>
+          </div>
+
+          <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto overflow-x-auto scrollbar-hide">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={handleToday}
+                className="shrink-0 min-h-11 px-3 sm:min-h-8 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-600 dark:text-slate-300 border border-slate-200/50 dark:border-white/5 transition-colors cursor-pointer"
+              >
+                Today
+              </button>
+              <div className="flex shrink-0 bg-slate-100 dark:bg-zinc-800 p-0.5 rounded-xl border border-slate-200/50 dark:border-white/5 relative">
+                {views.map((v) => {
+                  const isActive = currentView === v.id;
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => handleViewChange(v.id)}
+                      className="relative min-h-11 px-3 text-xs font-semibold rounded-lg transition-colors cursor-pointer select-none sm:min-h-8"
+                      style={{ color: isActive ? "var(--foreground)" : "var(--muted-foreground)" }}
+                    >
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeViewIndicator"
+                          className="absolute inset-0 bg-white dark:bg-zinc-700 rounded-lg shadow-sm z-0"
+                          transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                        />
+                      )}
+                      <span className="relative z-10">{v.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {onAddEventClick && (
+              <button
+                type="button"
+                onClick={onAddEventClick}
+                data-testid="calendar-add-event"
+                className="flex shrink-0 min-h-11 sm:min-h-8 items-center justify-center gap-1.5 px-3 sm:px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl text-xs font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Tambah Event</span>
+                <span className="inline sm:hidden">Tambah</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Category filter bar & Add button */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-3 border-b border-slate-100 dark:border-white/5">
+      {/* Category filter bar */}
+      <div className="flex flex-col xl:flex-row xl:items-center gap-4 pb-3 border-b border-slate-100 dark:border-white/5">
         {/* Saved Views / Presets */}
         <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
           <span className="text-slate-400 dark:text-zinc-500 font-semibold mr-1">Views:</span>
@@ -470,18 +520,6 @@ export function WeeklyCalendar({
             {selectedCategories.length === ALL_CATEGORY_KEYS.length ? "Clear All" : "Select All"}
           </button>
         </div>
-
-        {onAddEventClick && (
-          <button
-            type="button"
-            onClick={onAddEventClick}
-            data-testid="calendar-add-event"
-            className="flex min-h-11 items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl text-xs font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer shrink-0 xl:ml-auto"
-          >
-            <Plus className="w-4 h-4" />
-            Tambah Event
-          </button>
-        )}
       </div>
 
       {/* Calendar Area - Robust height (no brittle 100vh calc) */}
@@ -497,12 +535,22 @@ export function WeeklyCalendar({
           editable={true}
           selectable={true}
           selectMirror={true}
-          dayMaxEvents={true}
+          dayMaxEvents={currentView === "dayGridMonth" ? 1 : true}
           events={filteredEvents}
           dateClick={onDateClick}
           eventClick={onEventClick}
           eventDrop={onEventDrop}
           eventResize={onEventResize}
+          eventDragStart={(info) => {
+            const width = info.el.getBoundingClientRect().width;
+            const height = info.el.getBoundingClientRect().height;
+            document.documentElement.style.setProperty('--dragged-event-width', `${width}px`);
+            document.documentElement.style.setProperty('--dragged-event-height', `${height}px`);
+          }}
+          eventDragStop={() => {
+            document.documentElement.style.removeProperty('--dragged-event-width');
+            document.documentElement.style.removeProperty('--dragged-event-height');
+          }}
           eventContent={renderEventContent}
           datesSet={(arg) => {
             setCalendarTitle(arg.view.title);
