@@ -581,6 +581,18 @@ export function WeeklyCalendar({
               "data-timeora-category",
               categoryKey
             );
+            if (info.event.title) {
+              info.el.setAttribute("data-timeora-event-title", info.event.title);
+              info.el.setAttribute("title", info.event.title);
+            }
+            // Prefer unique accessible name for Playwright get_by_role / link filters
+            const anchor = info.el.matches("a")
+              ? info.el
+              : info.el.querySelector("a");
+            if (anchor instanceof HTMLElement && info.event.title) {
+              anchor.setAttribute("aria-label", info.event.title);
+              anchor.setAttribute("data-timeora-event-title", info.event.title);
+            }
           }}
           titleFormat={
             isMobile 

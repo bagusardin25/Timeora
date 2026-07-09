@@ -320,6 +320,32 @@ export function EventDialog({
               />
             </div>
 
+            <div className="grid gap-2">
+              <Label htmlFor="recurrence" className="text-zinc-600 dark:text-zinc-400">
+                {t("calendar.repeats")} / {t("calendar.recurrence")}
+              </Label>
+              <select
+                id="recurrence"
+                name="recurrence"
+                data-testid="recurrence-select"
+                aria-label={`${t("calendar.repeats")} ${t("calendar.recurrence")}`}
+                value={formData.recurrence_rule || ""}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    recurrence_rule: e.target.value || null,
+                  })
+                }
+                className="min-h-11 w-full rounded-md border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/20 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:min-h-10"
+              >
+                <option value="">{t("calendar.recurrenceNone")}</option>
+                <option value="daily">{t("calendar.recurrenceDaily")}</option>
+                <option value="weekdays">{t("calendar.recurrenceWeekdays")}</option>
+                <option value="weekly">{t("calendar.recurrenceWeekly")}</option>
+                <option value="monthly">{t("calendar.recurrenceMonthly")}</option>
+              </select>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="startTime" className="text-zinc-600 dark:text-zinc-400">{t("calendar.start")}</Label>
@@ -391,6 +417,7 @@ export function EventDialog({
                 </Label>
                 <select
                   id="priority"
+                  data-testid="priority-select"
                   value={formData.priority || "normal"}
                   onChange={(e) => setFormData({
                     ...formData,
@@ -409,6 +436,7 @@ export function EventDialog({
                 </Label>
                 <select
                   id="reminder"
+                  data-testid="reminder-select"
                   value={formData.reminder_minutes ?? ""}
                   onChange={(e) => setFormData({
                     ...formData,
@@ -496,6 +524,7 @@ export function EventDialog({
             <Button 
               onClick={handleSave} 
               disabled={isSaving || !canSave}
+              data-testid="save-event-button"
               className="min-h-11 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all font-semibold rounded-xl px-6"
             >
               {isSaving ? (
