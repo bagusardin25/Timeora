@@ -354,21 +354,24 @@ describe("AssistantPanel", () => {
 
   function createSpeechRecognitionMock() {
     let recognition: RecognitionHandlers | null = null;
-    const SpeechRecognitionMock = vi.fn(function SpeechRecognitionMock(this: RecognitionHandlers) {
-      recognition = this;
-      this.continuous = false;
-      this.interimResults = false;
-      this.lang = "";
-      this.onstart = null;
-      this.onresult = null;
-      this.onerror = null;
-      this.onend = null;
-      this.start = vi.fn(() => {
-        this.onstart?.();
-      });
-      this.stop = vi.fn(() => {
-        this.onend?.();
-      });
+    const SpeechRecognitionMock = vi.fn(function SpeechRecognitionMock() {
+      const instance: RecognitionHandlers = {
+        continuous: false,
+        interimResults: false,
+        lang: "",
+        onstart: null,
+        onresult: null,
+        onerror: null,
+        onend: null,
+        start: vi.fn(() => {
+          instance.onstart?.();
+        }),
+        stop: vi.fn(() => {
+          instance.onend?.();
+        }),
+      };
+      recognition = instance;
+      return instance;
     });
     vi.stubGlobal("SpeechRecognition", SpeechRecognitionMock);
     return {

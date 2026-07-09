@@ -39,12 +39,12 @@ function getGreetingKey(hour: number): "agenda.goodNight" | "agenda.goodMorning"
   return "agenda.goodNight";
 }
 
-function greetingIcon(hour: number): typeof Sun {
-  if (hour < 6) return Moon;
-  if (hour < 11) return Sunrise;
-  if (hour < 15) return Sun;
-  if (hour < 18) return Sunset;
-  return Moon;
+function GreetingIconView({ hour, className }: { hour: number; className?: string }) {
+  if (hour < 6) return <Moon className={className} />;
+  if (hour < 11) return <Sunrise className={className} />;
+  if (hour < 15) return <Sun className={className} />;
+  if (hour < 18) return <Sunset className={className} />;
+  return <Moon className={className} />;
 }
 
 function formatTimeRange(start: Date, end: Date): string {
@@ -146,7 +146,6 @@ export function TodayAgenda({ events, onEventClick }: TodayAgendaProps) {
 
   const hour = now.getHours();
   const greeting = t(getGreetingKey(hour));
-  const GreetingIcon = greetingIcon(hour);
   const dateLocale = locale === "id" ? "id-ID" : "en-US";
 
   return (
@@ -159,7 +158,7 @@ export function TodayAgenda({ events, onEventClick }: TodayAgendaProps) {
       {/* Header */}
       <div className="px-5 pt-5 pb-3">
         <div className="flex items-center gap-2 mb-1">
-          <GreetingIcon className="w-4 h-4 text-amber-500" />
+          <GreetingIconView hour={hour} className="w-4 h-4 text-amber-500" />
           <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
             {greeting}
           </span>

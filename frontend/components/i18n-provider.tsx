@@ -6,7 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 
@@ -23,42 +23,41 @@ type I18nContextValue = {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
+function subscribeLocale(onStoreChange: () => void) {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === "timeora_locale" || event.key === "timeora_preferences") {
+      onStoreChange();
+    }
+  };
+  const onCustom = () => onStoreChange();
+  window.addEventListener("storage", onStorage);
+  window.addEventListener("timeora:locale-change", onCustom);
+  return () => {
+    window.removeEventListener("storage", onStorage);
+    window.removeEventListener("timeora:locale-change", onCustom);
+  };
+}
+
+function getLocaleSnapshot(): Locale {
+  return getStoredLocale();
+}
+
+function getServerLocaleSnapshot(): Locale {
+  return DEFAULT_LOCALE;
+}
+
 export function LocaleProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
-  const [ready, setReady] = useState(false);
+  const locale = useSyncExternalStore(
+    subscribeLocale,
+    getLocaleSnapshot,
+    getServerLocaleSnapshot,
+  );
 
   useEffect(() => {
-    setLocaleState(getStoredLocale());
-    setReady(true);
-
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === "timeora_locale" || event.key === "timeora_preferences") {
-        setLocaleState(getStoredLocale());
-      }
-    };
-    const onCustom = (event: Event) => {
-      const detail = (event as CustomEvent<{ locale?: Locale }>).detail;
-      if (detail?.locale === "en" || detail?.locale === "id") {
-        setLocaleState(detail.locale);
-      } else {
-        setLocaleState(getStoredLocale());
-      }
-    };
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("timeora:locale-change", onCustom);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("timeora:locale-change", onCustom);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!ready) return;
     document.documentElement.lang = locale === "id" ? "id" : "en";
-  }, [locale, ready]);
+  }, [locale]);
 
   const setLocale = useCallback((next: Locale) => {
-    setLocaleState(next);
     setStoredLocale(next);
   }, []);
 

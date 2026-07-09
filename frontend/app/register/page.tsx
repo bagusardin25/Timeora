@@ -11,11 +11,9 @@ import Link from 'next/link';
 import { persistAuthTokens } from '@/lib/session';
 import { LanguageToggle } from '@/components/language-toggle';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { useI18n } from '@/components/i18n-provider';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { t } = useI18n();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

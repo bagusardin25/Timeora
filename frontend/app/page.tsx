@@ -19,7 +19,6 @@ import {
   Globe,
   Bot,
   Loader2,
-  X,
   AlertTriangle,
   Edit3,
   Clock
@@ -235,7 +234,14 @@ export default function LandingPage() {
 
   // Enhanced demo state
   const [dynamicEvent, setDynamicEvent] = useState<{ dayIndex: number, title: string, isConflict: boolean, time?: string, duration?: string } | null>(null);
-  const [parsedData, setParsedData] = useState<any>(null);
+  const [parsedData, setParsedData] = useState<{
+    title: string;
+    day: string;
+    time: string;
+    duration: string;
+    intent: string;
+    language: string;
+  } | null>(null);
   const [alternatives, setAlternatives] = useState<Array<{ dayIndex: number; time: string; label: string }>>([]);
   const [selectedAltIndex, setSelectedAltIndex] = useState<number | null>(null);
   const [appliedMessage, setAppliedMessage] = useState<string | null>(null);
@@ -251,19 +257,26 @@ export default function LandingPage() {
   const t = content[lang];
 
   useEffect(() => {
+    // Defer all setState into timeouts so the effect body stays free of
+    // synchronous cascading updates (react-hooks/set-state-in-effect).
     if (!demoInput.trim()) {
-      setDynamicEvent(null);
-      setParsedData(null);
-      setAlternatives([]);
-      setAppliedMessage(null);
-      setIsParsing(false);
-      return;
+      const clearTimer = window.setTimeout(() => {
+        setDynamicEvent(null);
+        setParsedData(null);
+        setAlternatives([]);
+        setAppliedMessage(null);
+        setIsParsing(false);
+      }, 0);
+      return () => window.clearTimeout(clearTimer);
     }
-    setIsParsing(true);
-    setAppliedMessage(null);
-    setSelectedAltIndex(null);
 
-    const timer = setTimeout(() => {
+    const loadingTimer = window.setTimeout(() => {
+      setIsParsing(true);
+      setAppliedMessage(null);
+      setSelectedAltIndex(null);
+    }, 0);
+
+    const timer = window.setTimeout(() => {
       const text = demoInput.toLowerCase();
       let dayIndex = 2;
       let title = demoMode === 'reschedule' ? "Rescheduled Meeting" : "New Event";
@@ -320,7 +333,10 @@ export default function LandingPage() {
       setIsParsing(false);
     }, 650);
 
-    return () => clearTimeout(timer);
+    return () => {
+      window.clearTimeout(loadingTimer);
+      window.clearTimeout(timer);
+    };
   }, [demoInput, demoMode]);
 
   useEffect(() => {
@@ -912,11 +928,11 @@ export default function LandingPage() {
           <div className="grid sm:grid-cols-2 gap-4 max-w-2xl mx-auto text-left">
             <div className="p-5 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
               <div className="font-semibold mb-1 text-sm text-violet-600">🇮🇩 Indonesian</div>
-              <div className="text-sm text-slate-500">"Rapat tim marketing besok jam 14.00 selama 45 menit"</div>
+              <div className="text-sm text-slate-500">&ldquo;Rapat tim marketing besok jam 14.00 selama 45 menit&rdquo;</div>
             </div>
             <div className="p-5 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
               <div className="font-semibold mb-1 text-sm text-violet-600">🇬🇧 English</div>
-              <div className="text-sm text-slate-500">"Marketing sync tomorrow at 2pm for 45 minutes"</div>
+              <div className="text-sm text-slate-500">&ldquo;Marketing sync tomorrow at 2pm for 45 minutes&rdquo;</div>
             </div>
           </div>
         </div>

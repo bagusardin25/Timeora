@@ -724,21 +724,19 @@ export function AssistantPanel({
     };
   }, []);
 
-  // Stop recognition when panel is closed
+  // Stop recognition when panel is closed. `onend` clears isListening.
   useEffect(() => {
     if (!open) {
       recognitionRef.current?.stop();
       recognitionRef.current = null;
-      setIsListening(false);
     }
   }, [open]);
 
-  // Stop recognition while a request is in flight
+  // Stop recognition while a request is in flight. `onend` clears isListening.
   useEffect(() => {
     if (pending && isListening) {
       recognitionRef.current?.stop();
       recognitionRef.current = null;
-      setIsListening(false);
     }
   }, [pending, isListening]);
 

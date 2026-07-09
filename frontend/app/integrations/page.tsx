@@ -46,9 +46,11 @@ export default function IntegrationsPage() {
   const router = useRouter();
   const { t } = useI18n();
 
-  function messageFrom(error: unknown): string {
-    return error instanceof Error ? error.message : t("integrations.unexpected");
-  }
+  const messageFrom = useCallback(
+    (error: unknown): string =>
+      error instanceof Error ? error.message : t("integrations.unexpected"),
+    [t],
+  );
   const [statuses, setStatuses] = useState<IntegrationStatus[]>([]);
   const [webhooks, setWebhooks] = useState<WebhookSubscription[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +77,7 @@ export default function IntegrationsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [messageFrom]);
 
   useEffect(() => {
     if (!localStorage.getItem("token")) {
@@ -98,7 +100,7 @@ export default function IntegrationsPage() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, messageFrom]);
 
   const byProvider = useMemo(
     () => new Map(statuses.map((item) => [item.provider, item])),
