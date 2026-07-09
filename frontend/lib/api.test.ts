@@ -59,7 +59,10 @@ describe("fetchApi", () => {
       .mockResolvedValueOnce(jsonResponse(401, { detail: "invalid refresh" }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(fetchApi("/events")).rejects.toBeInstanceOf(ApiError);
+    await expect(fetchApi("/events")).rejects.toMatchObject({
+      status: 401,
+      message: "Your session has expired. Please sign in again.",
+    });
 
     expect(localStorage.getItem("token")).toBeNull();
     expect(localStorage.getItem("refresh_token")).toBeNull();
@@ -78,6 +81,34 @@ describe("fetchApi", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(String(fetchMock.mock.calls[1][0])).toContain("/auth/refresh");
+  });
+
+  it("shares one refresh across parallel 401s (single-flight)", async () => {
+    localStorage.setItem("token", "expired-access");
+    localStorage.setItem("refresh_token", "valid-refresh");
+    let refreshCalls = 0;
+    const fetchMock = vi.fn(async (url: string) => {
+      if (String(url).includes("/auth/refresh")) {
+        refreshCalls += 1;
+        await new Promise((r) => setTimeout(r, 25));
+        return jsonResponse(200, {
+          access_token: "fresh-access",
+          refresh_token: "fresh-refresh",
+        });
+      }
+      if (localStorage.getItem("token") === "fresh-access") {
+        return jsonResponse(200, []);
+      }
+      return jsonResponse(401, { detail: "expired" });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const [a, b] = await Promise.all([fetchApi("/events"), fetchApi("/events")]);
+
+    expect(a).toEqual([]);
+    expect(b).toEqual([]);
+    expect(refreshCalls).toBe(1);
+    expect(localStorage.getItem("token")).toBe("fresh-access");
   });
 
   it("clears a stale access token when no refresh token is available", async () => {

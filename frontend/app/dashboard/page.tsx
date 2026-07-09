@@ -18,7 +18,9 @@ import {
   applySpreadLoad,
   API_BASE_URL,
   API_CLIENT_BUILD,
+  isUnauthorizedError,
 } from "@/lib/api";
+import { hasAuthSession } from "@/lib/session";
 import { format } from "date-fns";
 import { callAssistant } from "@/lib/api";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
@@ -176,10 +178,15 @@ export default function DashboardPage() {
       const data = await fetchEventsExpanded(from, to);
       setEvents(toCalendarEvents(data));
     } catch (err) {
+      // 401 clears session + AuthSessionWatcher → /login (duck-type: HMR breaks instanceof).
+      if (isUnauthorizedError(err)) {
+        router.replace("/login");
+        return;
+      }
       console.error("Failed to load events", err);
       toast.error(errorMessage(err, "Failed to load events. Please try again."));
     }
-  }, [dateRange.from, dateRange.to]);
+  }, [dateRange.from, dateRange.to, router]);
 
   const refreshAll = useCallback((from?: string, to?: string) => {
     void loadEvents(from, to);
@@ -187,14 +194,14 @@ export default function DashboardPage() {
   }, [loadEvents]);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
+    // Access token alone is not enough — silent renew needs refresh_token.
+    if (!hasAuthSession()) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("refresh_token");
       router.replace("/login");
       return;
     }
 
-    // One-time client diagnostics — if you still see the old timeout text,
-    // the browser is not running this build.
     console.info(`[Timeora] API client ${API_CLIENT_BUILD} base=${API_BASE_URL}`);
 
     let cancelled = false;
@@ -205,6 +212,10 @@ export default function DashboardPage() {
       })
       .catch((error: unknown) => {
         if (cancelled) return;
+        if (isUnauthorizedError(error)) {
+          router.replace("/login");
+          return;
+        }
         console.error("Failed to load events", error, { API_BASE_URL, API_CLIENT_BUILD });
         toast.error(errorMessage(error, "Failed to load events. Please try again."));
       });
@@ -513,8 +524,12 @@ export default function DashboardPage() {
             className="hidden dark:block w-9 h-9 object-contain flex-shrink-0"
           />
           <div className="flex flex-col">
-            <h1 className="text-base font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-zinc-400 leading-none">Timeora</h1>
-            <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-semibold mt-1">Your AI Companion</span>
+            <h1 className="type-brand text-base bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-zinc-400">
+              Timeora
+            </h1>
+            <span className="type-caption text-[10px] text-slate-400 dark:text-zinc-500 mt-1">
+              Your AI Companion
+            </span>
           </div>
         </div>
 
@@ -560,7 +575,7 @@ export default function DashboardPage() {
             title={`${API_CLIENT_BUILD} → ${API_BASE_URL}`}
             data-timeora-api-build={API_CLIENT_BUILD}
           >
-            {API_CLIENT_BUILD.replace("timeora-api-", "")}
+            {API_CLIENT_BUILD.replace("timeora-api-", "") /* expect: v7-session */}
           </div>
 
           {/* Better Keyboard Shortcuts Hint */}

@@ -16,7 +16,19 @@ function resolveApiBaseUrl(): string {
 
 export const API_BASE_URL = resolveApiBaseUrl();
 /** Visible in timeout errors / dashboard so we know the browser loaded this bundle. */
-export const API_CLIENT_BUILD = 'timeora-api-v6-no-abort';
+export const API_CLIENT_BUILD = 'timeora-api-v7-session';
+
+const SESSION_EXPIRED_MESSAGE = 'Your session has expired. Please sign in again.';
+
+/** Duck-type 401 checks (HMR can break `instanceof ApiError`). */
+export function isUnauthorizedError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const status = (error as { status?: unknown }).status;
+  if (status === 401) return true;
+  const message = error instanceof Error ? error.message : '';
+  return /invalid or expired token|session has expired|session expired/i.test(message);
+}
+
 /**
  * Only apply a client abort for absolute cross-origin APIs.
  * Same-origin `/backend-api` must not be aborted early — Windows + stale
@@ -42,13 +54,26 @@ function errorMessage(data: JsonRecord, defaultMessage: string): string {
   return defaultMessage;
 }
 
+function normalizeAuthDetail(status: number, data: JsonRecord): JsonRecord {
+  if (status !== 401) return data;
+  const detail = data.detail;
+  if (typeof detail === 'string' && /invalid or expired token|not authenticated|could not refresh/i.test(detail)) {
+    return { ...data, detail: SESSION_EXPIRED_MESSAGE };
+  }
+  if (detail == null || detail === '') {
+    return { ...data, detail: SESSION_EXPIRED_MESSAGE };
+  }
+  return data;
+}
+
 export class ApiError extends Error {
   public status: number;
   public data: JsonRecord;
 
   constructor(status: number, data: unknown, defaultMessage: string) {
-    const normalizedData = asRecord(data);
-    super(errorMessage(normalizedData, defaultMessage));
+    const normalizedData = normalizeAuthDetail(status, asRecord(data));
+    super(errorMessage(normalizedData, status === 401 ? SESSION_EXPIRED_MESSAGE : defaultMessage));
+    this.name = 'ApiError';
     this.status = status;
     this.data = normalizedData;
   }
@@ -112,37 +137,49 @@ function requestSignal(external?: AbortSignal | null): {
   };
 }
 
+/** Single-flight refresh so parallel 401s don't rotate/invalidate one another. */
+let refreshInFlight: Promise<boolean> | null = null;
+
 async function refreshAccessToken(): Promise<boolean> {
-  const refreshToken = localStorage.getItem('refresh_token');
-  if (!refreshToken) {
-    if (localStorage.getItem('token')) clearSession();
-    return false;
-  }
-  const timeout = requestSignal();
-  try {
-    const resp = await fetch(`${API_BASE_URL}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-      signal: timeout.signal,
-    });
-    if (!resp.ok) {
-      clearSession();
+  if (refreshInFlight) return refreshInFlight;
+
+  refreshInFlight = (async () => {
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) {
+      if (localStorage.getItem('token')) clearSession();
       return false;
     }
-    const data = await resp.json() as AuthTokenResponse;
-    if (data.access_token) {
-      persistAuthTokens(data, { preserveRefreshToken: true });
-      return true;
+    const timeout = requestSignal();
+    try {
+      const resp = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+        ...(timeout.signal ? { signal: timeout.signal } : {}),
+      });
+      if (!resp.ok) {
+        clearSession();
+        return false;
+      }
+      const data = await resp.json() as AuthTokenResponse;
+      if (data.access_token) {
+        // Supabase may rotate refresh_token; persist the new pair when present.
+        persistAuthTokens(data, { preserveRefreshToken: true });
+        return true;
+      }
+      clearSession();
+      return false;
+    } catch {
+      clearSession();
+      return false;
+    } finally {
+      timeout.dispose();
     }
-    clearSession();
-  } catch {
-    clearSession();
-    return false;
-  } finally {
-    timeout.dispose();
-  }
-  return false;
+  })().finally(() => {
+    refreshInFlight = null;
+  });
+
+  return refreshInFlight;
 }
 
 export async function fetchApi<T = unknown>(
@@ -197,9 +234,18 @@ export async function fetchApi<T = unknown>(
   if (response.status === 401 && retry && !endpoint.includes('/auth/')) {
     const refreshed = await refreshAccessToken();
     if (refreshed) return fetchApi<T>(endpoint, options, false);
+    // Session already cleared by refreshAccessToken.
+    throw new ApiError(401, { detail: SESSION_EXPIRED_MESSAGE }, 'Session expired');
   }
 
   if (!response.ok) {
+    if (response.status === 401 && !endpoint.includes('/auth/')) {
+      if (localStorage.getItem('token') || localStorage.getItem('refresh_token')) {
+        clearSession();
+      }
+      // Never surface raw backend JWT text after a failed retry.
+      throw new ApiError(401, { detail: SESSION_EXPIRED_MESSAGE }, 'Session expired');
+    }
     const errorData = await responseData(response);
     throw new ApiError(response.status, errorData, 'An error occurred while fetching data');
   }
