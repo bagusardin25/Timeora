@@ -10,9 +10,15 @@
 
 | Service | URL |
 |---------|-----|
-| **Frontend** | [https://timeora-alpha.vercel.app](https://timeora-alpha.vercel.app) |
+| **App (frontend)** | [https://timeora-alpha.vercel.app](https://timeora-alpha.vercel.app) |
 | **Backend API** | [https://timeora-production.up.railway.app](https://timeora-production.up.railway.app) |
 | **API Health** | [https://timeora-production.up.railway.app/api/health](https://timeora-production.up.railway.app/api/health) |
+
+## 📰 Write-up & demo
+
+| Resource | Link |
+|----------|------|
+| **Medium** — *Building Timeora with a Real Loop: How I Used TestSprite CLI in Hackathon Season 3* | [Read on Medium](https://medium.com/@bagusardinp/building-timeora-with-a-real-loop-how-i-used-testsprite-cli-in-hackathon-season-3-cf755d4e2845) |
 
 ---
 
@@ -92,29 +98,55 @@ project JWKS.
 
 ---
 
-## 🔄 Loop Engineering 
+## 🔄 Loop Engineering
 
-This project was built with a strict **write → verify → fail → fix → verify** loop, documented transparently in [`LOOP.md`](./LOOP.md).
+This project was built with a strict **write → verify → fail → fix → verify**
+loop, documented transparently in [`LOOP.md`](./LOOP.md) (iterations **#1–#30**).
 
 ### Verification coverage
 
-| Layer | Coverage | Current local result |
+| Layer | What it covers | Current result |
 |---|---|---|
-| Backend unit | JWT security, bilingual parsing, conflict ranking, recurrence, analytics, availability, ICS, integration security, event details, native assistant tools | **116/116 passed** |
-| Frontend unit | API hardening, calendar action menus, assistant chat, reminder scheduler, notification fallback, event dialog positioning | **55/55 passed** across 14 files |
+| Backend unit | JWT security, bilingual parsing, conflict ranking, recurrence, analytics, availability, ICS, integrations, event details, native assistant tools | **152/152 passed** (local) |
+| Frontend unit | API hardening, calendar actions, assistant chat, reminders, dialogs, session, i18n helpers | **75/75 passed** (local Vitest) |
 | Frontend static | ESLint + strict TypeScript | **Passed** |
 | Frontend build | Next.js production bundle | **Passed** |
-| TestSprite backend | Health, DB, signed JWT, forged-JWT rejection, parse, availability, auth refresh, ICS export, assistant execution | **Passing** |
-| TestSprite frontend | Register → login → Command Bar → save → calendar assertion, ICS download, assistant cancel confirmation | **Passing** |
+| **TestSprite live suite** | Cloud checks against the public app (not localhost) | **65/65 passed** · 0 failed · 0 blocked · 0 draft |
 
-The complete maker → verify → failure → fix history is documented in
+#### TestSprite suite (live)
+
+| Split | Count | Status |
+|---|---:|---|
+| Backend API tests | 25 | passed |
+| Frontend browser tests | 40 | passed |
+| **Total** | **65** | **all green** |
+
+Representative live coverage (not every edge case — strong on core + major features):
+
+- **Auth & security** — register/login, refresh, signed JWT / security smoke
+- **NL scheduling** — hybrid EN/ID parse, conflict alternatives
+- **Assistant** — create, query, reschedule, cancel, find free slot, confirm flows, voice control
+- **Calendar** — E2E create, rich details, recurring (dialog + NL), soft-delete undo, event actions
+- **Export / integrations** — `.ics` export paths, ICS import + webhook foundation
+- **Analytics** — weekly insights, block-focus action, availability heatmap
+- **Product UX** — EN/ID language switch, landing bilingual demo, category/templates/agenda/theme/profile
+
+Honest scope note: TestSprite is the **live checker** for the loop. It does **not** claim exhaustive coverage of every polish path (e.g. full OAuth providers, browser notification runtime, every mobile-only gesture). Those remain local unit tests and manual demo.
+
+The complete maker → verify → failure → fix history is in
 [`LOOP.md`](./LOOP.md), with platform test IDs and matching commits.
 
-Latest remediation evidence: commit `ea2e8e9` fixed the reported auth/session
-502s and ICS export regression, Railway deployed it successfully, and manual
-TestSprite CLI readback returned no failed or blocked tests for the project.
+Recent loop evidence:
 
-### CI/CD verification gate 
+- `#23` — auth/session + ICS remediations (`ea2e8e9`), cleared prior failed/blocked report set
+- `#25–#27` — locale q-value fix, recurrence UI + selectors, residual FE re-runs to green
+- `#28` — removed orphan draft so dashboard is not stuck at “66 complete”
+- `#29` — documented cancel / event-actions / ICS blocked→passed IDs
+- `#30` — assistant cancel/query matching + clarification UI dedupe (`7ec33b3`, `c551ea8`)
+- Live readback: `testsprite test list` → **65 passed**, empty failed/blocked/draft
+- Live smoke (pre-final docs commit): frontend **HTTP 200**, API health `db:connected`
+
+### CI/CD verification gate
 
 GitHub Actions runs local quality checks first, waits for the matching Vercel
 revision and a healthy Railway deployment, then executes fixed TestSprite
@@ -229,24 +261,23 @@ npm run build
 
 ### Manual TestSprite verification
 
+Project: `fe31e397-bb11-4aae-af0f-2916b246b3f5` · suite target **65/65 passed**.
+
 ```bash
 testsprite auth status
 
-testsprite test run 2aadf520-65ff-4f1b-9e28-80406e3fbe28 \
-  --target-url https://timeora-production.up.railway.app \
-  --wait --timeout 300 --output json
+# Full suite status (expect passed: 65, failed/blocked/draft: empty)
+testsprite test list \
+  --project fe31e397-bb11-4aae-af0f-2916b246b3f5 \
+  --output json
 
+testsprite test list --project fe31e397-bb11-4aae-af0f-2916b246b3f5 --status failed
+testsprite test list --project fe31e397-bb11-4aae-af0f-2916b246b3f5 --status blocked
+
+# Spot-check a frontend gate (example)
 testsprite test run 5c7bac18-9569-4c14-af7f-17d3bb6d6909 \
   --target-url https://timeora-alpha.vercel.app \
   --wait --timeout 600 --output json
-
-testsprite --output json test list \
-  --project fe31e397-bb11-4aae-af0f-2916b246b3f5 \
-  --status failed
-
-testsprite --output json test list \
-  --project fe31e397-bb11-4aae-af0f-2916b246b3f5 \
-  --status blocked
 ```
 
 ---
@@ -259,8 +290,10 @@ testsprite --output json test list \
 | **Creator** | Bagus Ardin Prayoga |
 | **Account** | bagusardinp@gmail.com |
 | **GitHub** | [github.com/bagusardin25/Timeora](https://github.com/bagusardin25/Timeora) |
-| **Frontend** | [timeora-alpha.vercel.app](https://timeora-alpha.vercel.app) |
-| **Backend** | [timeora-production.up.railway.app](https://timeora-production.up.railway.app) |
+| **Live app** | [timeora-alpha.vercel.app](https://timeora-alpha.vercel.app) |
+| **TestSprite suite** | **65/65 passed** (25 backend + 40 frontend) on the live app |
+| **Loop log** | [`LOOP.md`](./LOOP.md) · iterations #1–#30 |
+| **Medium write-up** | [Building Timeora with a Real Loop](https://medium.com/@bagusardinp/building-timeora-with-a-real-loop-how-i-used-testsprite-cli-in-hackathon-season-3-cf755d4e2845) |
 
 ---
 

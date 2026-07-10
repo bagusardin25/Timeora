@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { EventDialog } from "./EventDialog";
 
+// Default locale is English (see lib/i18n/types.ts DEFAULT_LOCALE).
 describe("EventDialog", () => {
   it("keeps desktop dialog centering while exposing rich event fields", () => {
     render(
@@ -19,7 +20,7 @@ describe("EventDialog", () => {
 
     expect(dialog.className).not.toContain("sm:static");
     expect(dialog.className).toContain("sm:-translate-x-1/2");
-    expect(screen.getByLabelText("Deskripsi")).toBeVisible();
+    expect(screen.getByLabelText("Description")).toBeVisible();
     expect(screen.getByLabelText("Meeting link")).toBeVisible();
     expect(screen.getByLabelText("Priority")).toBeVisible();
     expect(screen.getByLabelText("Reminder")).toBeVisible();
@@ -38,8 +39,8 @@ describe("EventDialog", () => {
       />,
     );
 
-    await user.type(screen.getByLabelText("Judul Event"), "   ");
-    await user.click(screen.getByRole("button", { name: "Simpan Event" }));
+    await user.type(screen.getByLabelText("Event title"), "   ");
+    await user.click(screen.getByRole("button", { name: "Save Event" }));
 
     expect(onSave).not.toHaveBeenCalled();
   });
@@ -55,8 +56,8 @@ describe("EventDialog", () => {
       />,
     );
 
-    const titleInput = screen.getByLabelText("Judul Event");
-    const saveButton = screen.getByRole("button", { name: "Simpan Event" });
+    const titleInput = screen.getByLabelText("Event title");
+    const saveButton = screen.getByRole("button", { name: "Save Event" });
 
     expect(saveButton).toBeDisabled();
 
@@ -81,12 +82,12 @@ describe("EventDialog", () => {
       />,
     );
 
-    await user.type(screen.getByLabelText("Judul Event"), "Late deployment");
-    await user.clear(screen.getByLabelText("Mulai"));
-    await user.type(screen.getByLabelText("Mulai"), "23:00");
-    await user.clear(screen.getByLabelText("Selesai"));
-    await user.type(screen.getByLabelText("Selesai"), "00:30");
-    await user.click(screen.getByRole("button", { name: "Simpan Event" }));
+    await user.type(screen.getByLabelText("Event title"), "Late deployment");
+    await user.clear(screen.getByLabelText("Start"));
+    await user.type(screen.getByLabelText("Start"), "23:00");
+    await user.clear(screen.getByLabelText("End"));
+    await user.type(screen.getByLabelText("End"), "00:30");
+    await user.click(screen.getByRole("button", { name: "Save Event" }));
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
       start_time: "23:00:00",
@@ -106,15 +107,15 @@ describe("EventDialog", () => {
       />,
     );
 
-    await user.type(screen.getByLabelText("Judul Event"), "Moved planning");
-    await user.clear(screen.getByLabelText("Mulai"));
-    await user.type(screen.getByLabelText("Mulai"), "11:00");
-    await user.click(screen.getByRole("button", { name: "Simpan Event" }));
+    await user.type(screen.getByLabelText("Event title"), "Moved planning");
+    await user.clear(screen.getByLabelText("Start"));
+    await user.type(screen.getByLabelText("Start"), "11:00");
+    await user.click(screen.getByRole("button", { name: "Save Event" }));
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
       start_time: "11:00:00",
       duration_minutes: 60,
     }));
-    expect(screen.getByLabelText("Selesai")).toHaveValue("12:00");
+    expect(screen.getByLabelText("End")).toHaveValue("12:00");
   });
 });
