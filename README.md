@@ -6,13 +6,9 @@
 
 > AI-powered natural language scheduling app. Built for **TestSprite Hackathon Season 3** — *"Build the Loop"*.
 
-## 🔗 Live URLs
+## 🔗 Live
 
-| Service | URL |
-|---------|-----|
-| **App (frontend)** | [https://timeora-alpha.vercel.app](https://timeora-alpha.vercel.app) |
-| **Backend API** | [https://timeora-production.up.railway.app](https://timeora-production.up.railway.app) |
-| **API Health** | [https://timeora-production.up.railway.app/api/health](https://timeora-production.up.railway.app/api/health) |
+**App:** [https://timeora-alpha.vercel.app](https://timeora-alpha.vercel.app)
 
 ## 📰 Write-up & demo
 
@@ -100,8 +96,37 @@ project JWKS.
 
 ## 🔄 Loop Engineering
 
-This project was built with a strict **write → verify → fail → fix → verify**
-loop, documented transparently in [`LOOP.md`](./LOOP.md) (iterations **#1–#30**).
+Built with a strict **write → verify → fail → fix → verify** loop against **public**
+URLs (not localhost). Full chronological log, scorecard, and failure index:
+**[`LOOP.md`](./LOOP.md)** (iterations **#1–#30**).
+
+> Timeora is a bilingual AI scheduling product where the TestSprite loop forced
+> production decisions — forged-JWT rejection, dual DB failover on Railway,
+> FullCalendar agent-hard UI, and locale correctness — proven by a **65/65** live
+> suite plus **227** unit tests, not a one-shot demo.
+
+### Final scorecard
+
+| Metric | Value |
+|--------|------:|
+| Loop iterations | **30** |
+| TestSprite live (cloud) | **65/65** (25 BE + 40 FE) |
+| Backend unit | **152/152** |
+| Frontend unit | **75/75** |
+| Product bugs closed under the loop | **8+** |
+| CI gate | Fail on non-pass TestSprite + deploy revision checks |
+
+### How TestSprite changed the product
+
+| # | Decision | Loop signal | Outcome |
+|---|----------|-------------|---------|
+| 1 | **JWT security** (`#19`) | Forged JWT still returned 200 under MVP `verify_signature: False` | Strict JWKS/HS256 claims; CI no longer soft-passes |
+| 2 | **DB production** (`#2`, `#7`–`#8`) | Live login / create-event failed with `db: disconnected` | Session pooler + Supabase REST failover |
+| 3 | **Category drag** (`#21`) | Three cloud fails on persist/attribute before green | Stable `data-timeora-*` DOM + evaluate-click harness |
+| 4 | **Locale** (`#25`–`#26`) | EN UI got Indonesian assistant text via naive `,id` match | q-value locale parse + BE/FE re-verify |
+| 5 | **Deploy + CI honesty** (`#11`, `#19`–`#20`, `#23`) | Stale Railway, false-green gates, 502 report set | Root deploys, fixed-ID GHA, failure bundles on fail |
+
+Detail and platform IDs for each case: [LOOP.md — How TestSprite Changed Timeora](./LOOP.md#how-testsprite-changed-timeora).
 
 ### Verification coverage
 
@@ -133,18 +158,26 @@ Representative live coverage (not every edge case — strong on core + major fea
 
 Honest scope note: TestSprite is the **live checker** for the loop. It does **not** claim exhaustive coverage of every polish path (e.g. full OAuth providers, browser notification runtime, every mobile-only gesture). Those remain local unit tests and manual demo.
 
-The complete maker → verify → failure → fix history is in
-[`LOOP.md`](./LOOP.md), with platform test IDs and matching commits.
+### Failure evidence (committed)
 
-Recent loop evidence:
+Judges can open artifacts in-repo (not only the TestSprite dashboard):
 
-- `#23` — auth/session + ICS remediations (`ea2e8e9`), cleared prior failed/blocked report set
-- `#25–#27` — locale q-value fix, recurrence UI + selectors, residual FE re-runs to green
-- `#28` — removed orphan draft so dashboard is not stuck at “66 complete”
-- `#29` — documented cancel / event-actions / ICS blocked→passed IDs
-- `#30` — assistant cancel/query matching + clarification UI dedupe (`7ec33b3`, `c551ea8`)
-- Live readback: `testsprite test list` → **65 passed**, empty failed/blocked/draft
-- Live smoke (pre-final docs commit): frontend **HTTP 200**, API health `db:connected`
+| Story | Path |
+|-------|------|
+| Category drag fail→fix | [`.testsprite/failure-category-v7/`](./.testsprite/failure-category-v7/), [`v8/`](./.testsprite/failure-category-v8/) |
+| Templates / agenda | [`.testsprite/failure-template-v3/`](./.testsprite/failure-template-v3/) …, [`.testsprite/failure-agenda-v2/`](./.testsprite/failure-agenda-v2/) |
+| Early FE / CORS | [`.testsprite/failure-frontend/`](./.testsprite/failure-frontend/) |
+| Later run receipts | [`.testsprite/runs/`](./.testsprite/runs/) |
+
+Full index: [LOOP.md — Committed failure evidence](./LOOP.md#committed-failure-evidence).
+
+### Judge demo path (≈60s)
+
+1. Live app → register/sign-in
+2. AI chat: create event (EN or ID) → confirm on calendar
+3. Soft-delete → Undo; optional category drag
+4. Language toggle EN ↔ ID
+5. [`LOOP.md`](./LOOP.md) scorecard → case study #1 or #3 → open a failure folder
 
 ### CI/CD verification gate
 

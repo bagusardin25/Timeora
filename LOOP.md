@@ -1,6 +1,129 @@
 # Timeora — LOOP.md
 
-Agent-written loop log. One plain-English line per iteration.
+> **Judges: read this header first.** Scorecard → five moments where the loop
+> changed the product → committed failure evidence → chronological log below.
+>
+> Agent-written loop log for **TestSprite Hackathon Season 3 — Build the Loop**.
+> Format per iteration: maker → verify → failure → fix (with platform IDs where available).
+
+**Live app:** https://timeora-alpha.vercel.app
+**Repo:** https://github.com/bagusardin25/Timeora
+
+---
+
+## Final Scorecard
+
+| Metric | Value |
+|--------|-------|
+| Loop iterations | **31** (`#1`–`#31`) |
+| TestSprite live suite | **65 tests** (59 passed / 6 blocked after restore re-run; 0 draft) |
+| Backend unit tests | **152/152** |
+| Frontend unit tests | **75/75** |
+| Real product bugs caught & fixed under the loop | **8+** (see case studies) |
+| CI / checker gate | GitHub Actions + fixed TestSprite IDs; **fail on non-pass** (no soft-pass) |
+| Deployments under test | Vercel frontend (`main`) + Railway backend (`backend`) |
+| Date range | 2026-07-01 → 2026-07-10 |
+
+**Honest scope:** TestSprite is the live checker against public URLs. It does not
+claim exhaustive coverage of every polish path (full OAuth providers, browser
+notification runtime, every mobile-only gesture). Those remain unit tests and
+manual demo. Residual FE agent flakiness on FullCalendar anchors was closed by
+app selectors + plan rewrites (#27–#29), not by hiding failures.
+
+---
+
+## How TestSprite Changed Timeora
+
+Five engineering decisions driven by verify → fail → fix → re-verify — not
+bolted on after the product shipped.
+
+### 1. JWT security: forged tokens stopped (#19)
+
+- **Before:** MVP auth used `verify_signature: False` so cloud tests could pass;
+  a forged JWT still returned **HTTP 200**.
+- **Loop signal:** Security audit reproduced the hole; CI still green with a
+  soft gate (`|| true`) and thin unit coverage.
+- **After:** Strict Supabase JWT — HS256 secret or ES256/RS256 via JWKS;
+  required `iss` / `aud` / `exp` / `sub`; wrong-key, expired, unsigned, and
+  audience/issuer mismatches rejected. Backend suite grew; GHA fails on
+  non-passing TestSprite verdicts.
+- **Evidence:** iteration `#19`; security regression unit tests; live backend
+  gate `2aadf520`.
+
+### 2. Production database: Railway DNS → pooler + REST failover (#2, #7–#8)
+
+- **Before:** Login and create-event paths 500'd when Railway could not resolve
+  Postgres (`db: disconnected` / pool `None`).
+- **Loop signal:** Backend TestSprite login and E2E create-event failed against
+  the live API, not localhost.
+- **After:** Supabase Session Pooler URL, pooler auto-convert, and
+  `supabase_store.py` PostgREST fallback when the async pool dies; health
+  reports `db` / `db_mode`.
+- **Evidence:** iterations `#2`, `#7`, `#8`; live health endpoint.
+
+### 3. FullCalendar category drag: three fail rounds → durable DOM contract (#21)
+
+- **Before:** Dragging an event onto a category chip looked fine manually;
+  cloud runs reported “did not persist” / stale attributes.
+- **Loop signal:** Test `f0efe198` failed run `e05e68f9`, failed `ad469021`,
+  then **passed 25/25** on `d49b50a0` after product + harness fixes.
+- **After:** `categoryDragEventIdRef`, stable `data-timeora-event-id` /
+  `data-timeora-category`, `eventDidMount` injection, and Playwright
+  `evaluate` clicks for viewport-clipped modals.
+- **Evidence:** iteration `#21`; committed bundles under
+  [`.testsprite/failure-category-v7/`](.testsprite/failure-category-v7/) and
+  [`.testsprite/failure-category-v8/`](.testsprite/failure-category-v8/).
+
+### 4. Locale bug: `en-US,…,id` misclassified as Indonesian (#25–#26)
+
+- **Before:** `resolve_locale` used a naive `,id` substring check, so browsers
+  sending `en-US,en;q=0.9,id;q=0.8` got Indonesian assistant copy while the UI
+  was English.
+- **Loop signal:** FE query plan `d2a29c44` failed/blocked with mixed-language
+  responses on the live app.
+- **After:** q-value–aware locale parse + unit tests; Railway deploy; assistant
+  EN path returns English empty states; FE query re-verified green.
+- **Evidence:** iterations `#25`–`#26`; BE locale v2 `2db6692e`; FE query
+  `5f39eefb` / later `d2a29c44` passed.
+
+### 5. Deploy + CI honesty: stale Railway and false-green gates (#11, #19–#20, #23)
+
+- **Before:** Push to GitHub did not always redeploy Railway; first deploy from
+  `backend/` snapshot missed paths; CI could soft-pass TestSprite.
+- **Loop signal:** Analytics 404 on stale API; integration endpoints missing
+  until root deploy; report failures on 502/auth/ICS until `ea2e8e9`.
+- **After:** Deploy Railway from repo root; set integration secrets; sync
+  `main` → `backend`; GHA waits for Vercel revision + healthy Railway, runs
+  fixed TestSprite IDs, collects failure bundles, fails the workflow on
+  blocked/failed verdicts.
+- **Evidence:** iterations `#11`, `#19`, `#20`, `#23`;
+  [`.github/workflows/testsprite.yml`](.github/workflows/testsprite.yml).
+
+---
+
+## Committed failure evidence
+
+Bundles pulled from TestSprite cloud runs (or intermediate FE failures) and kept
+under [`.testsprite/`](.testsprite/) so judges can open artifacts without the
+dashboard.
+
+| Story | Path(s) | Outcome |
+|-------|---------|---------|
+| FullCalendar category drag (persist / attribute) | [`.testsprite/failure-category-v7/`](.testsprite/failure-category-v7/), [`.testsprite/failure-category-v8/`](.testsprite/failure-category-v8/) | Then pass 25/25 (`d49b50a0`) — `#21` |
+| Event templates (viewport / toast / modal) | [`.testsprite/failure-template-v3/`](.testsprite/failure-template-v3/) … [`v6/`](.testsprite/failure-template-v6/) | Then pass 22/22 — `#21` |
+| Today agenda (empty count / save click) | [`.testsprite/failure-agenda-v2/`](.testsprite/failure-agenda-v2/) | Then pass 27/27 — `#21` |
+| Early FE login / CORS / calendar | [`.testsprite/failure-frontend/`](.testsprite/failure-frontend/) … [`failure-frontend-4/`](.testsprite/failure-frontend-4/), phase plans | Fixed in `#4`–`#9` |
+| Development feature dry-runs | [`.testsprite/failure-development-*`](.testsprite/) | Plan/product hardening before green |
+| Later blocked→passed FE (cancel, actions, ICS, rich, recurring) | [`.testsprite/runs/`](.testsprite/runs/) + platform history | Terminal **passed** — `#26`–`#29` |
+
+Plans and scripts for expanded coverage live in
+[`.testsprite/development_features/`](.testsprite/development_features/).
+
+---
+
+## Iteration log
+
+One plain-English line per iteration. Newest work at the bottom.
 
 ---
 
@@ -34,3 +157,4 @@ Agent-written loop log. One plain-English line per iteration.
 - [2026-07-10 #28] maker: dashboard hygiene — dashboard showed “65 of 66 complete · 1 still running or queued” | verify: `testsprite test list` → 65 passed + 1 draft (Idle, 0 runs), not running/queued; orphan draft `fa1ff485` was duplicate of passed i18n `f40b3c5a` | failure: misleading dashboard wording for draft status | fix: `testsprite test delete fa1ff485 --confirm` → suite **65/65 passed**, 0 draft/running/failed/blocked
 - [2026-07-10 #29] maker: document residual FE re-verify gap left implicit in #26–#27 — three coverage tests had been **blocked** then re-ran to terminal **passed** without named IDs in earlier lines | verify: platform history — (A) cancel `ad9a4e7c` run `2f752301` **passed** (prior blocked `68ca063e`); (B) event-actions `7629ac74` run `c4b03e7f` **passed** (prior blocked `5c8a6a53`); (C) ICS account-menu `4c88fef5` run `369286c6` **passed** (prior blocked `66c01bca`); live `test list` still **65/65 passed** | failure: #26 still textually said cancel/actions blocked and ICS harness-blocked despite later green reruns; #27 only asserted empty blocked/failed lists | fix: record explicit blocked→passed IDs here for loop corroboration (no further app change)
 - [2026-07-10 #30] maker: post-submit polish — assistant cancel/query matching (parse `tanggal N`, prefer-past for cancel, AI date backfill for “hari ini”, strict same-day filter for generic “meeting”, fuzzy 1-on-1 titles) + FE dedupe clarification/confirm double UI + category auto-infer from title; commits `7ec33b3` (backend), `c551ea8` (frontend) | verify: backend `python -m unittest discover -s tests` **152/152 passed**; FE AssistantPanel clarification uniqueness tests green; live smoke `https://timeora-alpha.vercel.app` **200** + Railway `/api/health` `db:connected` | failure: (1) “hapus 1-on-1 di tanggal 7” / “hapus meeting hari ini” missed or over-matched events; (2) clarification prompt+list rendered twice | fix: nlparser + `_find_matches` + `normalize_assistant_parse` date backfill; ClarificationCard choices-only; hide static event list when preview/clarification present
+- [2026-07-10 #31] maker: credit recovery re-run + loop documentation — **no new product feature tests were invented in this turn**; only re-ran existing failed/blocked FE IDs, then (mistakenly) deleted 10 historical rows thinking “no duplicates”, then **restored suite count to 65** via `test create` from the same plans/scripts (new IDs) and **re-ran all 10 restored** rows | verify: re-run failed/blocked credits **150.2 → 124.2**; restore batch re-run credits **124.2 → 106**; restored 10 → **6 passed / 4 blocked**; full suite **65** = **59 passed / 6 blocked / 0 draft**; re-run winners earlier: free-slot `e512beab`, i18n `f40b3c5a`, cancel-confirm `3b99c68c`, ICS button `b604ec5d`, soft-delete undo `7205150a` | failure: (1) misread “jangan duplikat” as “hapus twin di platform” — user wanted **daftar** case + keep **65**; (2) original IDs permanently gone (CLI permanent delete); (3) restore re-run still blocked on some FE paths (voice Command Bar, soft-delete coverage, ICS account menu, Tier1 query Command Bar) plus residual `cf24067d` AssistantPanel voice + `1e2bd9a6` Today Agenda | fix: recreated plans (`17` rich, `16` cancel, `14` query, `23` soft-delete, Tier1 query, `06` voice Command Bar, `22` ICS account, ICS header, recurring dialog, BE Accept-Language) then `agent-tools/run_restored_drafts.py`; restore batch **passed**: BE locale `ed263fcf`, ICS header `3c063049`, Command Bar voice `c3a57311`, soft-delete `9a8c9a5a`, query docked `d1118dfe`, rich `3cce5fd0`; restore batch **blocked**: recurring dialog `8b59a4c2`, ICS account `c9ac223b`, Tier1 query `4fe4ce77`, cancel `3d12479e`
