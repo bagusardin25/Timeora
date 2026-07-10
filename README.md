@@ -15,6 +15,7 @@
 | Resource | Link |
 |----------|------|
 | **Demo video** | [Watch on YouTube](https://youtu.be/amYxcmTNE5I) |
+| **X post** | [x.com/ArdinPrayoga/…](https://x.com/ArdinPrayoga/status/2075692537092931596?s=20) |
 | **Medium** — *Building Timeora with a Real Loop: How I Used TestSprite CLI in Hackathon Season 3* | [Read on Medium](https://medium.com/@bagusardinp/building-timeora-with-a-real-loop-how-i-used-testsprite-cli-in-hackathon-season-3-cf755d4e2845) |
 
 ---
@@ -327,6 +328,7 @@ testsprite test run 5c7bac18-9569-4c14-af7f-17d3bb6d6909 \
 | **Live app** | [timeora-alpha.vercel.app](https://timeora-alpha.vercel.app) |
 | **TestSprite suite** | **65/65 passed** (25 backend + 40 frontend) on the live app |
 | **Demo video** | [youtu.be/amYxcmTNE5I](https://youtu.be/amYxcmTNE5I) |
+| **X post** | [x.com/ArdinPrayoga/…](https://x.com/ArdinPrayoga/status/2075692537092931596?s=20) |
 | **Loop log** | [`LOOP.md`](./LOOP.md) · iterations #1–#32 |
 | **Medium write-up** | [Building Timeora with a Real Loop](https://medium.com/@bagusardinp/building-timeora-with-a-real-loop-how-i-used-testsprite-cli-in-hackathon-season-3-cf755d4e2845) |
 
