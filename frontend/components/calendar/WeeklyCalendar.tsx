@@ -16,11 +16,13 @@ import type {
   EventContentArg,
 } from "@fullcalendar/core";
 import { CATEGORY_OPTIONS, getCategoryConfig } from "@/lib/categories";
-import { Plus, Filter, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Filter, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { motion } from "framer-motion";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { useI18n } from "@/components/i18n-provider";
 import { EventActions } from "./EventActions";
 import { EventPreview } from "./EventPreview";
+import { CategoryIcon } from "./CategoryIcon";
 import type { EventData } from "./EventDialog";
 
 interface WeeklyCalendarProps {
@@ -117,6 +119,7 @@ export function WeeklyCalendar({
   onEventDelete,
   onEventAskAI,
 }: WeeklyCalendarProps) {
+  const { t } = useI18n();
   const calendarRef = useRef<FullCalendar>(null);
   const categoryDragEventIdRef = useRef<string | null>(null);
 
@@ -176,36 +179,57 @@ export function WeeklyCalendar({
             className="w-1.5 h-1.5 rounded-full flex-shrink-0"
             style={{ backgroundColor: cat.calendarBg }}
           />
-          <span className="text-xs font-semibold block min-w-0 flex-1 truncate whitespace-nowrap overflow-hidden text-ellipsis text-left pr-7 leading-tight">
-            {arg.timeText && (
-              <span className="mr-1 opacity-80">{arg.timeText}</span>
-            )}
+          <span className="text-[11px] font-semibold block min-w-0 flex-1 truncate whitespace-nowrap overflow-hidden text-ellipsis text-left pr-7 leading-tight">
             {arg.event.title}
           </span>
         </div>
-      ) : (
+      ) : (() => {
+        const durationMin = Number(ext.duration_minutes || 60);
+        const isLong = durationMin >= 60;
+        const isMedium = durationMin >= 45;
+        // Categories with light/bright backgrounds need dark text for contrast
+        const lightBgCategories = new Set(["focus", "personal"]);
+        const needsDarkText = lightBgCategories.has(categoryKey);
+        const textClass = needsDarkText
+          ? "text-gray-900"
+          : "text-white";
+        const subTextClass = needsDarkText
+          ? "text-gray-700"
+          : "text-white/80";
+
+        return (
       <div
         draggable
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         data-timeora-event-id={eventId}
         data-timeora-category={categoryKey}
-        className="flex items-start gap-1.5 px-1.5 py-1 overflow-hidden h-full cursor-grab active:cursor-grabbing"
+        className={`flex items-start gap-1.5 px-2 py-1.5 overflow-hidden h-full cursor-grab active:cursor-grabbing ${textClass}`}
       >
-        <span
-          className="w-2 h-2 rounded-full flex-shrink-0 mt-0.5"
-          style={{ backgroundColor: cat.calendarBg }}
-        />
+        <span className="mt-0.5 flex-shrink-0 leading-none select-none" aria-hidden="true">
+          <CategoryIcon categoryKey={categoryKey} className="w-3.5 h-3.5" />
+        </span>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold truncate leading-tight">
+          <p className="text-xs font-bold leading-tight whitespace-normal break-words line-clamp-3">
             {arg.event.title}
           </p>
           {arg.timeText && (
-            <p className="text-[10px] opacity-80 truncate">{arg.timeText}</p>
+            <p className={`text-[10px] ${subTextClass} truncate`}>{arg.timeText}</p>
+          )}
+          {isLong && (
+            <p className={`text-[10px] ${subTextClass} truncate mt-0.5`}>
+              ⏱ {Math.floor(durationMin / 60)}h{durationMin % 60 > 0 ? ` ${durationMin % 60}m` : ""}
+            </p>
+          )}
+          {isMedium && Boolean(ext.description) && (
+            <p className={`text-[9px] ${subTextClass} truncate mt-1 italic`}>
+              {String(ext.description).slice(0, 60)}
+            </p>
           )}
         </div>
       </div>
-    );
+        );
+      })();
 
     return (
       <HoverCard>
@@ -425,8 +449,8 @@ export function WeeklyCalendar({
                 className="flex shrink-0 min-h-11 sm:min-h-8 items-center justify-center gap-1.5 px-3 sm:px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl text-xs font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">Tambah Event</span>
-                <span className="inline sm:hidden">Tambah</span>
+                <span className="hidden sm:inline">{t("calendar.addEvent")}</span>
+                <span className="inline sm:hidden">{t("calendar.addEventShort")}</span>
               </button>
             )}
           </div>
@@ -480,7 +504,7 @@ export function WeeklyCalendar({
                 }`}
               >
                 <span className={`w-1.5 h-1.5 rounded-full ${isActive ? cat.dot : "bg-slate-300 dark:bg-zinc-700"}`} />
-                <span>{cat.emoji} {cat.label}</span>
+                <span className="flex items-center gap-1.5"><CategoryIcon categoryKey={cat.key} className="w-3.5 h-3.5" /> {cat.label}</span>
                 <span className="ml-0.5 px-1.5 py-0.2 bg-black/5 dark:bg-white/10 rounded-full text-[9px] font-bold">
                   {count}
                 </span>
@@ -500,7 +524,7 @@ export function WeeklyCalendar({
             }`}
           >
             <span className={`w-1.5 h-1.5 rounded-full ${selectedCategories.includes(UNCATEGORIZED_CATEGORY_KEY) ? "bg-indigo-500" : "bg-slate-300 dark:bg-zinc-700"}`} />
-            <span>📅 Uncategorized</span>
+            <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Uncategorized</span>
             <span className="ml-0.5 px-1.5 py-0.2 bg-black/5 dark:bg-white/10 rounded-full text-[9px] font-bold">
               {categoryCounts[UNCATEGORIZED_CATEGORY_KEY] || 0}
             </span>
@@ -535,7 +559,7 @@ export function WeeklyCalendar({
           editable={true}
           selectable={true}
           selectMirror={true}
-          dayMaxEvents={currentView === "dayGridMonth" ? 1 : true}
+          dayMaxEvents={currentView === "dayGridMonth" ? 3 : true}
           events={filteredEvents}
           dateClick={onDateClick}
           eventClick={onEventClick}
@@ -564,10 +588,10 @@ export function WeeklyCalendar({
           expandRows={true}
           nowIndicator={true}
           eventClassNames={() => {
-            return `cursor-pointer transition-transform hover:scale-[1.02] shadow-sm !border-l-[3px]`;
+            return `cursor-pointer transition-transform hover:scale-[1.02] shadow-sm !border-l-[4px]`;
           }}
-          eventBackgroundColor="#6366f1"
-          eventBorderColor="#4f46e5"
+          eventBackgroundColor="#94a3b8"
+          eventBorderColor="#64748b"
           eventDidMount={(info) => {
             const ext = info.event.extendedProps as Record<string, unknown>;
             const categoryKey = normalizeCalendarCategory(ext.category);
@@ -585,6 +609,9 @@ export function WeeklyCalendar({
               info.el.setAttribute("data-timeora-event-title", info.event.title);
               info.el.setAttribute("title", info.event.title);
             }
+            // Priority data attribute for CSS styling
+            const priority = (ext.priority as string) || "normal";
+            info.el.setAttribute("data-timeora-priority", priority);
             // Prefer unique accessible name for Playwright get_by_role / link filters
             const anchor = info.el.matches("a")
               ? info.el
@@ -599,6 +626,26 @@ export function WeeklyCalendar({
               ? { month: 'short', day: 'numeric' } 
               : { month: 'long', year: 'numeric', day: 'numeric' }
           }
+          slotLabelFormat={{
+            hour: 'numeric',
+            minute: '2-digit',
+            meridiem: 'short',
+          }}
+          dayCellDidMount={(arg) => {
+            // Task #9: Count events on this day for busy-day CSS indicators
+            const calApi = calendarRef.current?.getApi();
+            if (!calApi) return;
+            const dayStart = arg.date;
+            const dayEnd = new Date(dayStart);
+            dayEnd.setDate(dayEnd.getDate() + 1);
+            const dayEvents = calApi.getEvents().filter((ev) => {
+              const start = ev.start;
+              if (!start) return false;
+              return start >= dayStart && start < dayEnd;
+            });
+            const count = dayEvents.length;
+            arg.el.setAttribute('data-event-count', String(count));
+          }}
         />
       </div>
     </div>

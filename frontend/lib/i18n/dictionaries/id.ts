@@ -128,6 +128,8 @@ export const id: Dictionary = {
   },
   calendar: {
     askAi: "Tanya AI",
+    addEvent: "Tambah Event",
+    addEventShort: "Tambah",
     save: "Simpan",
     delete: "Hapus",
     edit: "Ubah",
@@ -180,6 +182,12 @@ export const id: Dictionary = {
     conflictTitle: "Jadwal bentrok!",
     conflictWith: "Waktu ini bertabrakan dengan: “{title}”",
     aiSuggestions: "Saran AI (slot kosong):",
+    deleteConfirmTitle: "Hapus Event",
+    deleteConfirmDesc: "Apakah Anda yakin ingin menghapus event ini? Tindakan ini tidak dapat dibatalkan.",
+    deleteConfirmDescNamed: "Apakah Anda yakin ingin menghapus \"{title}\"? Tindakan ini tidak dapat dibatalkan.",
+    deleteCancel: "Batal",
+    deleteConfirm: "Hapus",
+    deleting: "Menghapus…",
   },
   profilePage: {
     backDashboard: "Kembali ke Dashboard",

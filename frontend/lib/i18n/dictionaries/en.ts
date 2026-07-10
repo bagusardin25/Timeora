@@ -126,6 +126,8 @@ export const en = {
   },
   calendar: {
     askAi: "Ask AI",
+    addEvent: "Add Event",
+    addEventShort: "Add",
     save: "Save",
     delete: "Delete",
     edit: "Edit",
@@ -178,6 +180,12 @@ export const en = {
     conflictTitle: "Schedule conflict!",
     conflictWith: "This time conflicts with: “{title}”",
     aiSuggestions: "AI suggestions (free slots):",
+    deleteConfirmTitle: "Delete Event",
+    deleteConfirmDesc: "Are you sure you want to delete this event? This action cannot be undone.",
+    deleteConfirmDescNamed: "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
+    deleteCancel: "Cancel",
+    deleteConfirm: "Delete",
+    deleting: "Deleting…",
   },
   profilePage: {
     backDashboard: "Back to Dashboard",

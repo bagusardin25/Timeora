@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut, Brain, Download, Settings, User } from "lucide-react";
 import { WeeklyCalendar } from "@/components/calendar/WeeklyCalendar";
 import { EventDialog, EventData, ConflictData } from "@/components/calendar/EventDialog";
+import { DeleteConfirmDialog } from "@/components/calendar/DeleteConfirmDialog";
 import {
   fetchApi,
   ApiError,
@@ -126,6 +127,7 @@ export default function DashboardPage() {
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantContext, setAssistantContext] = useState<EventData | null>(null);
   const [undoDelete, setUndoDelete] = useState<{ id: string; title: string } | null>(null);
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<{ id: string; title?: string } | null>(null);
   const [dateRange, setDateRange] = useState<DateRange>(INITIAL_DATE_RANGE);
   const [exporting, setExporting] = useState(false);
   const [insightsRefreshKey, setInsightsRefreshKey] = useState(0);
@@ -415,9 +417,17 @@ export default function DashboardPage() {
       });
       refreshAll();
     } catch (err: unknown) {
-      console.error(err);
-      toast.error(errorMessage(err, "Failed to move event"));
       arg.revert();
+      if (err instanceof ApiError && err.status === 409) {
+        const detail = err.data?.detail;
+        if (isConflictData(detail)) {
+          toast.error(t("calendar.conflictWith", { title: detail.conflicting_event }));
+        } else {
+          toast.error(t("calendar.conflictTitle"));
+        }
+      } else {
+        toast.error(errorMessage(err, "Failed to move event"));
+      }
     }
   };
 
@@ -480,16 +490,21 @@ export default function DashboardPage() {
     }
   };
 
-  const handleDeleteEvent = async (id: string, title?: string) => {
-    if (!confirm("Are you sure you want to delete this event?")) return;
+  const handleDeleteEvent = (id: string, title?: string) => {
+    setDeleteConfirmTarget({ id, title });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmTarget) return;
     setIsSaving(true);
     try {
-      const baseId = baseEventId(id);
+      const baseId = baseEventId(deleteConfirmTarget.id);
       await fetchApi(`/events/${baseId}`, {
         method: "DELETE",
       });
       setIsDialogOpen(false);
-      setUndoDelete({ id: baseId, title: title || "Event" });
+      setDeleteConfirmTarget(null);
+      setUndoDelete({ id: baseId, title: deleteConfirmTarget.title || "Event" });
       refreshAll();
     } catch (err: unknown) {
       toast.error(errorMessage(err, "Failed to delete event"));
@@ -927,6 +942,13 @@ export default function DashboardPage() {
           refreshAll();
           setAssistantOpen(false);
         }}
+      />
+      <DeleteConfirmDialog
+        open={!!deleteConfirmTarget}
+        onOpenChange={(open) => { if (!open) setDeleteConfirmTarget(null); }}
+        eventTitle={deleteConfirmTarget?.title}
+        onConfirm={confirmDelete}
+        isDeleting={isSaving}
       />
       <Toaster richColors closeButton />
     </div>
