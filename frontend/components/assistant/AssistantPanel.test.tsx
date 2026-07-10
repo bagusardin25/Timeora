@@ -69,11 +69,16 @@ describe("AssistantPanel", () => {
     callAssistantMock
       .mockResolvedValueOnce({
         intent: "cancel",
-        result: { events: [] },
-        message: "Which event did you mean?",
+        result: {
+          events: [
+            { id: "one", title: "Marketing Sync", start_time: "10:00:00", date: "2026-07-10", duration_minutes: 60, participants: "" },
+            { id: "two", title: "Product Sync", start_time: "14:00:00", date: "2026-07-10", duration_minutes: 60, participants: "" },
+          ],
+        },
+        message: "I found more than one matching event. Which one did you mean?",
         clarification: {
           type: "event_selection",
-          prompt: "Which team meeting did you mean?",
+          prompt: "I found more than one matching event. Which one did you mean?",
           choices: [
             { id: "one", title: "Marketing Sync", start_time: "10:00:00", date: "2026-07-10" },
             { id: "two", title: "Product Sync", start_time: "14:00:00", date: "2026-07-10" },
@@ -91,6 +96,12 @@ describe("AssistantPanel", () => {
     await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Batalkan team sync");
     await user.click(screen.getByRole("button", { name: "Send" }));
     expect(await screen.findByText("2026-07-10 · 14:00")).toBeVisible();
+    // Prompt + event list must appear once (choices only, not duplicated static cards).
+    expect(
+      screen.getAllByText("I found more than one matching event. Which one did you mean?"),
+    ).toHaveLength(1);
+    expect(screen.getAllByText("Marketing Sync")).toHaveLength(1);
+    expect(screen.getAllByText("Product Sync")).toHaveLength(1);
     await user.click(await screen.findByRole("button", { name: /Product Sync/ }));
 
     expect(callAssistantMock).toHaveBeenLastCalledWith("Batalkan team sync", {

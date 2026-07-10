@@ -527,10 +527,24 @@ function buildActionPreview(
   }
 
   if (params.action === "cancel") {
+    const lines: string[] = [];
+    const primary = Array.isArray(result.events) ? result.events[0] : null;
+    if (primary && isRecord(primary)) {
+      const when = [
+        asDisplayString(primary.date),
+        asDisplayString(primary.start_time)
+          ? formatClock(String(primary.start_time))
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      if (when) lines.push(when);
+    }
+    lines.push(t("assistant.cancelLine"));
     return {
       badge: t("assistant.cancelBadge"),
       title: primaryTitle,
-      lines: [t("assistant.cancelLine")],
+      lines,
       destructive: true,
       confirmLabel: t("assistant.confirmCancel"),
       confirmAriaLabel: t("assistant.confirmCancel"),
@@ -1083,7 +1097,11 @@ export function AssistantPanel({
                 ) : null}
                 <p className="whitespace-pre-wrap">{message.text}</p>
 
-                {message.result?.events?.length ? (
+                {/* Skip static event list when clarification or action preview already
+                    shows the same event(s) — avoids double list on cancel confirm. */}
+                {message.result?.events?.length &&
+                !message.result.clarification &&
+                !preview ? (
                   <div className="flex flex-col gap-2">
                     {message.result.events.map((event) => (
                       <div

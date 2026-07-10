@@ -32,9 +32,10 @@ export function ClarificationCard({
   const selectedId = resolvedChoiceId ?? pendingId;
   const locked = Boolean(resolvedChoiceId) || disabled;
 
+  // Prompt is already shown as the assistant bubble text (message.text === clarification.prompt).
+  // Only render selectable choices here to avoid a double "Which one?" heading.
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-border bg-background/60 p-3">
-      <p className="text-sm font-medium text-foreground">{clarification.prompt}</p>
       {clarification.choices.map((choice) => {
         const meta = formatChoiceMeta(choice);
         const isSelected = selectedId === choice.id;

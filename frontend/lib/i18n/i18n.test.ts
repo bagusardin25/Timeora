@@ -13,6 +13,13 @@ describe("i18n dictionaries", () => {
     expect(translate(getDictionary("id"), "assistant.title")).toBe("Tanya kalender");
   });
 
+  it("translates calendar add event button", () => {
+    expect(translate(getDictionary("en"), "calendar.addEvent")).toBe("Add Event");
+    expect(translate(getDictionary("id"), "calendar.addEvent")).toBe("Tambah Event");
+    expect(translate(getDictionary("en"), "calendar.addEventShort")).toBe("Add");
+    expect(translate(getDictionary("id"), "calendar.addEventShort")).toBe("Tambah");
+  });
+
   it("interpolates variables", () => {
     expect(translate(getDictionary("en"), "assistant.minutes", { n: 30 })).toBe("30 min");
     expect(translate(getDictionary("id"), "assistant.minutes", { n: 30 })).toBe("30 menit");

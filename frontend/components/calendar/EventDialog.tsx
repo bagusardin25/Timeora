@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertTriangle, Bell, Clock, CalendarIcon, Flag, Link, Users, Sparkles, Bookmark, Tag } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CATEGORY_OPTIONS, getCategoryConfig } from "@/lib/categories";
+import { CATEGORY_OPTIONS, getCategoryConfig, inferCategoryFromTitle } from "@/lib/categories";
 import { getTemplates, saveTemplate, applyTemplate, type EventTemplate } from "@/lib/templates";
 import { useI18n } from "@/components/i18n-provider";
 
@@ -94,6 +94,11 @@ export function EventDialog({
   const initialFormData = defaultEventData(initialData);
   const [formData, setFormData] =
     useState<Partial<EventData>>(initialFormData);
+  // Track whether the user has *explicitly* chosen a category so auto-inference
+  // doesn't overwrite their manual selection.
+  const [categoryManuallySet, setCategoryManuallySet] = useState(
+    () => Boolean(initialFormData.category)
+  );
   const [endTime, setEndTime] = useState(() => calculateEndTime(initialFormData));
   const canSave = Boolean(formData.title?.trim() && formData.date && formData.start_time);
 
@@ -128,7 +133,7 @@ export function EventDialog({
       duration_minutes: formData.duration_minutes || 60,
       participants: formData.participants || "",
       recurrence_rule: formData.recurrence_rule || null,
-      category: formData.category || null,
+      category: formData.category || inferCategoryFromTitle(title) || null,
       description: formData.description || "",
       location_url: formData.location_url || null,
       priority: formData.priority || "normal",
@@ -279,7 +284,17 @@ export function EventDialog({
               <Input
                 id="title"
                 value={formData.title || ""}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) => {
+                  const newTitle = e.target.value;
+                  const update: Partial<EventData> = { ...formData, title: newTitle };
+                  // Auto-suggest category from title keywords when user hasn't
+                  // explicitly picked one.
+                  if (!categoryManuallySet) {
+                    const inferred = inferCategoryFromTitle(newTitle);
+                    update.category = inferred;
+                  }
+                  setFormData(update);
+                }}
                 placeholder={t("calendar.titlePlaceholder")}
                 className="bg-zinc-50 dark:bg-black/20 border-zinc-200 dark:border-white/10 focus-visible:ring-primary shadow-sm"
               />
@@ -398,13 +413,17 @@ export function EventDialog({
               <select
                 id="category"
                 value={formData.category || ""}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value || null })}
+                onChange={(e) => {
+                  const val = e.target.value || null;
+                  setCategoryManuallySet(Boolean(val));
+                  setFormData({ ...formData, category: val });
+                }}
                   className="min-h-11 w-full rounded-md border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-black/20 px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:min-h-10"
               >
                 <option value="">{t("calendar.noCategory")}</option>
                 {CATEGORY_OPTIONS.map((cat) => (
                   <option key={cat.key} value={cat.key}>
-                    {cat.emoji} {cat.label}
+                    {cat.label}
                   </option>
                 ))}
               </select>
