@@ -98,7 +98,7 @@ project JWKS.
 
 Built with a strict **write → verify → fail → fix → verify** loop against **public**
 URLs (not localhost). Full chronological log, scorecard, and failure index:
-**[`LOOP.md`](./LOOP.md)** (iterations **#1–#30**).
+**[`LOOP.md`](./LOOP.md)** (iterations **#1–#32**).
 
 > Timeora is a bilingual AI scheduling product where the TestSprite loop forced
 > production decisions — forged-JWT rejection, dual DB failover on Railway,
@@ -109,7 +109,7 @@ URLs (not localhost). Full chronological log, scorecard, and failure index:
 
 | Metric | Value |
 |--------|------:|
-| Loop iterations | **30** |
+| Loop iterations | **32** |
 | TestSprite live (cloud) | **65/65** (25 BE + 40 FE) |
 | Backend unit | **152/152** |
 | Frontend unit | **75/75** |
@@ -325,7 +325,7 @@ testsprite test run 5c7bac18-9569-4c14-af7f-17d3bb6d6909 \
 | **GitHub** | [github.com/bagusardin25/Timeora](https://github.com/bagusardin25/Timeora) |
 | **Live app** | [timeora-alpha.vercel.app](https://timeora-alpha.vercel.app) |
 | **TestSprite suite** | **65/65 passed** (25 backend + 40 frontend) on the live app |
-| **Loop log** | [`LOOP.md`](./LOOP.md) · iterations #1–#30 |
+| **Loop log** | [`LOOP.md`](./LOOP.md) · iterations #1–#32 |
 | **Medium write-up** | [Building Timeora with a Real Loop](https://medium.com/@bagusardinp/building-timeora-with-a-real-loop-how-i-used-testsprite-cli-in-hackathon-season-3-cf755d4e2845) |
 
 ---
