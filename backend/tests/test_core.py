@@ -184,6 +184,15 @@ class TestNaturalLanguageParser(unittest.TestCase):
         result = parse("cari waktu kosong besok", today=date(2026, 7, 10))
         self.assertEqual(result["intent"], "find_slot")
 
+    def test_find_slot_keeps_explicit_event_title(self):
+        result = parse(
+            "cari slot kosong untuk TS FreeSlot Create besok",
+            today=date(2026, 7, 10),
+        )
+        self.assertEqual(result["intent"], "find_slot")
+        self.assertEqual(result["title"], "TS FreeSlot Create")
+        self.assertEqual(result["date"], "2026-07-11")
+
 
 class TestConflictEngine(unittest.TestCase):
     event_date = date(2026, 7, 6)

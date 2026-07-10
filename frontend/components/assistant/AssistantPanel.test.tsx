@@ -465,6 +465,7 @@ describe("AssistantPanel", () => {
         result: {
           date: "2026-07-10",
           duration_minutes: 60,
+          title: "TS FreeSlot Create",
           slots: [
             { start_time: "14:00", reason: "After lunch" },
             { start_time: "15:00", reason: "Later" },
@@ -476,19 +477,22 @@ describe("AssistantPanel", () => {
         intent: "create",
         result: {
           event_data: {
-            title: "Meeting",
+            title: "TS FreeSlot Create",
             date: "2026-07-10",
             start_time: "15:00:00",
             duration_minutes: 60,
           },
         },
-        message: 'Buat "Meeting" pada 2026-07-10 jam 15:00?',
+        message: 'Buat "TS FreeSlot Create" pada 2026-07-10 jam 15:00?',
         requires_confirmation: true,
       });
 
     render(<AssistantPanel open onOpenChange={vi.fn()} onEventsChanged={vi.fn()} />);
 
-    await user.type(screen.getByPlaceholderText("Ask or type a message…"), "Cari slot");
+    await user.type(
+      screen.getByPlaceholderText("Ask or type a message…"),
+      "cari slot kosong untuk TS FreeSlot Create",
+    );
     await user.click(screen.getByRole("button", { name: "Send" }));
     expect(await screen.findByText("14:00")).toBeVisible();
 
@@ -496,7 +500,7 @@ describe("AssistantPanel", () => {
     await user.click(screen.getByRole("button", { name: "Send" }));
 
     expect(callAssistantMock).toHaveBeenLastCalledWith(
-      "Jadwalkan Meeting pada 2026-07-10 jam 15:00",
+      "Jadwalkan TS FreeSlot Create pada 2026-07-10 jam 15:00",
       undefined,
     );
   });

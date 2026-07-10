@@ -321,6 +321,22 @@ class TestAssistantClarification(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(response.result, dict)
         self.assertGreater(len(response.result["slots"]), 0)
 
+    async def test_find_slot_preserves_requested_title_for_create_followup(self):
+        with patch.object(assistant.data_access, "list_events_window", AsyncMock(return_value=[])):
+            response = await assistant._handle_find_slot(
+                {"id": "user-1"},
+                {
+                    "title": "TS FreeSlot Create",
+                    "date": "2026-07-11",
+                    "start_time": "09:00",
+                    "duration_minutes": 60,
+                },
+            )
+
+        self.assertEqual(response.intent, "find_slot")
+        self.assertEqual(response.result["title"], "TS FreeSlot Create")
+        self.assertGreater(len(response.result["slots"]), 0)
+
     async def test_help_intent_lists_capabilities(self):
         response = assistant._handle_help()
         self.assertEqual(response.intent, "help")

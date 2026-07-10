@@ -661,10 +661,28 @@ async def _handle_find_slot(user: dict, parsed: dict, locale: str = "en") -> Ass
         count=5,
     )
 
+    # Preserve requested event title so free-slot → create keeps "TS FreeSlot Create"
+    # instead of falling back to generic "Meeting" on the client.
+    title_hint = _clean_title_query(parsed.get("title"))
+    if not title_hint or _is_generic_title(title_hint):
+        # Prefer non-generic raw title if cleaner failed (e.g. still useful phrase).
+        raw_title = str(parsed.get("title") or "").strip()
+        if raw_title and not _is_generic_title(raw_title):
+            title_hint = raw_title
+        else:
+            title_hint = ""
+
     if not alternatives:
+        empty_result: dict = {
+            "date": target_date.isoformat(),
+            "duration_minutes": duration,
+            "slots": [],
+        }
+        if title_hint:
+            empty_result["title"] = title_hint
         return AssistantResponse(
             intent="find_slot",
-            result={"date": target_date.isoformat(), "duration_minutes": duration, "slots": []},
+            result=empty_result,
             message=msg(
                 "find_slot_empty",
                 loc,
@@ -677,13 +695,16 @@ async def _handle_find_slot(user: dict, parsed: dict, locale: str = "en") -> Ass
     slot_lines = ", ".join(
         str(slot.get("start_time", ""))[:5] for slot in alternatives[:5] if slot.get("start_time")
     )
+    found_result: dict = {
+        "date": target_date.isoformat(),
+        "duration_minutes": duration,
+        "slots": alternatives,
+    }
+    if title_hint:
+        found_result["title"] = title_hint
     return AssistantResponse(
         intent="find_slot",
-        result={
-            "date": target_date.isoformat(),
-            "duration_minutes": duration,
-            "slots": alternatives,
-        },
+        result=found_result,
         message=msg(
             "find_slot_found",
             loc,

@@ -225,6 +225,30 @@ function slotGroupToMemory(group: FreeSlotGroup): SlotMemory | null {
   };
 }
 
+/** Best-effort title from a free-slot request when API omits result.title. */
+function titleHintFromUserFreeSlotText(text: string): string | null {
+  let rest = text.trim();
+  if (!rest) return null;
+  rest = rest.replace(
+    /\b(cari|find)\b[\s\S]*?\b(slot|waktu|time|free)\b/gi,
+    " ",
+  );
+  rest = rest.replace(
+    /\b(free\s+slot|available\s+slot|slot\s+kosong|waktu\s+kosong|jam\s+kosong)\b/gi,
+    " ",
+  );
+  rest = rest.replace(
+    /\b(hari\s+ini|besok|lusa|today|tomorrow|next\s+\w+)\b/gi,
+    " ",
+  );
+  rest = rest.replace(/\b\d{4}-\d{2}-\d{2}\b/g, " ");
+  rest = rest.replace(/\b(for|untuk|pada|di|tolong|please)\b/gi, " ");
+  rest = rest.replace(/\s+/g, " ").replace(/^[\s.,;:\-]+|[\s.,;:\-]+$/g, "");
+  if (!rest || rest.length < 2) return null;
+  if (/^(meeting|event|acara|jadwal)$/i.test(rest)) return null;
+  return rest;
+}
+
 /** Resolve short follow-ups like "pakai jam 14:00" / "yang kedua" against last find_slot. */
 function resolveSlotReference(text: string, memory: SlotMemory | null): string | null {
   if (!memory?.slots.length || !memory.date) return null;
@@ -820,9 +844,19 @@ export function AssistantPanel({
     }
   };
 
-  const rememberSlotsFromResult = (result: AssistantResult) => {
+  const rememberSlotsFromResult = (result: AssistantResult, userText?: string) => {
     const group = extractFreeSlotGroup(result);
-    const memory = group ? slotGroupToMemory(group) : null;
+    if (!group) return;
+    // If backend omitted title, try to keep a meaningful title from the user's
+    // free-slot request so pick-slot create does not become generic "Meeting".
+    if (
+      (!group.titleHint || group.titleHint.toLowerCase() === "meeting") &&
+      userText
+    ) {
+      const fromUser = titleHintFromUserFreeSlotText(userText);
+      if (fromUser) group.titleHint = fromUser;
+    }
+    const memory = slotGroupToMemory(group);
     if (memory) {
       setSlotMemory(memory);
       slotMemoryRef.current = memory;
@@ -856,7 +890,7 @@ export function AssistantPanel({
     setPendingExecute(null);
     try {
       const result = await callAssistant(normalized, options);
-      rememberSlotsFromResult(result);
+      rememberSlotsFromResult(result, normalized);
       setMessages((current) => [
         ...current,
         {

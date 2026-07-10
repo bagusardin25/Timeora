@@ -260,7 +260,7 @@ def normalize_assistant_parse(
     # Deterministic parse often catches "hari ini" / "tanggal 7" more reliably
     # than the model — use it to backfill missing fields for match intents.
     fallback_parse: dict[str, Any] | None = None
-    if intent in {"cancel", "update", "query", "reschedule"} and (
+    if intent in {"cancel", "update", "query", "reschedule", "find_slot"} and (
         date_value is None or not title
     ):
         fallback_parse = nlparser.parse(original_text, today=today)

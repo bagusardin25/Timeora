@@ -635,9 +635,13 @@ _FREE_SLOT_PATTERNS = (
     r"\bwaktu\s+kosong\b",
     r"\bslot\s+kosong\b",
     r"\bfree\s+slot\b",
+    r"\bfree\s+time\b",
     r"\bavailable\s+slot\b",
     r"\bdi\s+jam\s+kosong\b",
     r"\bpada\s+jam\s+kosong\b",
+    r"\bcari\s+(?:waktu|slot)\b",
+    r"\bfind\s+(?:a\s+)?(?:free\s+)?(?:time|slot)\b",
+    r"\bfind\s+free\b",
 )
 
 
@@ -685,21 +689,15 @@ def _extract_title(text: str) -> str:
     for pattern in temporal_patterns:
         result = re.sub(pattern, " ", result, flags=re.I)
 
-    # Remove common prefixes / conversational create verbs
-    prefixes = [
-        r"\bjadwalkan\b", r"\bschedule\b", r"\bbuatin\b", r"\bbuatkan\b",
-        r"\bbuatlah\b", r"\bbuat\b", r"\bcreate\b",
-        r"\badd\b", r"\btambah(?:kan)?\b", r"\bset\b", r"\bbook\b",
-        r"\bpindahkan\b", r"\breschedule\b", r"\bmove\b",
-        r"\bbatalkan\b", r"\bcancel\b", r"\bhapus\b", r"\bdelete\b", r"\bremove\b",
-        r"\bupdate\b", r"\bedit\b", r"\bjadikan\b", r"\btandai\b",
-        r"\bjadwal(?:kan)?\b",
-        r"\bcari\b", r"\bfind\b", r"\blihat\b", r"\btampilkan\b", r"\bsearch\b",
-        r"\btask\b", r"\bevent\b", r"\bacara\b",
-        # Availability fluff often left after cancel/query ("meeting yg tersedia")
-        r"\b(?:yg|yang)\s+tersedia\b", r"\bavailable\b", r"\byang\s+ada\b",
-    ]
-    for p in prefixes:
+    # Residual availability / container fluff (safe mid-phrase)
+    for p in (
+        r"\btask\b",
+        r"\bevent\b",
+        r"\bacara\b",
+        r"\b(?:yg|yang)\s+tersedia\b",
+        r"\bavailable\b",
+        r"\byang\s+ada\b",
+    ):
         result = re.sub(p, " ", result, flags=re.I)
 
     # Conversational fillers common in Indo/English chat
@@ -716,8 +714,31 @@ def _extract_title(text: str) -> str:
         result = re.sub(f, " ", result, flags=re.I)
 
     result = re.sub(r"\s+", " ", result).strip(".,;:-–—\"' ")
+    # Free-slot phrasing often leaves "for <title>" / "a <title>" (leading or mid).
+    result = re.sub(r"^\s*(?:for|a|an|untuk)\s+", "", result, flags=re.I).strip()
+    result = re.sub(r"\b(?:for|untuk)\s+(?=\S)", "", result, flags=re.I).strip()
     # Date extraction can leave a trailing preposition ("1-on-1 on" after "July 7").
     result = re.sub(r"\s+\b(?:on|at|di|pada|for|untuk)\s*$", "", result, flags=re.I).strip()
+
+    # Leading schedule/search verbs AFTER fillers — so "oke ... buatin meeting"
+    # cleans to "Meeting", while "TS FreeSlot Create" keeps trailing Create.
+    leading_verbs = [
+        r"jadwalkan", r"schedule", r"buatin", r"buatkan", r"buatlah", r"buat",
+        r"create", r"add", r"tambahkan", r"tambah", r"set", r"book",
+        r"pindahkan", r"reschedule", r"move",
+        r"batalkan", r"cancel", r"hapus", r"delete", r"remove",
+        r"update", r"edit", r"jadikan", r"tandai", r"jadwal",
+        r"cari", r"find", r"lihat", r"tampilkan", r"search",
+    ]
+    changed = True
+    while changed:
+        changed = False
+        for verb in leading_verbs:
+            updated = re.sub(rf"^\s*{verb}\b\s*", "", result, count=1, flags=re.I)
+            if updated != result:
+                result = updated
+                changed = True
+    result = re.sub(r"\s+", " ", result).strip(".,;:-–—\"' ")
 
     if result.lower() in {"", "event", "acara", "kegiatan"}:
         return "Meeting"
