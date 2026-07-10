@@ -238,18 +238,51 @@ def normalize_assistant_parse(
         intent = nlparser.parse(original_text, today=today)["intent"]
 
     title = _resolve_title(raw.get("title"), original_text)
-    if intent in {"query", "find_slot"} and title.lower() in {
+    query_title_junk = {
         "meeting",
         "untitled event",
         "event",
+        "acara",
+        "jadwal",
+        "schedule",
+        "apa",
+        "apa saja",
+        "hari",
+        "today",
+        "hari ini",
         "",
-    }:
-        # Avoid polluting query/find with default create title.
+    }
+    if intent in {"query", "find_slot"} and title.lower().strip() in query_title_junk:
+        # Avoid polluting query/find with default create title or agenda fluff.
         title = ""
 
     date_value = _normalize_date_str(raw.get("date"), today)
-    if intent in {"create", "query", "find_slot"} and date_value is None:
-        date_value = today.isoformat()
+    # Deterministic parse often catches "hari ini" / "tanggal 7" more reliably
+    # than the model — use it to backfill missing fields for match intents.
+    fallback_parse: dict[str, Any] | None = None
+    if intent in {"cancel", "update", "query", "reschedule"} and (
+        date_value is None or not title
+    ):
+        fallback_parse = nlparser.parse(original_text, today=today)
+
+    if date_value is None and fallback_parse and fallback_parse.get("date"):
+        date_value = fallback_parse.get("date")
+
+    if (not title or title.lower().strip() in {"meeting", "event", "acara"}) and fallback_parse:
+        fb_title = str(fallback_parse.get("title") or "").strip()
+        if fb_title and fb_title.lower() not in {"meeting", "event", "acara", "untitled event"}:
+            title = fb_title
+        elif not title and fb_title:
+            title = fb_title
+
+    # Create/find_slot always need a day. Query only defaults to today when
+    # listing a day's agenda — keep date null for named-event searches
+    # ("cari task 1-on-1") so the handler can scan the full calendar.
+    if date_value is None:
+        if intent in {"create", "find_slot"}:
+            date_value = today.isoformat()
+        elif intent == "query" and not title:
+            date_value = today.isoformat()
 
     time_value = _normalize_time_str(raw.get("start_time"))
     time_explicit = _as_bool(raw.get("time_explicit"), time_value is not None)

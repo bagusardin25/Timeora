@@ -83,15 +83,21 @@ _INTENT_PATTERNS: list[tuple[str, list[str]]] = [
         r"\bjadikan\b", r"\btandai\b",
         r"\bubah\s+(?!jadwal\b)",
     ]),
-    ("query", [
-        r"\bapa jadwal\b", r"\bwhat do i have\b", r"\bjadwal hari\b",
-        r"\bshow schedule\b", r"\bshow my\b", r"\blihat jadwal\b",
-        r"\bwhat's on\b", r"\bapa saja\b",
-    ]),
     ("find_slot", [
         r"\bcari waktu\b", r"\bfind time\b", r"\bcari slot\b",
         r"\bkapan bisa\b", r"\bfind a slot\b", r"\bfind.*free\b",
         r"\bwaktu kosong\b",
+    ]),
+    ("query", [
+        r"\bapa jadwal\b", r"\bwhat do i have\b", r"\bjadwal hari\b",
+        r"\bshow schedule\b", r"\bshow my\b", r"\blihat jadwal\b",
+        r"\bwhat's on\b", r"\bapa saja\b",
+        # Find/list a named event or task (keep after find_slot so "cari waktu" wins)
+        r"\bcari\s+(?:task|event|acara|jadwal)\b",
+        r"\bfind\s+(?:task|event|meeting|acara)\b",
+        r"\blihat\s+(?:task|event|acara)\b",
+        r"\btampilkan\b",
+        r"\bsearch\s+(?:for\s+)?(?:task|event|meeting)\b",
     ]),
 ]
 
@@ -139,16 +145,47 @@ def _detect_intent(text: str) -> str:
     return "create"
 
 
-def _parse_date(text: str, today: date) -> tuple[date | None, str]:
-    """Try to extract a date from *text*.  Returns (date, cleaned_text)."""
+def _parse_date(
+    text: str,
+    today: date,
+    *,
+    prefer_past: bool = False,
+) -> tuple[date | None, str]:
+    """Try to extract a date from *text*.  Returns (date, cleaned_text).
+
+    prefer_past: when True (cancel/query/update of existing events), resolve
+    bare day/month references to the most recent matching date (including past
+    dates in the current year) instead of always jumping forward.
+    """
     low = text.lower()
 
-    def resolve_month_day(day_num: int, month_num: int, explicit_year: str | None) -> date | None:
+    def resolve_month_day(
+        day_num: int,
+        month_num: int,
+        explicit_year: str | None,
+    ) -> date | None:
         if explicit_year:
             try:
                 return date(int(explicit_year), month_num, day_num)
             except ValueError:
                 return None
+
+        if prefer_past:
+            # Prefer this year even if the date already passed (e.g. cancel on the 7th).
+            try:
+                this_year = date(today.year, month_num, day_num)
+            except ValueError:
+                this_year = None
+            if this_year is not None:
+                # Within the last year or any future date this year → use it.
+                if this_year >= today - timedelta(days=366):
+                    return this_year
+            try:
+                last_year = date(today.year - 1, month_num, day_num)
+            except ValueError:
+                last_year = None
+            if last_year is not None and (today - last_year).days <= 366:
+                return last_year
 
         for candidate_year in range(today.year, today.year + 5):
             try:
@@ -157,6 +194,43 @@ def _parse_date(text: str, today: date) -> tuple[date | None, str]:
                 continue
             if result_date >= today:
                 return result_date
+        return None
+
+    def resolve_day_only(day_num: int) -> date | None:
+        """Resolve bare day-of-month like 'tanggal 7' / 'the 7th'."""
+        if not 1 <= day_num <= 31:
+            return None
+
+        def safe(year: int, month: int) -> date | None:
+            try:
+                return date(year, month, day_num)
+            except ValueError:
+                return None
+
+        this_month = safe(today.year, today.month)
+        if prefer_past:
+            if this_month is not None:
+                return this_month
+            # Day invalid this month (e.g. 31 in June) → previous month.
+            prev_month = today.month - 1 or 12
+            prev_year = today.year if today.month > 1 else today.year - 1
+            return safe(prev_year, prev_month)
+
+        # Scheduling: next occurrence of that day-of-month.
+        if this_month is not None and this_month >= today:
+            return this_month
+        next_month = today.month + 1 if today.month < 12 else 1
+        next_year = today.year if today.month < 12 else today.year + 1
+        nxt = safe(next_year, next_month)
+        if nxt is not None:
+            return nxt
+        # Skip months where day doesn't exist (e.g. 31).
+        for offset in range(2, 14):
+            m = ((today.month - 1 + offset) % 12) + 1
+            y = today.year + ((today.month - 1 + offset) // 12)
+            candidate = safe(y, m)
+            if candidate is not None and candidate >= today:
+                return candidate
         return None
 
     # Relative dates — ID
@@ -201,9 +275,8 @@ def _parse_date(text: str, today: date) -> tuple[date | None, str]:
             return result_date, cleaned.strip()
 
     # Absolute: "5 Juli", "July 5", "5 juli 2026", "2026-07-05"
-    # DD Month [YYYY]
-    m = re.search(r"\b(\d{1,2})\s+([a-zA-Z]+)(?:\s+(\d{4}))?\b", low)
-    if m:
+    # DD Month [YYYY] — iterate so false positives like "hapus 1-…" don't hide a later date.
+    for m in re.finditer(r"\b(\d{1,2})\s+([a-zA-Z]+)(?:\s+(\d{4}))?\b", low):
         day_num = int(m.group(1))
         month_name = m.group(2)
         if month_name in _MONTHS:
@@ -213,8 +286,7 @@ def _parse_date(text: str, today: date) -> tuple[date | None, str]:
                 return result_date, cleaned.strip()
 
     # Month DD [, YYYY]
-    m = re.search(r"\b([a-zA-Z]+)\s+(\d{1,2})(?:\s*,?\s*(\d{4}))?\b", low)
-    if m:
+    for m in re.finditer(r"\b([a-zA-Z]+)\s+(\d{1,2})(?:\s*,?\s*(\d{4}))?\b", low):
         month_name = m.group(1)
         day_num = int(m.group(2))
         if month_name in _MONTHS:
@@ -232,6 +304,21 @@ def _parse_date(text: str, today: date) -> tuple[date | None, str]:
             return result_date, cleaned.strip()
         except ValueError:
             pass
+
+    # Bare day-of-month: "tanggal 7", "tgl 7", "the 7th"
+    m = re.search(r"\b(?:tanggal|tgl\.?)\s*(\d{1,2})\b", low)
+    if m:
+        result_date = resolve_day_only(int(m.group(1)))
+        if result_date is not None:
+            cleaned = text[: m.start()] + text[m.end() :]
+            return result_date, cleaned.strip()
+
+    m = re.search(r"\bthe\s+(\d{1,2})(?:st|nd|rd|th)\b", low)
+    if m:
+        result_date = resolve_day_only(int(m.group(1)))
+        if result_date is not None:
+            cleaned = text[: m.start()] + text[m.end() :]
+            return result_date, cleaned.strip()
 
     return None, text
 
@@ -590,6 +677,10 @@ def _extract_title(text: str) -> str:
         r"\bselama\s+\d+\s*(menit|jam|hours?|minutes?)\b",
         r"\bfor\s+\d+\s*(menit|jam|hours?|minutes?)\b",
         r"\b\d+\s*(menit|jam|hours?|minutes?)\b",
+        # Bare day references left when date parse failed or residual tokens
+        r"\b(?:tanggal|tgl\.?)\s*\d{1,2}\b",
+        r"\bthe\s+\d{1,2}(?:st|nd|rd|th)\b",
+        r"\bon\s+\d{1,2}\b",
     ]
     for pattern in temporal_patterns:
         result = re.sub(pattern, " ", result, flags=re.I)
@@ -600,9 +691,13 @@ def _extract_title(text: str) -> str:
         r"\bbuatlah\b", r"\bbuat\b", r"\bcreate\b",
         r"\badd\b", r"\btambah(?:kan)?\b", r"\bset\b", r"\bbook\b",
         r"\bpindahkan\b", r"\breschedule\b", r"\bmove\b",
-        r"\bbatalkan\b", r"\bcancel\b", r"\bhapus\b",
+        r"\bbatalkan\b", r"\bcancel\b", r"\bhapus\b", r"\bdelete\b", r"\bremove\b",
         r"\bupdate\b", r"\bedit\b", r"\bjadikan\b", r"\btandai\b",
         r"\bjadwal(?:kan)?\b",
+        r"\bcari\b", r"\bfind\b", r"\blihat\b", r"\btampilkan\b", r"\bsearch\b",
+        r"\btask\b", r"\bevent\b", r"\bacara\b",
+        # Availability fluff often left after cancel/query ("meeting yg tersedia")
+        r"\b(?:yg|yang)\s+tersedia\b", r"\bavailable\b", r"\byang\s+ada\b",
     ]
     for p in prefixes:
         result = re.sub(p, " ", result, flags=re.I)
@@ -621,6 +716,8 @@ def _extract_title(text: str) -> str:
         result = re.sub(f, " ", result, flags=re.I)
 
     result = re.sub(r"\s+", " ", result).strip(".,;:-–—\"' ")
+    # Date extraction can leave a trailing preposition ("1-on-1 on" after "July 7").
+    result = re.sub(r"\s+\b(?:on|at|di|pada|for|untuk)\s*$", "", result, flags=re.I).strip()
 
     if result.lower() in {"", "event", "acara", "kegiatan"}:
         return "Meeting"
@@ -663,8 +760,10 @@ def parse(text: str, today: date | None = None) -> dict[str, Any]:
     # 2. Recurrence
     recurrence, remaining = _parse_recurrence(remaining)
 
-    # 3. Date — only default to today for create; cancel/reschedule match by title alone
-    parsed_date, remaining = _parse_date(remaining, today)
+    # 3. Date — only default to today for create; cancel/reschedule match by title alone.
+    # For cancel/query/update prefer past dates when resolving "tanggal 7" / "7 Juli".
+    prefer_past = intent in {"cancel", "query", "update"}
+    parsed_date, remaining = _parse_date(remaining, today, prefer_past=prefer_past)
     if parsed_date is None and intent == "create":
         parsed_date = today
         warnings.append("No date found — defaulting to today")

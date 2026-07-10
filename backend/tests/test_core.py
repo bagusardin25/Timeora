@@ -151,6 +151,39 @@ class TestNaturalLanguageParser(unittest.TestCase):
         self.assertEqual(result["title"], "Product Sync")
         self.assertEqual(result["event_data"], {"reminder_minutes": 30})
 
+    def test_cancel_parses_tanggal_day_including_past(self):
+        """'tanggal 7' after the 7th must still resolve to this month for cancel."""
+        result = parse("hapus 1-on-1 di tanggal 7", today=date(2026, 7, 10))
+
+        self.assertEqual(result["intent"], "cancel")
+        self.assertEqual(result["title"], "1-on-1")
+        self.assertEqual(result["date"], "2026-07-07")
+
+    def test_cancel_parses_past_absolute_date_same_year(self):
+        result = parse("hapus 1-on-1 7 Juli", today=date(2026, 7, 10))
+
+        self.assertEqual(result["intent"], "cancel")
+        self.assertEqual(result["title"], "1-on-1")
+        self.assertEqual(result["date"], "2026-07-07")
+
+    def test_cancel_parses_english_month_day_with_on(self):
+        result = parse("hapus 1-on-1 on July 7", today=date(2026, 7, 10))
+
+        self.assertEqual(result["intent"], "cancel")
+        self.assertEqual(result["title"], "1-on-1")
+        self.assertEqual(result["date"], "2026-07-07")
+
+    def test_query_named_task_does_not_default_to_create(self):
+        result = parse("cari task 1-on-1", today=date(2026, 7, 10))
+
+        self.assertEqual(result["intent"], "query")
+        self.assertEqual(result["title"], "1-on-1")
+        self.assertIsNone(result["date"])
+
+    def test_find_slot_still_wins_over_query_cari(self):
+        result = parse("cari waktu kosong besok", today=date(2026, 7, 10))
+        self.assertEqual(result["intent"], "find_slot")
+
 
 class TestConflictEngine(unittest.TestCase):
     event_date = date(2026, 7, 6)

@@ -7,6 +7,7 @@ Tier 3: confirm + execute for cancel/reschedule.
 
 from __future__ import annotations
 
+import re
 from datetime import date, datetime, time, timedelta
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
@@ -21,6 +22,19 @@ from app.models import AssistantRequest, AssistantResponse
 
 router = APIRouter()
 
+# Collapse common 1:1 / 1-on-1 spellings so cancel/query match calendar titles.
+_ONE_ON_ONE_RE = re.compile(r"\b1\s*(?:[:\-–—]\s*1|on\s*1)\b", re.I)
+_NON_ALNUM_RE = re.compile(r"[^a-z0-9]+")
+# Leading container words only — keep "meeting"/"rapat" as real title tokens.
+_TITLE_NOISE_RE = re.compile(
+    r"^(?:task|event|acara|jadwal)\s+",
+    re.I,
+)
+_TITLE_FLUFF_RE = re.compile(
+    r"\b(?:yg|yang)\s+tersedia\b|\bavailable\b|\byang\s+ada\b",
+    re.I,
+)
+
 
 def _event_to_dict(ev) -> dict:
     if hasattr(ev, "model_dump"):
@@ -31,8 +45,10 @@ def _event_to_dict(ev) -> dict:
 def _parse_date_value(value) -> date | None:
     if value is None:
         return None
-    if isinstance(value, date):
+    if isinstance(value, date) and not isinstance(value, datetime):
         return value
+    if isinstance(value, datetime):
+        return value.date()
     if isinstance(value, str):
         try:
             return date.fromisoformat(value[:10])
@@ -53,17 +69,63 @@ def _parse_time_value(value: str | None) -> time | None:
         return None
 
 
+def _clean_title_query(value: str | None) -> str:
+    """Normalize a user/AI title query for matching calendar events."""
+    text = (value or "").strip()
+    if not text:
+        return ""
+    text = _TITLE_NOISE_RE.sub("", text).strip()
+    text = _TITLE_FLUFF_RE.sub(" ", text)
+    # Residual date tokens sometimes leak from partial parses.
+    text = re.sub(r"\b(?:tanggal|tgl\.?)\s*\d{1,2}\b", " ", text, flags=re.I)
+    text = re.sub(r"\bthe\s+\d{1,2}(?:st|nd|rd|th)\b", " ", text, flags=re.I)
+    text = re.sub(r"\s+", " ", text).strip(".,;:-–—\"' ")
+    text = re.sub(r"\s+\b(?:on|at|di|pada)\s*$", "", text, flags=re.I).strip()
+    return text
+
+
+def _normalize_title_key(value: str | None) -> str:
+    text = (value or "").lower().strip()
+    if not text:
+        return ""
+    text = _ONE_ON_ONE_RE.sub("1on1", text)
+    text = _NON_ALNUM_RE.sub("", text)
+    return text
+
+
+def _title_matches(query: str | None, title: str | None) -> bool:
+    """True if query matches event title (substring + normalized 1-on-1 variants)."""
+    q_raw = _clean_title_query(query)
+    if not q_raw:
+        return True
+    t_raw = (title or "").strip()
+    if not t_raw:
+        return False
+
+    q = q_raw.lower()
+    t = t_raw.lower()
+    if q in t or t in q:
+        return True
+
+    qn = _normalize_title_key(q_raw)
+    tn = _normalize_title_key(t_raw)
+    return bool(qn) and (qn in tn or tn in qn)
+
+
 def _event_overlaps_date(ev: dict, target_date: date) -> bool:
     event_date = _parse_date_value(ev.get("date"))
     event_time = _parse_time_value(ev.get("start_time"))
-    if event_date is None or event_time is None:
+    if event_date is None:
         return False
+    # All-day / missing time: still match by calendar date.
+    if event_time is None:
+        return event_date == target_date
     try:
         duration = int(ev.get("duration_minutes") or 0)
     except (TypeError, ValueError):
-        return False
+        duration = 0
     if duration <= 0:
-        return False
+        return event_date == target_date
 
     event_start = datetime.combine(event_date, event_time)
     event_end = event_start + timedelta(minutes=duration)
@@ -72,22 +134,74 @@ def _event_overlaps_date(ev: dict, target_date: date) -> bool:
     return event_start < day_end and event_end > day_start
 
 
+def _event_date_value(ev: dict) -> date | None:
+    return _parse_date_value(ev.get("date"))
+
+
+# Generic titles must never expand beyond the requested day — otherwise
+# "hapus meeting hari ini" dumps every Meeting in the calendar.
+_GENERIC_TITLE_KEYS = frozenset(
+    {
+        "meeting",
+        "rapat",
+        "event",
+        "acara",
+        "sync",
+        "call",
+        "jadwal",
+        "standup",
+        "stand-up",
+    }
+)
+
+
+def _is_generic_title(title_query: str) -> bool:
+    key = _normalize_title_key(title_query)
+    if not key:
+        return True
+    generic_keys = {_normalize_title_key(item) for item in _GENERIC_TITLE_KEYS}
+    return key in generic_keys
+
+
 def _find_matches(all_events, parsed: dict, *, use_date_filter: bool = True) -> list[dict]:
-    """Match events by title substring and optional parsed date."""
-    title_query = (parsed.get("title") or "").lower().strip()
+    """Match events by title (fuzzy) and optional parsed date.
+
+    When a date is present, prefer exact day hits. Soft nearby fallback is only
+    for *specific* titles (e.g. "1-on-1") when the day resolution may have
+    drifted — never for generic "meeting"/"rapat".
+    """
+    title_query = _clean_title_query(parsed.get("title"))
     target_date = _parse_date_value(parsed.get("date"))
-    matches: list[dict] = []
+    title_matches: list[dict] = []
 
     for ev in all_events:
         ev_dict = _event_to_dict(ev)
-        ev_title = (ev_dict.get("title") or "").lower()
-        if title_query and title_query not in ev_title:
+        if not _title_matches(title_query, ev_dict.get("title")):
             continue
-        if use_date_filter and target_date is not None and not _event_overlaps_date(ev_dict, target_date):
-            continue
-        matches.append(ev_dict)
+        title_matches.append(ev_dict)
 
-    return matches
+    if use_date_filter and target_date is not None:
+        dated = [ev for ev in title_matches if _event_overlaps_date(ev, target_date)]
+        if dated:
+            return dated
+
+        # Explicit day + generic title ("meeting hari ini") → empty, not history.
+        if not title_query or _is_generic_title(title_query):
+            return []
+
+        # Specific title, day miss: try a tight window, then title-only.
+        nearby: list[dict] = []
+        for ev in title_matches:
+            event_date = _event_date_value(ev)
+            if event_date is None:
+                continue
+            if abs((event_date - target_date).days) <= 7:
+                nearby.append(ev)
+        if nearby:
+            return nearby
+        return title_matches
+
+    return title_matches
 
 
 @router.post("/assistant", response_model=AssistantResponse)
@@ -254,7 +368,39 @@ def _conflict_recovery_response(
 
 async def _handle_query(user: dict, parsed: dict, locale: str = "en") -> AssistantResponse:
     loc = resolve_locale(explicit=locale)
+    title_query = _clean_title_query(parsed.get("title"))
     target_date = _parse_date_value(parsed.get("date"))
+    date_was_explicit = target_date is not None
+
+    # Title-only search ("cari task 1-on-1") should scan the full calendar, not
+    # default to "today's agenda" which hides events on other days.
+    if title_query and not date_was_explicit:
+        all_events = await data_access.list_events(user["id"])
+        matching = [
+            ev_dict
+            for ev in all_events
+            for ev_dict in [_event_to_dict(ev)]
+            if _title_matches(title_query, ev_dict.get("title"))
+        ]
+        if not matching:
+            return AssistantResponse(
+                intent="query",
+                result=[],
+                message=msg("query_title_empty", loc, title=title_query),
+            )
+        return AssistantResponse(
+            intent="query",
+            result=matching,
+            message=msg(
+                "query_title_found",
+                loc,
+                count=len(matching),
+                title=title_query,
+            ),
+            events=matching,
+            suggested_actions=["open_event", "cancel", "find_free_slot"],
+        )
+
     if target_date is None:
         target_date = datetime.now().date()
 
@@ -266,20 +412,63 @@ async def _handle_query(user: dict, parsed: dict, locale: str = "en") -> Assista
     matching = []
     for ev in all_events:
         ev_dict = _event_to_dict(ev)
-        if _event_overlaps_date(ev_dict, target_date):
-            matching.append(ev_dict)
+        if not _event_overlaps_date(ev_dict, target_date):
+            continue
+        if title_query and not _title_matches(title_query, ev_dict.get("title")):
+            continue
+        matching.append(ev_dict)
+
+    # If user asked for a named event on a day and nothing matched, broaden to
+    # title-only across all events (date resolution often drifts for past days).
+    if not matching and title_query:
+        all_events = await data_access.list_events(user["id"])
+        matching = [
+            ev_dict
+            for ev in all_events
+            for ev_dict in [_event_to_dict(ev)]
+            if _title_matches(title_query, ev_dict.get("title"))
+        ]
+        if matching:
+            return AssistantResponse(
+                intent="query",
+                result=matching,
+                message=msg(
+                    "query_title_found",
+                    loc,
+                    count=len(matching),
+                    title=title_query,
+                ),
+                events=matching,
+                suggested_actions=["open_event", "cancel", "find_free_slot"],
+            )
 
     if not matching:
+        empty_msg = (
+            msg("query_title_empty", loc, title=title_query)
+            if title_query
+            else msg("query_empty", loc, date=target_date.isoformat())
+        )
         return AssistantResponse(
             intent="query",
             result=[],
-            message=msg("query_empty", loc, date=target_date.isoformat()),
+            message=empty_msg,
         )
 
+    found_msg = (
+        msg(
+            "query_title_on_date_found",
+            loc,
+            count=len(matching),
+            title=title_query,
+            date=target_date.isoformat(),
+        )
+        if title_query
+        else msg("query_found", loc, count=len(matching), date=target_date.isoformat())
+    )
     return AssistantResponse(
         intent="query",
         result=matching,
-        message=msg("query_found", loc, count=len(matching), date=target_date.isoformat()),
+        message=found_msg,
         events=matching,
         suggested_actions=["open_event", "find_free_slot"],
     )

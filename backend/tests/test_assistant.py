@@ -121,6 +121,92 @@ class TestAssistantClarification(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.message, "Found 1 event(s) on 2026-07-06.")
         self.assertEqual(response.events[0]["id"], "overnight")
 
+    async def test_cancel_matches_one_on_one_variants_and_past_date(self):
+        events = [
+            event_on("one", "1-on-1", date(2026, 7, 7), time(10, 0), 30),
+            event_on("two", "Focus Block", date(2026, 7, 10), time(9, 0), 60),
+        ]
+        with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=events)):
+            response = await assistant._handle_cancel(
+                {"id": "user-1"},
+                {"title": "1:1", "date": "2026-07-07"},
+            )
+
+        self.assertTrue(response.requires_confirmation)
+        self.assertEqual(response.result["primary_event_id"], "one")
+
+    async def test_cancel_falls_back_to_title_when_date_misses(self):
+        events = [event_on("one", "1-on-1", date(2026, 7, 7), time(10, 0), 30)]
+        with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=events)):
+            response = await assistant._handle_cancel(
+                {"id": "user-1"},
+                {"title": "1-on-1", "date": "2026-08-07"},
+            )
+
+        self.assertTrue(response.requires_confirmation)
+        self.assertEqual(response.result["primary_event_id"], "one")
+
+    async def test_cancel_today_meeting_prefers_same_day_not_all_history(self):
+        events = [
+            event_on("old", "Meeting", date(2026, 7, 4), time(19, 0), 60),
+            event_on("today", "Meeting", date(2026, 7, 10), time(11, 15), 60),
+            event_on("future", "meeting", date(2026, 7, 15), time(10, 0), 60),
+        ]
+        with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=events)):
+            response = await assistant._handle_cancel(
+                {"id": "user-1"},
+                {"title": "meeting yg tersedia", "date": "2026-07-10"},
+            )
+
+        self.assertTrue(response.requires_confirmation)
+        self.assertEqual(response.result["primary_event_id"], "today")
+
+    async def test_cancel_generic_meeting_does_not_expand_beyond_requested_day(self):
+        """Nearby fallback must not surface other days for generic 'meeting'."""
+        events = [
+            event_on("old", "Meeting", date(2026, 7, 4), time(19, 0), 60),
+            event_on("other", "Meeting", date(2026, 7, 9), time(14, 0), 60),
+            event_on("future", "meeting", date(2026, 7, 15), time(10, 0), 60),
+        ]
+        with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=events)):
+            response = await assistant._handle_cancel(
+                {"id": "user-1"},
+                {"title": "meeting", "date": "2026-07-10"},
+            )
+
+        self.assertFalse(response.requires_confirmation)
+        self.assertEqual(response.events, [])
+        self.assertIn("meeting", response.message.lower())
+
+    async def test_query_by_title_searches_all_events(self):
+        events = [
+            event_on("one", "1-on-1", date(2026, 7, 7), time(10, 0), 30),
+            event_on("two", "Focus Block", date(2026, 7, 10), time(9, 0), 60),
+        ]
+        with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=events)):
+            response = await assistant._handle_query(
+                {"id": "user-1"},
+                {"title": "1-on-1", "date": None},
+            )
+
+        self.assertEqual(len(response.events), 1)
+        self.assertEqual(response.events[0]["id"], "one")
+        self.assertIn("1-on-1", response.message)
+
+    async def test_query_by_title_filters_day_agenda(self):
+        events = [
+            event_on("one", "1-on-1", date(2026, 7, 7), time(10, 0), 30),
+            event_on("two", "Focus Block", date(2026, 7, 7), time(9, 0), 60),
+        ]
+        with patch.object(assistant.data_access, "list_events_window", AsyncMock(return_value=events)):
+            response = await assistant._handle_query(
+                {"id": "user-1"},
+                {"title": "1-on-1", "date": "2026-07-07"},
+            )
+
+        self.assertEqual(len(response.events), 1)
+        self.assertEqual(response.events[0]["title"], "1-on-1")
+
     async def test_update_preview_returns_confirmation_with_event_data(self):
         events = [event("one", "Product Sync", 14)]
         with patch.object(assistant.data_access, "list_events", AsyncMock(return_value=events)):

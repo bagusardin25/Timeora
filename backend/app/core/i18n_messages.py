@@ -105,6 +105,18 @@ MESSAGES: dict[str, dict[Locale, str]] = {
         "en": "Found {count} event(s) on {date}.",
         "id": "Ditemukan {count} event pada {date}.",
     },
+    "query_title_found": {
+        "en": "Found {count} event(s) matching '{title}'.",
+        "id": "Ditemukan {count} event yang cocok dengan '{title}'.",
+    },
+    "query_title_on_date_found": {
+        "en": "Found {count} event(s) matching '{title}' on {date}.",
+        "id": "Ditemukan {count} event yang cocok dengan '{title}' pada {date}.",
+    },
+    "query_title_empty": {
+        "en": "No events matching '{title}' found.",
+        "id": "Tidak ada event yang cocok dengan '{title}'.",
+    },
     "find_slot_empty": {
         "en": "No free {duration}-minute slots on {date}.",
         "id": "Tidak ada slot kosong {duration} menit pada {date}.",
